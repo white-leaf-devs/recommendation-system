@@ -468,6 +468,10 @@ dependencies = [
 [[package]]
 name = "recommendation-system"
 version = "0.1.0"
+dependencies = [
+ "controller",
+ "simple-movie",
+]
 
 [[package]]
 name = "regex"

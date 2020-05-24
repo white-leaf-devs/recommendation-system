@@ -7,4 +7,10 @@ edition = "2018"
 [workspace]
 members = ["controller", "controllers/*", "recommend"]
 
-[dependencies]
+[dependencies.controller]
+version = "*"
+path = "controller"
+
+[dependencies.simple-movie]
+version = "*"
+path = "controllers/simple-movie"
