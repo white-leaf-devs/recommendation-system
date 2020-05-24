@@ -1,0 +1,17 @@
+[package]
+name = "simple-movie"
+version = "0.1.0"
+authors = ["Kevin Del Castillo <quebin31@gmail.com>"]
+edition = "2018"
+workspace = "../.."
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1"
+diesel = { version = "1", features = ["postgres"] }
+csv = "1"
+
+[dependencies.controller]
+path = "../../controller/"
+version = "*"
