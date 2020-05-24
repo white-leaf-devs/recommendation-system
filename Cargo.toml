@@ -1,0 +1,10 @@
+[package]
+name = "recommendation-system"
+version = "0.1.0"
+authors = ["Kevin Del Castillo <quebin31@gmail.com>"]
+edition = "2018"
+
+[workspace]
+members = ["controller", "controllers/*", "recommend"]
+
+[dependencies]
