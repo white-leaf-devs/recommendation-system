@@ -9,8 +9,8 @@ workspace = "../.."
 
 [dependencies]
 anyhow = "1"
-diesel = { version = "1", features = ["postgres"] }
 csv = "1"
+diesel = { version = "1", features = ["postgres"] }
 
 [dependencies.controller]
 path = "../../controller/"
