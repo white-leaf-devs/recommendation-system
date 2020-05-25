@@ -157,7 +157,7 @@ mod tests {
         let users = controller.user_by_name("Chris")?;
         assert_eq!(users.len(), 2);
         for user in users {
-            assert_eq!("Chris", user.name());
+            assert_eq!(Some("Chris"), user.name());
         }
 
         Ok(())

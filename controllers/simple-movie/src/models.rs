@@ -23,8 +23,8 @@ impl Item for Movie {
         self.id
     }
 
-    fn name(&self) -> &str {
-        &self.name
+    fn name(&self) -> Option<&str> {
+        Some(&self.name)
     }
 }
 
@@ -56,8 +56,8 @@ impl UserT<Movie> for CompleteUser {
         self.inner.id
     }
 
-    fn name(&self) -> &str {
-        &self.inner.name
+    fn name(&self) -> Option<&str> {
+        Some(&self.inner.name)
     }
 
     fn ratings(&self) -> &HashMap<<Movie as Item>::Id, f64> {
