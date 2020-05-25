@@ -5,7 +5,7 @@ pub trait User<I: Item> {
     type Id;
 
     fn id(&self) -> Self::Id;
-    fn name(&self) -> &str;
+    fn name(&self) -> Option<&str>;
     fn ratings(&self) -> &HashMap<I::Id, f64>;
     fn metadata(&self) -> HashMap<String, String> {
         HashMap::new()
@@ -16,7 +16,7 @@ pub trait Item {
     type Id;
 
     fn id(&self) -> Self::Id;
-    fn name(&self) -> &str;
+    fn name(&self) -> Option<&str>;
     fn metadata(&self) -> HashMap<String, String> {
         HashMap::new()
     }
