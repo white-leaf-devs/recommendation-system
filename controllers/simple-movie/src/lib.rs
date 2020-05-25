@@ -7,7 +7,7 @@ pub mod schema;
 use crate::models::{CompleteUser, Movie, Rating, User};
 use crate::schema::{movies, ratings, users};
 use anyhow::Error;
-use controller::{Controller, ErrorKind};
+use controller::{error, Controller};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 
@@ -25,20 +25,20 @@ impl Controller<CompleteUser, Movie> for SimpleMovieController {
         SimpleMovieController { pg_conn }
     }
 
-    fn user_by_id(&self, id: u64) -> Result<CompleteUser, Error> {
+    fn user_by_id(&self, id: i32) -> Result<CompleteUser, Error> {
         let user = users::table
-            .filter(users::id.eq(id as i32))
+            .filter(users::id.eq(id))
             .limit(1)
             .load::<User>(&self.pg_conn)?
             .get(0)
             .cloned()
-            .ok_or_else(|| ErrorKind::NotFound(id))?;
+            .ok_or_else(|| error::NotFoundById(id))?;
 
         let ratings = ratings::table
-            .filter(ratings::user_id.eq(id as i32))
+            .filter(ratings::user_id.eq(id))
             .load::<Rating>(&self.pg_conn)?
             .iter()
-            .map(|rating| (rating.movie_id as u64, rating.score))
+            .map(|rating| (rating.movie_id, rating.score))
             .collect();
 
         Ok(CompleteUser {
@@ -47,14 +47,14 @@ impl Controller<CompleteUser, Movie> for SimpleMovieController {
         })
     }
 
-    fn item_by_id(&self, id: u64) -> Result<Movie, Error> {
+    fn item_by_id(&self, id: i32) -> Result<Movie, Error> {
         movies::table
-            .filter(movies::id.eq(id as i32))
+            .filter(movies::id.eq(id))
             .limit(1)
             .load(&self.pg_conn)?
             .get(0)
             .cloned()
-            .ok_or_else(|| ErrorKind::NotFound(id).into())
+            .ok_or_else(|| error::NotFoundById(id).into())
     }
 
     fn user_by_name(&self, name: &str) -> Result<Vec<CompleteUser>, Error> {
@@ -68,7 +68,7 @@ impl Controller<CompleteUser, Movie> for SimpleMovieController {
                 .filter(ratings::user_id.eq(user.id))
                 .load::<Rating>(&self.pg_conn)?
                 .iter()
-                .map(|rating| (rating.movie_id as u64, rating.score))
+                .map(|rating| (rating.movie_id, rating.score))
                 .collect();
 
             complete_users.push(CompleteUser {
@@ -97,7 +97,30 @@ impl Controller<CompleteUser, Movie> for SimpleMovieController {
                 .filter(ratings::user_id.eq(user.id))
                 .load::<Rating>(&self.pg_conn)?
                 .iter()
-                .map(|rating| (rating.movie_id as u64, rating.score))
+                .map(|rating| (rating.movie_id, rating.score))
+                .collect();
+
+            complete_users.push(CompleteUser {
+                inner: user,
+                ratings,
+            });
+        }
+
+        Ok(complete_users)
+    }
+
+    fn all_users_except(&self, id: i32) -> Result<Vec<CompleteUser>, Error> {
+        let users = users::table
+            .filter(users::id.is_distinct_from(id))
+            .load::<User>(&self.pg_conn)?;
+
+        let mut complete_users = Vec::new();
+        for user in users {
+            let ratings = ratings::table
+                .filter(ratings::user_id.eq(user.id))
+                .load::<Rating>(&self.pg_conn)?
+                .iter()
+                .map(|rating| (rating.movie_id, rating.score))
                 .collect();
 
             complete_users.push(CompleteUser {

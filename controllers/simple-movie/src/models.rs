@@ -1,6 +1,32 @@
 use crate::schema::*;
-use controller::{Item, User as UserTrait};
+use controller::{Item, User as UserT};
 use std::collections::HashMap;
+
+// To query data from the database
+#[derive(Debug, Clone, Queryable)]
+pub struct Movie {
+    pub id: i32,
+    pub name: String,
+}
+
+// To insert a new movie into the database
+#[derive(Debug, Clone, Insertable)]
+#[table_name = "movies"]
+pub struct NewMovie<'a> {
+    pub name: &'a str,
+}
+
+impl Item for Movie {
+    type Id = i32;
+
+    fn id(&self) -> Self::Id {
+        self.id
+    }
+
+    fn name(&self) -> &str {
+        &self.name
+    }
+}
 
 // To query data from the database
 #[derive(Debug, Clone, Queryable)]
@@ -20,44 +46,22 @@ pub struct NewUser<'a> {
 #[derive(Debug, Clone)]
 pub struct CompleteUser {
     pub inner: User,
-    pub ratings: HashMap<u64, f64>,
+    pub ratings: HashMap<i32, f64>,
 }
 
-impl UserTrait for CompleteUser {
-    fn id(&self) -> u64 {
-        self.inner.id as u64
+impl UserT<Movie> for CompleteUser {
+    type Id = i32;
+
+    fn id(&self) -> Self::Id {
+        self.inner.id
     }
 
     fn name(&self) -> &str {
         &self.inner.name
     }
 
-    fn ratings(&self) -> &HashMap<u64, f64> {
+    fn ratings(&self) -> &HashMap<<Movie as Item>::Id, f64> {
         &self.ratings
-    }
-}
-
-// To query data from the database
-#[derive(Debug, Clone, Queryable)]
-pub struct Movie {
-    pub id: i32,
-    pub name: String,
-}
-
-// To insert a new movie into the database
-#[derive(Debug, Clone, Insertable)]
-#[table_name = "movies"]
-pub struct NewMovie<'a> {
-    pub name: &'a str,
-}
-
-impl Item for Movie {
-    fn id(&self) -> u64 {
-        self.id as u64
-    }
-
-    fn name(&self) -> &str {
-        &self.name
     }
 }
 
