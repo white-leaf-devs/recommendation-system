@@ -2,8 +2,8 @@ use anyhow::Error;
 use std::collections::HashMap;
 
 pub type Result<T> = std::result::Result<T, Error>;
-pub type Rating<K> = HashMap<K, f64>;
-pub type MapedRatings<U, K> = HashMap<U, Rating<K>>;
+pub type Ratings<K> = HashMap<K, f64>;
+pub type MapedRatings<U, K> = HashMap<U, Ratings<K>>;
 
 pub trait Entity {
     type Id;
@@ -19,11 +19,12 @@ where
     U: Entity,
     I: Entity,
 {
+    fn new() -> Self;
     fn with_url(url: &str) -> Self;
     fn user_by_id(&self, id: U::Id) -> Result<U>;
     fn item_by_id(&self, id: I::Id) -> Result<I>;
-    fn rating_by_user(&self, user: &U) -> Result<Rating<I::Id>>;
-    fn all_ratings(&self) -> Result<MapedRatings<U::Id, I::Id>>;
+    fn ratings_by_user(&self, user: &U) -> Result<Ratings<I::Id>>;
+    fn ratings_except_for(&self, user: &U) -> Result<MapedRatings<U::Id, I::Id>>;
 
     fn user_by_name(&self, name: &str) -> Result<Vec<U>> {
         Err(error::NotFoundByName(name.into()).into())
