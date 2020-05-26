@@ -9,9 +9,11 @@ workspace = ".."
 
 [dependencies]
 num-traits = "0.2.11"
+controller = { version = "*", path = "../controller" }
 
 [dev-dependencies]
 assert_approx_eq = "1"
+common_macros = "0.1"
 criterion = "0.3"
 rand = "0.7"
 
