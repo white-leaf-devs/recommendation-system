@@ -1,39 +1,37 @@
 use anyhow::Error;
 use std::collections::HashMap;
 
-pub trait User<I: Item> {
+pub type Result<T> = std::result::Result<T, Error>;
+pub type Rating<K> = HashMap<K, f64>;
+pub type MapedRatings<U, K> = HashMap<U, Rating<K>>;
+
+pub trait Entity {
     type Id;
 
-    fn id(&self) -> Self::Id;
-    fn name(&self) -> Option<&str>;
-    fn ratings(&self) -> &HashMap<I::Id, f64>;
-    fn metadata(&self) -> HashMap<String, String> {
-        HashMap::new()
-    }
-}
-
-pub trait Item {
-    type Id;
-
-    fn id(&self) -> Self::Id;
-    fn name(&self) -> Option<&str>;
-    fn metadata(&self) -> HashMap<String, String> {
-        HashMap::new()
+    fn get_id(&self) -> Self::Id;
+    fn get_data(&self) -> HashMap<String, String> {
+        Default::default()
     }
 }
 
 pub trait Controller<U, I>
 where
-    I: Item,
-    U: User<I>,
+    U: Entity,
+    I: Entity,
 {
     fn with_url(url: &str) -> Self;
-    fn user_by_id(&self, id: U::Id) -> Result<U, Error>;
-    fn item_by_id(&self, id: I::Id) -> Result<I, Error>;
-    fn user_by_name(&self, name: &str) -> Result<Vec<U>, Error>;
-    fn item_by_name(&self, name: &str) -> Result<Vec<I>, Error>;
-    fn all_users(&self) -> Result<Vec<U>, Error>;
-    fn all_users_except(&self, id: U::Id) -> Result<Vec<U>, Error>;
+    fn user_by_id(&self, id: U::Id) -> Result<U>;
+    fn item_by_id(&self, id: I::Id) -> Result<I>;
+    fn rating_by_user(&self, user: &U) -> Result<Rating<I::Id>>;
+    fn all_ratings(&self) -> Result<MapedRatings<U::Id, I::Id>>;
+
+    fn user_by_name(&self, name: &str) -> Result<Vec<U>> {
+        Err(error::NotFoundByName(name.into()).into())
+    }
+
+    fn item_by_name(&self, name: &str) -> Result<Vec<I>> {
+        Err(error::NotFoundByName(name.into()).into())
+    }
 }
 
 pub mod error {
@@ -45,5 +43,5 @@ pub mod error {
 
     #[derive(Debug, thiserror::Error)]
     #[error("Entity with name({0}) not found")]
-    pub struct NotFoundByName<I: Debug + Display>(pub I);
+    pub struct NotFoundByName(pub String);
 }
