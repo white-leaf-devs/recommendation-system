@@ -207,7 +207,7 @@ mod tests {
 
         println!(
             "kNN(52, manhattan): {:?}",
-            engine.knn(&52.into(), 3, Method::Manhattan)
+            engine.knn(&52.into(), 4, Method::Manhattan)
         );
 
         Ok(())
