@@ -123,11 +123,11 @@ where
         if let Some(y) = rhs.get(key) {
             *a_norm.get_or_insert_with(V::zero) += x.powi(2);
             *b_norm.get_or_insert_with(V::zero) += y.powi(2);
-            *dot_prod.get_or_insert_with(V::one) *= (*x) * (*y);
+            *dot_prod.get_or_insert_with(V::one) += (*x) * (*y);
         }
     }
 
-    let norm = (a_norm? * b_norm?).sqrt();
+    let norm = a_norm?.sqrt() * b_norm?.sqrt();
 
     Some(dot_prod? / norm)
 }

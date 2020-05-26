@@ -15,14 +15,15 @@
 // You should have received a copy of the GNU General Public License
 // along with recommend.  If not, see <http://www.gnu.org/licenses/>.
 
+pub mod distances;
+
+use self::distances::Method;
 use controller::{Controller, Entity, Id};
 use std::{
-    cmp::{Ordering, PartialOrd},
+    cmp::{Ordering, PartialOrd, Reverse},
     collections::BinaryHeap,
     marker::PhantomData,
 };
-
-pub mod distances;
 
 #[derive(Debug, Clone)]
 pub struct MapedDistance(Id, f64);
@@ -83,12 +84,12 @@ where
         distances::distance(&rating_a, &rating_b, method)
     }
 
-    pub fn knn(&self, id: &Id, k: usize, method: distances::Method) -> Option<Vec<MapedDistance>> {
+    fn max_heap_knn(&self, id: &Id, k: usize, method: Method) -> Option<Vec<MapedDistance>> {
         let user = self.controller.user_by_id(id).ok()?;
         let user_rating = self.controller.ratings_by_user(&user).ok()?;
         let maped_ratings = self.controller.ratings_except_for(&user).ok()?;
 
-        let mut max_heap: BinaryHeap<MapedDistance> = BinaryHeap::with_capacity(k);
+        let mut max_heap = BinaryHeap::with_capacity(k);
         for (user_id, rating) in maped_ratings {
             let distance = distances::distance(&user_rating, &rating, method);
 
@@ -106,6 +107,49 @@ where
         }
 
         Some(max_heap.into_sorted_vec())
+    }
+
+    fn min_heap_knn(&self, id: &Id, k: usize, method: Method) -> Option<Vec<MapedDistance>> {
+        let user = self.controller.user_by_id(id).ok()?;
+        let user_rating = self.controller.ratings_by_user(&user).ok()?;
+        let maped_ratings = self.controller.ratings_except_for(&user).ok()?;
+
+        let mut min_heap = BinaryHeap::with_capacity(k);
+        for (user_id, rating) in maped_ratings {
+            let distance = distances::distance(&user_rating, &rating, method);
+
+            if let Some(distance) = distance {
+                if min_heap.len() < k {
+                    min_heap.push(Reverse(MapedDistance(user_id, distance)));
+                } else {
+                    let minimum = min_heap.peek()?;
+                    if distance > (minimum.0).1 {
+                        min_heap.pop();
+                        min_heap.push(Reverse(MapedDistance(user_id, distance)));
+                    }
+                }
+            }
+        }
+
+        Some(
+            min_heap
+                .into_sorted_vec()
+                .into_iter()
+                .map(|r| r.0)
+                .collect(),
+        )
+    }
+
+    pub fn knn(&self, id: &Id, k: usize, method: Method) -> Option<Vec<MapedDistance>> {
+        match method {
+            Method::Manhattan
+            | Method::Euclidean
+            | Method::Minkowski(_)
+            | Method::JaccardDistance => self.max_heap_knn(id, k, method),
+            Method::CosineSimilarity | Method::PearsonCorrelation | Method::JaccardIndex => {
+                self.min_heap_knn(id, k, method)
+            }
+        }
     }
 }
 
@@ -144,6 +188,19 @@ mod tests {
     }
 
     #[test]
+    fn cosine_similarity_distance() -> Result<(), Error> {
+        let controller = SimpleMovieController::new()?;
+        let engine = Engine::with_controller(controller);
+
+        println!(
+            "cosine(52, 53): {:?}",
+            engine.distance(&52.into(), &53.into(), Method::CosineSimilarity)
+        );
+
+        Ok(())
+    }
+
+    #[test]
     fn knn_with_manhattan() -> Result<(), Error> {
         let controller = SimpleMovieController::new()?;
         let engine = Engine::with_controller(controller);
@@ -162,8 +219,21 @@ mod tests {
         let engine = Engine::with_controller(controller);
 
         println!(
-            "kNN(52, 5, euclidean): {:?}",
+            "kNN(52, 3, euclidean): {:?}",
             engine.knn(&52.into(), 3, Method::Euclidean)
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn knn_with_cosine() -> Result<(), Error> {
+        let controller = SimpleMovieController::new()?;
+        let engine = Engine::with_controller(controller);
+
+        println!(
+            "kNN(52, 3, cosine): {:?}",
+            engine.knn(&52.into(), 3, Method::CosineSimilarity)
         );
 
         Ok(())
