@@ -86,16 +86,14 @@ fn insert_ratings(conn: &PgConnection) -> Result<(), Error> {
     println!("Collecting records for ratings...");
     let records: Vec<_> = csv.records().collect();
 
-    let url = "postgres://postgres:@localhost/books";
-    let controller = BooksController::with_url(url);
-
+    let controller = BooksController::new()?;
     for record in records.iter().progress() {
         if let Ok(record) = record {
             let user_id: i32 = record[0].parse()?;
             let book_id = &record[1];
             let score: f64 = record[2].parse()?;
 
-            let book_res = controller.item_by_id(book_id.to_string());
+            let book_res = controller.item_by_id(&book_id.into());
             if book_res.is_err() {
                 continue;
             }
@@ -118,7 +116,7 @@ fn insert_ratings(conn: &PgConnection) -> Result<(), Error> {
 
 fn main() -> Result<(), Error> {
     let url = "postgres://postgres:@localhost/books";
-    let conn = establish_connection(url);
+    let conn = establish_connection(url)?;
 
     insert_users(&conn)?;
     insert_books(&conn)?;

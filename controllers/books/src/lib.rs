@@ -7,30 +7,38 @@ pub mod schema;
 use crate::models::{books::Book, ratings::Rating, users::User};
 use crate::schema::{books, ratings, users};
 use anyhow::Error;
-use controller::{Controller, MapedRatings, Ratings};
+use controller::{make_hash, Controller, Id, MapedRatings, Ratings};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use std::collections::HashMap;
+use std::collections::{hash_map::RandomState, HashMap};
 
-pub fn establish_connection(url: &str) -> PgConnection {
-    PgConnection::establish(&url).unwrap_or_else(|_| panic!("Error connecting to {}", url))
+pub fn establish_connection(url: &str) -> Result<PgConnection, Error> {
+    Ok(PgConnection::establish(&url)?)
 }
 
 pub struct BooksController {
     pg_conn: PgConnection,
+    hasher_builder: RandomState,
 }
 
-impl Controller<User, Book> for BooksController {
-    fn new() -> Self {
+impl BooksController {
+    pub fn new() -> Result<Self, Error> {
         Self::with_url("postgres://postgres:@localhost/books")
     }
 
-    fn with_url(url: &str) -> Self {
-        let pg_conn = establish_connection(url);
-        Self { pg_conn }
+    pub fn with_url(url: &str) -> Result<Self, Error> {
+        let pg_conn = establish_connection(url)?;
+        Ok(Self {
+            pg_conn,
+            hasher_builder: Default::default(),
+        })
     }
+}
 
-    fn user_by_id(&self, id: i32) -> Result<User, Error> {
+impl Controller<User, Book> for BooksController {
+    fn user_by_id(&self, id: &Id) -> Result<User, Error> {
+        let id: i32 = id.parse()?;
+
         let user = users::table
             .filter(users::id.eq(id))
             .first::<User>(&self.pg_conn)?;
@@ -38,7 +46,9 @@ impl Controller<User, Book> for BooksController {
         Ok(user)
     }
 
-    fn item_by_id(&self, id: String) -> Result<Book, Error> {
+    fn item_by_id(&self, id: &Id) -> Result<Book, Error> {
+        let id = id.to_string();
+
         let movie = books::table
             .filter(books::id.eq(id))
             .first::<Book>(&self.pg_conn)?;
@@ -54,27 +64,32 @@ impl Controller<User, Book> for BooksController {
         Ok(books)
     }
 
-    fn ratings_by_user(&self, user: &User) -> Result<Ratings<String>, Error> {
+    fn ratings_by_user(&self, user: &User) -> Result<Ratings, Error> {
         let ratings: HashMap<_, _> = Rating::belonging_to(user)
             .load::<Rating>(&self.pg_conn)?
             .iter()
-            .map(|rating| (rating.book_id.clone(), rating.score))
+            .map(|rating| {
+                let book_id = make_hash(&self.hasher_builder, &rating.book_id);
+                (book_id, rating.score)
+            })
             .collect();
 
         Ok(ratings)
     }
 
-    fn ratings_except_for(&self, user: &User) -> Result<MapedRatings<i32, String>, Error> {
+    fn ratings_except_for(&self, user: &User) -> Result<MapedRatings, Error> {
         let ratings: Vec<Rating> = ratings::table
             .filter(ratings::user_id.is_distinct_from(user.id))
             .load(&self.pg_conn)?;
 
         let mut maped_ratings = HashMap::new();
         for rating in ratings {
+            let book_id = make_hash(&self.hasher_builder, &rating.book_id);
+
             maped_ratings
-                .entry(rating.user_id)
+                .entry(rating.user_id.into())
                 .or_insert_with(HashMap::new)
-                .insert(rating.book_id.clone(), rating.score);
+                .insert(book_id, rating.score);
         }
 
         Ok(maped_ratings)
@@ -89,20 +104,20 @@ mod tests {
 
     #[test]
     fn query_user_by_id() -> Result<(), Error> {
-        let controller = BooksController::new();
+        let controller = BooksController::new()?;
 
-        let user = controller.user_by_id(2)?;
-        assert_eq!(user.get_id(), 2);
+        let user = controller.user_by_id(&2.into())?;
+        assert_eq!(user.get_id(), 2.into());
 
         Ok(())
     }
 
     #[test]
     fn query_item_by_name() -> Result<(), Error> {
-        let controller = BooksController::new();
+        let controller = BooksController::new()?;
 
         let book = controller.item_by_name("Jane Doe")?;
-        assert_eq!(book[0].get_id(), "1552041778".to_string());
+        assert_eq!(book[0].get_id(), "1552041778".into());
 
         Ok(())
     }

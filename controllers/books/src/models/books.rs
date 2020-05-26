@@ -1,6 +1,6 @@
 use crate::schema::books;
 use common_macros::hash_map;
-use controller::Entity;
+use controller::{Entity, Id};
 use std::collections::HashMap;
 
 // To query data from the database
@@ -25,10 +25,8 @@ pub struct NewBook<'a> {
 }
 
 impl Entity for Book {
-    type Id = String;
-
-    fn get_id(&self) -> Self::Id {
-        self.id.clone()
+    fn get_id(&self) -> Id {
+        (&self.id).into()
     }
 
     fn get_data(&self) -> HashMap<String, String> {
