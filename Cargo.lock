@@ -366,10 +366,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "movie-lens"
+name = "movie-lens-small"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "common_macros",
  "controller",
  "csv",
  "diesel",
@@ -521,19 +522,24 @@ dependencies = [
 name = "recommend"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "assert_approx_eq",
+ "books",
  "common_macros",
  "controller",
  "criterion",
  "num-traits",
  "rand",
+ "simple-movie",
 ]
 
 [[package]]
 name = "recommendation-system"
 version = "0.1.0"
 dependencies = [
+ "books",
  "controller",
+ "movie-lens-small",
  "simple-movie",
 ]
 
