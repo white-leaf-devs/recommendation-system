@@ -2,7 +2,11 @@ use anyhow::Error;
 use diesel::pg::PgConnection;
 use diesel::{insert_into, prelude::*};
 use simple_movie::establish_connection;
-use simple_movie::models::{Movie, NewMovie, NewRating, NewUser, User};
+use simple_movie::models::{
+    movies::{Movie, NewMovie},
+    ratings::NewRating,
+    users::{NewUser, User},
+};
 use simple_movie::schema::{movies, ratings, users};
 
 fn create_movie(conn: &PgConnection, name: &str) -> Result<Movie, Error> {
