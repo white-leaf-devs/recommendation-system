@@ -12,9 +12,10 @@ members = [
 ]
 
 [dependencies]
+anyhow = "1"
 controller = { version = "*", path = "controller" }
-
-# Specific controllers
 books = { version = "*", path = "controllers/books" }
 movie-lens-small = { version = "*", path = "controllers/movie-lens-small" }
 simple-movie = { version = "*", path = "controllers/simple-movie" }
+text_io = "0.1"
+recommend = { version = "*", path = "recommend" }
