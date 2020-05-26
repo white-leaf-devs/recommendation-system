@@ -50,7 +50,7 @@ fn create_rating(
 
 fn main() -> Result<(), Error> {
     let url = "postgres://postgres:@localhost/simple-movie";
-    let conn = establish_connection(url);
+    let conn = establish_connection(url)?;
 
     let mut csv = csv::ReaderBuilder::new()
         .has_headers(false)
