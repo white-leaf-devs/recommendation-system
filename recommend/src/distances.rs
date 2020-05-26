@@ -7,6 +7,33 @@ use std::{
     ops::{AddAssign, Mul, MulAssign, Sub},
 };
 
+#[derive(Debug, Clone, Copy)]
+pub enum Method {
+    Manhattan,
+    Euclidean,
+    Minkowski(usize),
+    JaccardIndex,
+    JaccardDistance,
+    CosineSimilarity,
+    PearsonCorrelation,
+}
+
+pub fn distance<K, V>(lhs: &HashMap<K, V>, rhs: &HashMap<K, V>, method: Method) -> Option<V>
+where
+    K: Hash + Eq,
+    V: Real + AddAssign + Sub + Mul + MulAssign,
+{
+    match method {
+        Method::Manhattan => manhattan_distance(lhs, rhs),
+        Method::Euclidean => euclidean_distance(lhs, rhs),
+        Method::Minkowski(p) => minkowski_distance(lhs, rhs, p),
+        Method::JaccardIndex => jaccard_index(lhs, rhs),
+        Method::JaccardDistance => jaccard_distance(lhs, rhs),
+        Method::CosineSimilarity => cosine_similarity(lhs, rhs),
+        Method::PearsonCorrelation => pearson_correlation(lhs, rhs),
+    }
+}
+
 pub fn manhattan_distance<K, V>(lhs: &HashMap<K, V>, rhs: &HashMap<K, V>) -> Option<V>
 where
     K: Hash + Eq,
