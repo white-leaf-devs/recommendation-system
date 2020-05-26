@@ -6,5 +6,5 @@
 - [x] Pearson coefficient  
 - [x] Cosine similarity
 - [x] Jaccard index and distance
-- [ ] k nearest neighbors 
+- [x] k nearest neighbors 
 - [ ] Rating prediction based on pearson and k-nn
