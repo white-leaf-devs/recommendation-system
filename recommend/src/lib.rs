@@ -15,11 +15,35 @@
 // You should have received a copy of the GNU General Public License
 // along with recommend.  If not, see <http://www.gnu.org/licenses/>.
 
-pub mod record;
-pub mod table;
+//use controller::{Controller, Entity, Rating};
+//use std::marker::PhantomData;
+
+pub mod distances;
 
 pub enum Distance {
     Manhattan,
     Euclidean,
     Minkowski(usize),
+    CosineSimilarity,
+    PearsonCorrelation,
 }
+
+/*
+pub struct Engine<C, U, I, UId, IId>
+where
+    U: Entity<Id = UId>,
+    I: Entity<Id = IId>,
+    C: Controller<U, I>,
+{
+    controller: C,
+
+    _user: PhantomData<U>,
+    _item: PhantomData<I>,
+    _user_id: PhantomData<UId>,
+    _item_id: PhantomData<IId>,
+}
+
+impl<C, U, I, UI, II> Engine<C, U, I, UI, II> {
+    fn distance(&self, id_a: UI, id_b: UI) -> Option<f64> {}
+}
+*/

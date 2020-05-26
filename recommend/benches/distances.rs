@@ -17,10 +17,10 @@
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use rand::{thread_rng, Rng};
-use recommend::record::Record;
+use recommend::distances::{euclidean_distance, manhattan_distance};
 use std::collections::HashMap;
 
-fn generate_records(size: u64) -> (Record<f64>, Record<f64>) {
+fn generate_records(size: u64) -> (HashMap<u64, f64>, HashMap<u64, f64>) {
     let mut rng = thread_rng();
 
     let mut a = HashMap::new();
@@ -36,14 +36,14 @@ fn generate_records(size: u64) -> (Record<f64>, Record<f64>) {
         }
     }
 
-    (a.into(), b.into())
+    (a, b)
 }
 
 fn manhattan_distance_10000(c: &mut Criterion) {
     let (a, b) = generate_records(10000);
 
     c.bench_function("manhattan 10000 kinda", |bench| {
-        bench.iter(|| a.manhattan_distance(black_box(&b)))
+        bench.iter(|| manhattan_distance(black_box(&a), black_box(&b)))
     });
 }
 
@@ -51,7 +51,7 @@ fn manhattan_distance_100000(c: &mut Criterion) {
     let (a, b) = generate_records(100_000);
 
     c.bench_function("manhattan 100000 kinda", |bench| {
-        bench.iter(|| a.manhattan_distance(black_box(&b)))
+        bench.iter(|| manhattan_distance(black_box(&a), black_box(&b)))
     });
 }
 
@@ -59,7 +59,7 @@ fn euclidean_distance_10000(c: &mut Criterion) {
     let (a, b) = generate_records(10000);
 
     c.bench_function("euclidean 10000 kinda", |bench| {
-        bench.iter(|| a.euclidean_distance(black_box(&b)))
+        bench.iter(|| euclidean_distance(black_box(&a), black_box(&b)))
     });
 }
 
@@ -67,7 +67,7 @@ fn euclidean_distance_100000(c: &mut Criterion) {
     let (a, b) = generate_records(100_000);
 
     c.bench_function("euclidean 100000 kinda", |bench| {
-        bench.iter(|| a.euclidean_distance(black_box(&b)))
+        bench.iter(|| euclidean_distance(black_box(&a), black_box(&b)))
     });
 }
 
