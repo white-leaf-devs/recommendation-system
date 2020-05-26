@@ -4,80 +4,53 @@ extern crate diesel;
 pub mod models;
 pub mod schema;
 
-use crate::models::{CompleteUser, Movie, Rating, User};
+use crate::models::{movies::Movie, ratings::Rating, users::User};
 use crate::schema::{movies, ratings, users};
 use anyhow::Error;
-use controller::{error, Controller};
+use controller::{Controller, MapedRatings, Ratings};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use std::collections::HashMap;
 
 pub fn establish_connection(url: &str) -> PgConnection {
     PgConnection::establish(&url).unwrap_or_else(|_| panic!("Error connecting to {}", url))
 }
-
 pub struct SimpleMovieController {
     pg_conn: PgConnection,
 }
 
-impl Controller<CompleteUser, Movie> for SimpleMovieController {
-    fn with_url(url: &str) -> Self {
-        let pg_conn = establish_connection(url);
-        SimpleMovieController { pg_conn }
+impl Controller<User, Movie> for SimpleMovieController {
+    fn new() -> Self {
+        Self::with_url("postgres://postgres:@localhost/simple-movie")
     }
 
-    fn user_by_id(&self, id: i32) -> Result<CompleteUser, Error> {
+    fn with_url(url: &str) -> Self {
+        let pg_conn = establish_connection(url);
+        Self { pg_conn }
+    }
+
+    fn user_by_id(&self, id: i32) -> Result<User, Error> {
         let user = users::table
             .filter(users::id.eq(id))
-            .limit(1)
-            .load::<User>(&self.pg_conn)?
-            .get(0)
-            .cloned()
-            .ok_or_else(|| error::NotFoundById(id))?;
+            .first::<User>(&self.pg_conn)?;
 
-        let ratings = ratings::table
-            .filter(ratings::user_id.eq(id))
-            .load::<Rating>(&self.pg_conn)?
-            .iter()
-            .map(|rating| (rating.movie_id, rating.score))
-            .collect();
-
-        Ok(CompleteUser {
-            inner: user,
-            ratings,
-        })
+        Ok(user)
     }
 
     fn item_by_id(&self, id: i32) -> Result<Movie, Error> {
-        movies::table
+        let movie = movies::table
             .filter(movies::id.eq(id))
-            .limit(1)
-            .load(&self.pg_conn)?
-            .get(0)
-            .cloned()
-            .ok_or_else(|| error::NotFoundById(id).into())
+            .first::<Movie>(&self.pg_conn)?;
+
+        Ok(movie)
     }
 
-    fn user_by_name(&self, name: &str) -> Result<Vec<CompleteUser>, Error> {
-        let users: Vec<_> = users::table
+    fn user_by_name(&self, name: &str) -> Result<Vec<User>, Error> {
+        let users: Vec<User> = users::table
             .filter(users::name.eq(name))
-            .load::<User>(&self.pg_conn)?;
+            .load(&self.pg_conn)?;
 
-        let mut complete_users = Vec::new();
-        for user in users {
-            let ratings = ratings::table
-                .filter(ratings::user_id.eq(user.id))
-                .load::<Rating>(&self.pg_conn)?
-                .iter()
-                .map(|rating| (rating.movie_id, rating.score))
-                .collect();
-
-            complete_users.push(CompleteUser {
-                inner: user,
-                ratings,
-            });
-        }
-
-        Ok(complete_users)
+        Ok(users)
     }
 
     fn item_by_name(&self, name: &str) -> Result<Vec<Movie>, Error> {
@@ -88,77 +61,55 @@ impl Controller<CompleteUser, Movie> for SimpleMovieController {
         Ok(movies)
     }
 
-    fn all_users(&self) -> Result<Vec<CompleteUser>, Error> {
-        let users = users::table.load::<User>(&self.pg_conn)?;
+    fn ratings_by_user(&self, user: &User) -> Result<Ratings<i32>, Error> {
+        let ratings: HashMap<_, _> = Rating::belonging_to(user)
+            .load::<Rating>(&self.pg_conn)?
+            .iter()
+            .map(|rating| (rating.movie_id, rating.score))
+            .collect();
 
-        let mut complete_users = Vec::new();
-        for user in users {
-            let ratings = ratings::table
-                .filter(ratings::user_id.eq(user.id))
-                .load::<Rating>(&self.pg_conn)?
-                .iter()
-                .map(|rating| (rating.movie_id, rating.score))
-                .collect();
-
-            complete_users.push(CompleteUser {
-                inner: user,
-                ratings,
-            });
-        }
-
-        Ok(complete_users)
+        Ok(ratings)
     }
 
-    fn all_users_except(&self, id: i32) -> Result<Vec<CompleteUser>, Error> {
-        let users = users::table
-            .filter(users::id.is_distinct_from(id))
-            .load::<User>(&self.pg_conn)?;
+    fn ratings_except_for(&self, user: &User) -> Result<MapedRatings<i32, i32>, Error> {
+        let ratings: Vec<Rating> = ratings::table
+            .filter(ratings::user_id.is_distinct_from(user.id))
+            .load(&self.pg_conn)?;
 
-        let mut complete_users = Vec::new();
-        for user in users {
-            let ratings = ratings::table
-                .filter(ratings::user_id.eq(user.id))
-                .load::<Rating>(&self.pg_conn)?
-                .iter()
-                .map(|rating| (rating.movie_id, rating.score))
-                .collect();
-
-            complete_users.push(CompleteUser {
-                inner: user,
-                ratings,
-            });
+        let mut maped_ratings = HashMap::new();
+        for rating in ratings {
+            maped_ratings
+                .entry(rating.user_id)
+                .or_insert_with(HashMap::new)
+                .insert(rating.movie_id, rating.score);
         }
 
-        Ok(complete_users)
+        Ok(maped_ratings)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use controller::User;
+    use anyhow::Error;
+    use controller::Entity;
 
     #[test]
     fn query_user_by_id() -> Result<(), Error> {
-        let controller =
-            SimpleMovieController::with_url("postgres://postgres:@localhost/simple-movie");
+        let controller = SimpleMovieController::new();
 
         let user = controller.user_by_id(53)?;
-        assert_eq!(user.id(), 53);
+        assert_eq!(user.get_id(), 53);
 
         Ok(())
     }
 
     #[test]
     fn query_user_by_name() -> Result<(), Error> {
-        let controller =
-            SimpleMovieController::with_url("postgres://postgres:@localhost/simple-movie");
+        let controller = SimpleMovieController::new();
 
         let users = controller.user_by_name("Chris")?;
         assert_eq!(users.len(), 2);
-        for user in users {
-            assert_eq!(Some("Chris"), user.name());
-        }
 
         Ok(())
     }

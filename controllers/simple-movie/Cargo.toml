@@ -9,6 +9,7 @@ workspace = "../.."
 
 [dependencies]
 anyhow = "1"
+common_macros = "0.1"
 csv = "1"
 diesel = { version = "1", features = ["postgres"] }
 
