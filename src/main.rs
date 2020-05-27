@@ -5,7 +5,7 @@ use books::BooksController;
 use controller::{Controller, Entity};
 use movie_lens_small::MovieLensSmallController;
 use parser::{Database, Index, Statement};
-use recommend::Engine;
+use recommend::{Engine, MapedDistance};
 use simple_movie::SimpleMovieController;
 
 macro_rules! prompt {
@@ -51,6 +51,37 @@ where
     }
 }
 
+fn get_item<C, U, I>(controller: &C, index: &Index) -> Option<I>
+where
+    C: Controller<U, I>,
+    U: Entity,
+    I: Entity,
+{
+    match index {
+        Index::Id(id) => match controller.item_by_id(&id) {
+            Ok(item) => Some(item),
+            Err(e) => {
+                println!("{}", e);
+                None
+            }
+        },
+        Index::Name(name) => match controller.item_by_name(&name) {
+            Ok(items) => {
+                if let Some(item) = items.into_iter().next() {
+                    Some(item)
+                } else {
+                    println!("Failed to find by name, empty");
+                    None
+                }
+            }
+            Err(e) => {
+                println!("{}", e);
+                None
+            }
+        },
+    }
+}
+
 fn database_connected_prompt<C, U, I>(controller: C, name: &str) -> Result<(), Error>
 where
     C: Controller<U, I>,
@@ -79,26 +110,18 @@ where
 
                     Statement::QueryUser(index) => match index {
                         Index::Id(id) => match controller.user_by_id(&id) {
-                            Ok(user) => {
-                                println!("User with {:?}", user.get_id());
-                                for (key, val) in user.get_data() {
-                                    println!("- {}: {}", key, val);
-                                }
-                            }
+                            Ok(user) => println!("{}", user.to_table()),
                             Err(e) => println!("{}", e),
                         },
                         Index::Name(name) => match controller.user_by_name(&name) {
                             Ok(users) => {
                                 if users.is_empty() {
-                                    println!("Empty");
+                                    println!("Not found, empty result");
                                     continue;
                                 }
 
                                 for user in users {
-                                    println!("User with {:?}", user.get_id());
-                                    for (key, val) in user.get_data() {
-                                        println!("- {}: {}", key, val);
-                                    }
+                                    println!("{}", user.to_table());
                                 }
                             }
                             Err(e) => println!("{}", e),
@@ -107,26 +130,18 @@ where
 
                     Statement::QueryItem(index) => match index {
                         Index::Id(id) => match controller.item_by_id(&id) {
-                            Ok(item) => {
-                                println!("Item with {:?}", item.get_id());
-                                for (key, val) in item.get_data() {
-                                    println!("- {}: {}", key, val);
-                                }
-                            }
+                            Ok(item) => println!("{}", item.to_table()),
                             Err(e) => println!("{}", e),
                         },
                         Index::Name(name) => match controller.item_by_name(&name) {
                             Ok(items) => {
                                 if items.is_empty() {
-                                    println!("Empty");
+                                    println!("Not found, empty result");
                                     continue;
                                 }
 
                                 for item in items {
-                                    println!("Item with {:?}", item.get_id());
-                                    for (key, val) in item.get_data() {
-                                        println!("- {}: {}", key, val);
-                                    }
+                                    println!("{}", item.to_table());
                                 }
                             }
                             Err(e) => println!("{}", e),
@@ -146,11 +161,28 @@ where
 
                         match dist {
                             Some(dist) => println!("Distance is {}", dist),
-                            None => println!("Impossible to calculate distance"),
+                            None => println!("Failed to calculate distance"),
                         }
                     }
 
-                    Statement::KNN(_, _, _) => {}
+                    Statement::KNN(index, k, method) => {
+                        let user = get_user(&controller, &index);
+                        let knn = user.and_then(|user| engine.knn(&user, k, method));
+
+                        match knn {
+                            Some(knn) => {
+                                if knn.is_empty() {
+                                    println!("Empty result");
+                                    continue;
+                                }
+
+                                for MapedDistance(nn_id, dist) in knn {
+                                    println!("Distance with id({}) is {}", nn_id.0, dist);
+                                }
+                            }
+                            None => println!("Failed to calculate distance"),
+                        }
+                    }
                 },
                 None => println!("Invalid syntax"),
             },
