@@ -1,9 +1,5 @@
 use anyhow::Error;
-use std::{
-    collections::HashMap,
-    hash::{BuildHasher, Hash, Hasher},
-    ops::Deref,
-};
+use std::{collections::HashMap, hash::Hash, ops::Deref};
 
 use prettytable::{cell, format::consts::FORMAT_BOX_CHARS, row, table, Table};
 
@@ -24,13 +20,17 @@ impl Deref for Id {
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
-pub type Ratings = HashMap<u64, f64>;
+pub type Ratings = HashMap<Id, f64>;
 pub type MapedRatings = HashMap<Id, Ratings>;
 
-pub fn make_hash<H: BuildHasher, K: Hash>(hasher: &H, key: K) -> u64 {
-    let mut state = hasher.build_hasher();
-    key.hash(&mut state);
-    state.finish()
+pub fn ratings_to_table(map: &Ratings) -> Table {
+    let mut table = Table::new();
+    for (key, val) in map {
+        table.add_row(row![key.0, val]);
+    }
+
+    table.set_format(*FORMAT_BOX_CHARS);
+    table
 }
 
 pub trait Entity {
@@ -52,7 +52,6 @@ pub trait Entity {
 }
 
 pub trait Controller<U, I> {
-    fn make_hash<K: Hash>(&self, k: K) -> u64;
     fn user_by_id(&self, id: &Id) -> Result<U>;
     fn item_by_id(&self, id: &Id) -> Result<I>;
     fn ratings_by_user(&self, user: &U) -> Result<Ratings>;

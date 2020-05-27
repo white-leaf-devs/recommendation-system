@@ -10,10 +10,7 @@ use anyhow::Error;
 use controller::{Controller, Id, MapedRatings, Ratings};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use std::{
-    collections::{hash_map::RandomState, HashMap},
-    hash::Hash,
-};
+use std::collections::HashMap;
 
 pub fn establish_connection(url: &str) -> Result<PgConnection, Error> {
     Ok(PgConnection::establish(&url)?)
@@ -21,7 +18,6 @@ pub fn establish_connection(url: &str) -> Result<PgConnection, Error> {
 
 pub struct BooksController {
     pg_conn: PgConnection,
-    hasher_builder: RandomState,
 }
 
 impl BooksController {
@@ -31,18 +27,11 @@ impl BooksController {
 
     pub fn with_url(url: &str) -> Result<Self, Error> {
         let pg_conn = establish_connection(url)?;
-        Ok(Self {
-            pg_conn,
-            hasher_builder: Default::default(),
-        })
+        Ok(Self { pg_conn })
     }
 }
 
 impl Controller<User, Book> for BooksController {
-    fn make_hash<K: Hash>(&self, k: K) -> u64 {
-        controller::make_hash(&self.hasher_builder, k)
-    }
-
     fn user_by_id(&self, id: &Id) -> Result<User, Error> {
         let id: i32 = id.parse()?;
 
@@ -75,10 +64,7 @@ impl Controller<User, Book> for BooksController {
         let ratings: HashMap<_, _> = Rating::belonging_to(user)
             .load::<Rating>(&self.pg_conn)?
             .iter()
-            .map(|rating| {
-                let book_id = self.make_hash(&rating.book_id);
-                (book_id, rating.score)
-            })
+            .map(|rating| ((&rating.book_id).into(), rating.score))
             .collect();
 
         Ok(ratings)
@@ -91,12 +77,10 @@ impl Controller<User, Book> for BooksController {
 
         let mut maped_ratings = HashMap::new();
         for rating in ratings {
-            let book_id = self.make_hash(&rating.book_id);
-
             maped_ratings
                 .entry(rating.user_id.into())
                 .or_insert_with(HashMap::new)
-                .insert(book_id, rating.score);
+                .insert(rating.book_id.into(), rating.score);
         }
 
         Ok(maped_ratings)
