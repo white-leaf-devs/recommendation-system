@@ -26,7 +26,7 @@ use std::{
 };
 
 #[derive(Debug, Clone)]
-pub struct MapedDistance(Id, f64);
+pub struct MapedDistance(pub Id, pub f64);
 
 impl PartialEq for MapedDistance {
     fn eq(&self, other: &Self) -> bool {
