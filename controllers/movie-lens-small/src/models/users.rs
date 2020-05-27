@@ -1,5 +1,5 @@
 use crate::schema::users;
-use controller::{Entity, Id};
+use controller::Entity;
 
 // To query data from the database
 #[derive(Debug, Clone, Identifiable, Queryable)]
@@ -9,8 +9,8 @@ pub struct User {
 
 // To insert a new user into the database
 impl Entity for User {
-    fn get_id(&self) -> Id {
-        self.id.into()
+    fn get_id(&self) -> String {
+        self.id.to_string()
     }
 }
 

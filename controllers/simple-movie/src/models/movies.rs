@@ -1,6 +1,6 @@
 use crate::schema::movies;
 use common_macros::hash_map;
-use controller::{Entity, Id};
+use controller::Entity;
 use std::collections::HashMap;
 
 // To query data from the database
@@ -11,8 +11,8 @@ pub struct Movie {
 }
 
 impl Entity for Movie {
-    fn get_id(&self) -> Id {
-        self.id.into()
+    fn get_id(&self) -> String {
+        self.id.to_string()
     }
 
     fn get_data(&self) -> HashMap<String, String> {

@@ -1,6 +1,6 @@
 use crate::schema::users;
 use common_macros::hash_map;
-use controller::{Entity, Id};
+use controller::Entity;
 use std::collections::HashMap;
 
 // To query data from the database
@@ -12,8 +12,8 @@ pub struct User {
 }
 
 impl Entity for User {
-    fn get_id(&self) -> Id {
-        self.id.into()
+    fn get_id(&self) -> String {
+        self.id.to_string()
     }
 
     fn get_data(&self) -> HashMap<String, String> {
