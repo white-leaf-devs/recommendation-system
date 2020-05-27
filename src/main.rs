@@ -2,9 +2,9 @@ pub mod parser;
 
 use anyhow::Error;
 use books::BooksController;
-use controller::{ratings_to_table, Controller, Entity};
+use controller::{Controller, Entity, ToTable};
 use movie_lens_small::MovieLensSmallController;
-use parser::{Database, Index, Statement};
+use parser::{Database, Statement};
 use recommend::{Engine, MapedDistance};
 use simple_movie::SimpleMovieController;
 
@@ -33,76 +33,18 @@ macro_rules! prompt {
             }
 
             Err(ReadlineError::Eof) => {
-                println!("Bye!");
+                if $db.is_empty() {
+                    println!("Exiting...Good bye!");
+                } else {
+                    println!("Disconnecting from {}", $db);
+                }
+
                 break;
             }
 
             Err(e) => Err(e),
         }
     }};
-}
-
-fn get_user<C, U, I>(controller: &C, index: &Index) -> Option<U>
-where
-    C: Controller<U, I>,
-    U: Entity,
-    I: Entity,
-{
-    match index {
-        Index::Id(id) => match controller.user_by_id(&id) {
-            Ok(user) => Some(user),
-            Err(e) => {
-                println!("{}", e);
-                None
-            }
-        },
-        Index::Name(name) => match controller.user_by_name(&name) {
-            Ok(users) => {
-                if let Some(user) = users.into_iter().next() {
-                    Some(user)
-                } else {
-                    println!("Failed to find by name, empty");
-                    None
-                }
-            }
-            Err(e) => {
-                println!("{}", e);
-                None
-            }
-        },
-    }
-}
-
-fn get_item<C, U, I>(controller: &C, index: &Index) -> Option<I>
-where
-    C: Controller<U, I>,
-    U: Entity,
-    I: Entity,
-{
-    match index {
-        Index::Id(id) => match controller.item_by_id(&id) {
-            Ok(item) => Some(item),
-            Err(e) => {
-                println!("{}", e);
-                None
-            }
-        },
-        Index::Name(name) => match controller.item_by_name(&name) {
-            Ok(items) => {
-                if let Some(item) = items.into_iter().next() {
-                    Some(item)
-                } else {
-                    println!("Failed to find by name, empty");
-                    None
-                }
-            }
-
-            Err(e) => {
-                println!("{}", e);
-                None
-            }
-        },
-    }
 }
 
 fn database_connected_prompt<C, U, I>(controller: C, name: &str) -> Result<(), Error>
@@ -128,75 +70,54 @@ where
                 break;
             }
 
+            "v" | "version" => {
+                println!("version: {}", VERSION);
+            }
+
             line => match parser::parse_line(line) {
                 Some(stmt) => match stmt {
                     Statement::Connect(_) => println!("Invalid in this context!"),
 
-                    Statement::QueryUser(index) => match index {
-                        Index::Id(id) => match controller.user_by_id(&id) {
-                            Ok(user) => println!("{}", user.to_table()),
-                            Err(e) => println!("{}", e),
-                        },
-                        Index::Name(name) => match controller.user_by_name(&name) {
-                            Ok(users) => {
-                                if users.is_empty() {
-                                    println!("Not found, empty result");
-                                    continue;
-                                }
-
-                                for user in users {
-                                    println!("{}", user.to_table());
-                                }
+                    Statement::QueryUser(searchby) => match controller.users(&searchby) {
+                        Ok(users) => {
+                            for user in users {
+                                println!("{}", user.to_table());
                             }
-                            Err(e) => println!("{}", e),
-                        },
-                    },
-
-                    Statement::QueryItem(index) => match index {
-                        Index::Id(id) => match controller.item_by_id(&id) {
-                            Ok(item) => println!("{}", item.to_table()),
-                            Err(e) => println!("{}", e),
-                        },
-                        Index::Name(name) => match controller.item_by_name(&name) {
-                            Ok(items) => {
-                                if items.is_empty() {
-                                    println!("Not found, empty result");
-                                    continue;
-                                }
-
-                                for item in items {
-                                    println!("{}", item.to_table());
-                                }
-                            }
-                            Err(e) => println!("{}", e),
-                        },
-                    },
-
-                    Statement::QueryRatings(index) => {
-                        let ratings = get_user(&controller, &index)
-                            .map(|user| controller.ratings_by_user(&user));
-
-                        match ratings {
-                            Some(Ok(ratings)) => {
-                                if ratings.is_empty() {
-                                    println!("Result is empty");
-                                    continue;
-                                }
-
-                                println!("{}", ratings_to_table(&ratings));
-                            }
-                            Some(Err(e)) => println!("{}", e),
-                            _ => println!("Not found, empty result"),
                         }
-                    }
+                        Err(e) => println!("{}", e),
+                    },
 
-                    Statement::Distance(index_a, index_b, method) => {
-                        let user_a = get_user(&controller, &index_a);
-                        let user_b = get_user(&controller, &index_b);
+                    Statement::QueryItem(searchby) => match controller.items(&searchby) {
+                        Ok(items) => {
+                            for item in items {
+                                println!("{}", item.to_table());
+                            }
+                        }
+                        Err(e) => println!("{}", e),
+                    },
 
-                        let dist = match (user_a, user_b) {
-                            (Some(user_a), Some(user_b)) => {
-                                engine.distance(&user_a, &user_b, method)
+                    Statement::QueryRatings(searchby) => match controller.users(&searchby) {
+                        Ok(users) => {
+                            for user in users {
+                                if let Ok(ratings) = controller.ratings_by(&user) {
+                                    if !ratings.is_empty() {
+                                        println!("{}", ratings.to_table());
+                                    } else {
+                                        println!("No ratings found for id({})", user.get_id());
+                                    }
+                                }
+                            }
+                        }
+                        Err(e) => println!("{}", e),
+                    },
+
+                    Statement::Distance(searchby_a, searchby_b, method) => {
+                        let users_a = controller.users(&searchby_a);
+                        let users_b = controller.users(&searchby_b);
+
+                        let dist = match (users_a, users_b) {
+                            (Ok(users_a), Ok(users_b)) => {
+                                engine.distance(&users_a[0], &users_b[0], method)
                             }
                             (_, _) => None,
                         };
@@ -207,37 +128,48 @@ where
                         }
                     }
 
-                    Statement::KNN(k, index, method) => {
-                        let knn = get_user(&controller, &index)
-                            .and_then(|user| engine.knn(k, &user, method));
+                    Statement::KNN(k, searchby, method) => {
+                        let users = controller.users(&searchby);
+                        let knn = match users {
+                            Ok(users) => engine.knn(k, &users[0], method),
+
+                            Err(e) => {
+                                println!("{}", e);
+                                continue;
+                            }
+                        };
 
                         match knn {
                             Some(knn) => {
                                 if knn.is_empty() {
-                                    println!("Empty result");
+                                    println!("Couldn't found {} neighbours", k);
                                     continue;
                                 }
 
                                 for MapedDistance(nn_id, dist) in knn {
-                                    println!("Distance with id({}) is {}", nn_id.0, dist);
+                                    println!("Distance with id({}) is {}", nn_id, dist);
                                 }
                             }
-                            None => println!("Failed to calculate distance"),
+
+                            None => println!("Failed to calculate {} nearest neighbors", k),
                         }
                     }
 
-                    Statement::Predict(k, index_user, index_item, method) => {
-                        let user = get_user(&controller, &index_user);
-                        let item = get_item(&controller, &index_item);
+                    Statement::Predict(k, searchby_user, searchby_item, method) => {
+                        let users = controller.users(&searchby_user);
+                        let items = controller.items(&searchby_item);
 
-                        let prediction = match (user, item) {
-                            (Some(user), Some(item)) => engine.predict(k, &user, &item, method),
+                        let prediction = match (users, items) {
+                            (Ok(users), Ok(items)) => {
+                                engine.predict(k, &users[0], &items[0], method)
+                            }
+
                             _ => None,
                         };
 
                         match prediction {
                             Some(predicted) => println!("Predicted value is {}", predicted),
-                            None => println!("Failed to predict, maybe one is missing"),
+                            None => println!("Failed to predict an score"),
                         }
                     }
                 },
@@ -271,6 +203,10 @@ fn main() -> Result<(), Error> {
             "q" | "quit" => {
                 println!("Bye!");
                 break;
+            }
+
+            "v" | "version" => {
+                println!("version: {}", VERSION);
             }
 
             empty if empty.is_empty() => {}
