@@ -16,6 +16,7 @@ pub enum Method {
     JaccardDistance,
     CosineSimilarity,
     PearsonCorrelation,
+    PearsonApproximation,
 }
 
 pub fn distance<K, V>(lhs: &HashMap<K, V>, rhs: &HashMap<K, V>, method: Method) -> Option<V>
@@ -31,6 +32,7 @@ where
         Method::JaccardDistance => jaccard_distance(lhs, rhs),
         Method::CosineSimilarity => cosine_similarity(lhs, rhs),
         Method::PearsonCorrelation => pearson_correlation(lhs, rhs),
+        Method::PearsonApproximation => pearson_approximation(lhs, rhs),
     }
 }
 
@@ -113,7 +115,7 @@ where
 pub fn cosine_similarity<K, V>(lhs: &HashMap<K, V>, rhs: &HashMap<K, V>) -> Option<V>
 where
     K: Hash + Eq,
-    V: Real + AddAssign + Sub + Mul + MulAssign,
+    V: Real + AddAssign + Sub + Mul,
 {
     let mut a_norm = None;
     let mut b_norm = None;
@@ -123,19 +125,18 @@ where
         if let Some(y) = rhs.get(key) {
             *a_norm.get_or_insert_with(V::zero) += x.powi(2);
             *b_norm.get_or_insert_with(V::zero) += y.powi(2);
-            *dot_prod.get_or_insert_with(V::one) += (*x) * (*y);
+            *dot_prod.get_or_insert_with(V::zero) += (*x) * (*y);
         }
     }
 
     let norm = a_norm?.sqrt() * b_norm?.sqrt();
-
     Some(dot_prod? / norm)
 }
 
 pub fn pearson_correlation<K, V>(lhs: &HashMap<K, V>, rhs: &HashMap<K, V>) -> Option<V>
 where
     K: Hash + Eq,
-    V: Real + AddAssign + Sub + Mul + MulAssign,
+    V: Real + AddAssign + Sub + Mul,
 {
     let mut mean_x = None;
     let mut mean_y = None;
@@ -149,8 +150,9 @@ where
         }
     }
 
-    let mean_x = mean_x? / V::from(total)?;
-    let mean_y = mean_y? / V::from(total)?;
+    let total = V::from(total)?;
+    let mean_x = mean_x? / total;
+    let mean_y = mean_y? / total;
 
     let mut cov = None;
     let mut std_dev_a = None;
@@ -158,15 +160,53 @@ where
 
     for (key, x) in lhs {
         if let Some(y) = rhs.get(key) {
-            *cov.get_or_insert_with(V::one) *= (*x - mean_x) * (*y - mean_y);
+            *cov.get_or_insert_with(V::zero) += (*x - mean_x) * (*y - mean_y);
             *std_dev_a.get_or_insert_with(V::zero) += (*x - mean_x).powi(2);
             *std_dev_b.get_or_insert_with(V::zero) += (*y - mean_y).powi(2);
         }
     }
 
-    let std_dev = (std_dev_a? * std_dev_b?).sqrt();
+    let std_dev = std_dev_a?.sqrt() * std_dev_b?.sqrt();
 
     Some(cov? / std_dev)
+}
+
+fn pearson_approximation<K, V>(lhs: &HashMap<K, V>, rhs: &HashMap<K, V>) -> Option<V>
+where
+    K: Hash + Eq,
+    V: Real + AddAssign + Sub + Mul,
+{
+    let mut sum_x = None;
+    let mut sum_y = None;
+    let mut sum_x_sq = None;
+    let mut sum_y_sq = None;
+    let mut dot_prod = None;
+    let mut total = 0;
+
+    for (key, x) in lhs {
+        if let Some(y) = rhs.get(key) {
+            *sum_x.get_or_insert_with(V::zero) += *x;
+            *sum_y.get_or_insert_with(V::zero) += *y;
+            *sum_x_sq.get_or_insert_with(V::zero) += x.powi(2);
+            *sum_y_sq.get_or_insert_with(V::zero) += y.powi(2);
+            *dot_prod.get_or_insert_with(V::zero) += (*x) * (*y);
+            total += 1;
+        }
+    }
+
+    if total == 0 {
+        return None;
+    }
+
+    let total = V::from(total)?;
+
+    let num = dot_prod? - (sum_x? * sum_y?) / total;
+
+    let dem_x = sum_x_sq? - sum_x?.powi(2) / total;
+    let dem_y = sum_y_sq? - sum_y?.powi(2) / total;
+    let dem = dem_x.sqrt() * dem_y.sqrt();
+
+    Some(num / dem)
 }
 
 #[cfg(test)]
