@@ -1,4 +1,4 @@
-use controller::Id;
+use controller::SearchBy;
 use nom::{alt, char, delimited, tag, take_while, take_while1, tuple, IResult};
 use recommend::distances::Method;
 
@@ -21,38 +21,22 @@ impl From<&str> for Database {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum Index {
-    Id(Id),
-    Name(String),
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Statement {
     Connect(Database),
-    QueryUser(Index),
-    QueryItem(Index),
-    QueryRatings(Index),
-    Distance(Index, Index, Method),
-    KNN(usize, Index, Method),
-    Predict(usize, Index, Index, Method),
-}
-
-#[inline(always)]
-fn ident(c: char) -> bool {
-    c.is_alphanumeric() || c == '_' || c == ' '
-}
-
-#[inline(always)]
-fn database(c: char) -> bool {
-    c.is_alphanumeric() || c == '_' || c == '-'
+    QueryUser(SearchBy),
+    QueryItem(SearchBy),
+    QueryRatings(SearchBy),
+    Distance(SearchBy, SearchBy, Method),
+    KNN(usize, SearchBy, Method),
+    Predict(usize, SearchBy, SearchBy, Method),
 }
 
 fn parse_ident(input: &str) -> IResult<&str, &str> {
-    take_while1!(input, ident)
+    take_while1!(input, |c: char| c.is_alphanumeric() || c == '_' || c == '-')
 }
 
-fn parse_database(input: &str) -> IResult<&str, &str> {
-    take_while1!(input, database)
+fn parse_string(input: &str) -> IResult<&str, &str> {
+    take_while1!(input, |c: char| c.is_alphanumeric() || c == '_' || c == ' ')
 }
 
 fn parse_number(input: &str) -> IResult<&str, &str> {
@@ -102,19 +86,14 @@ fn parse_method(input: &str) -> IResult<&str, Method> {
     Ok((input, method))
 }
 
-fn parse_index(input: &str) -> IResult<&str, Index> {
-    let (input, index_type) = alt! {
-        input,
-        tag!("id") |
-        tag!("name")
-    }?;
+fn parse_searchby(input: &str) -> IResult<&str, SearchBy> {
+    let (input, ident) = parse_ident(input)?;
+    let (input, value) = delimited!(input, char!('('), parse_string, char!(')'))?;
 
-    let (input, index) = delimited!(input, char!('('), parse_ident, char!(')'))?;
-
-    let index = match index_type {
-        "id" => Index::Id(index.into()),
-        "name" => Index::Name(index.into()),
-        _ => unreachable!(),
+    let index = match ident {
+        "id" => SearchBy::id(value),
+        "name" => SearchBy::name(value),
+        custom => SearchBy::custom(custom, value),
     };
 
     Ok((input, index))
@@ -134,22 +113,22 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
 
     let (input, statement) = match statement_type {
         "connect" => {
-            let (input, database) = delimited!(input, char!('('), parse_database, char!(')'))?;
+            let (input, database) = delimited!(input, char!('('), parse_ident, char!(')'))?;
             (input, Statement::Connect(database.into()))
         }
 
         "query_user" => {
-            let (input, index) = delimited!(input, char!('('), parse_index, char!(')'))?;
+            let (input, index) = delimited!(input, char!('('), parse_searchby, char!(')'))?;
             (input, Statement::QueryUser(index))
         }
 
         "query_item" => {
-            let (input, index) = delimited!(input, char!('('), parse_index, char!(')'))?;
+            let (input, index) = delimited!(input, char!('('), parse_searchby, char!(')'))?;
             (input, Statement::QueryItem(index))
         }
 
         "query_ratings" => {
-            let (input, index) = delimited!(input, char!('('), parse_index, char!(')'))?;
+            let (input, index) = delimited!(input, char!('('), parse_searchby, char!(')'))?;
             (input, Statement::QueryRatings(index))
         }
 
@@ -158,9 +137,9 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
                 input,
                 char!('('),
                 tuple!(
-                    parse_index,
+                    parse_searchby,
                     parse_separator,
-                    parse_index,
+                    parse_searchby,
                     parse_separator,
                     parse_method
                 ),
@@ -177,7 +156,7 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
                 tuple!(
                     parse_number,
                     parse_separator,
-                    parse_index,
+                    parse_searchby,
                     parse_separator,
                     parse_method
                 ),
@@ -194,9 +173,9 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
                 tuple!(
                     parse_number,
                     parse_separator,
-                    parse_index,
+                    parse_searchby,
                     parse_separator,
-                    parse_index,
+                    parse_searchby,
                     parse_separator,
                     parse_method
                 ),
@@ -209,7 +188,7 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
             )
         }
 
-        function => todo!("Function {}", function),
+        function => unimplemented!("Unimplemented parser for {}", function),
     };
 
     Ok((input, statement))
@@ -232,21 +211,21 @@ mod tests {
 
     #[test]
     fn index_tests() {
-        let parsed = parse_index("id(323)");
-        let expected = ("", Index::Id(323.into()));
+        let parsed = parse_searchby("id(323)");
+        let expected = ("", SearchBy::id("323"));
 
         assert_eq!(parsed, Ok(expected));
 
-        let parsed = parse_index("name(Patrick C)");
-        let expected = ("", Index::Name("Patrick C".into()));
+        let parsed = parse_searchby("name(Patrick C)");
+        let expected = ("", SearchBy::name("Patrick C"));
 
         assert_eq!(parsed, Ok(expected));
     }
 
     #[test]
     fn connect_statement() {
-        let parsed = parse_statement("connect(books)");
-        let expected = ("", Statement::Connect(Database::Books));
+        let parsed = parse_statement("connect(simple-movie)");
+        let expected = ("", Statement::Connect(Database::SimpleMovie));
 
         assert_eq!(parsed, Ok(expected));
     }
@@ -254,12 +233,12 @@ mod tests {
     #[test]
     fn query_user_statement() {
         let parsed = parse_statement("query_user(id(3))");
-        let expected = ("", Statement::QueryUser(Index::Id(3.into())));
+        let expected = ("", Statement::QueryUser(SearchBy::id("3")));
 
         assert_eq!(parsed, Ok(expected));
 
         let parsed = parse_statement("query_user(name(Patrick C))");
-        let expected = ("", Statement::QueryUser(Index::Name("Patrick C".into())));
+        let expected = ("", Statement::QueryUser(SearchBy::name("Patrick C")));
 
         assert_eq!(parsed, Ok(expected));
     }
@@ -267,15 +246,12 @@ mod tests {
     #[test]
     fn query_item_statement() {
         let parsed = parse_statement("query_item(id(bx32a))");
-        let expected = ("", Statement::QueryItem(Index::Id("bx32a".into())));
+        let expected = ("", Statement::QueryItem(SearchBy::id("bx32a")));
 
         assert_eq!(parsed, Ok(expected));
 
         let parsed = parse_statement("query_item(name(The Great Gatsby))");
-        let expected = (
-            "",
-            Statement::QueryItem(Index::Name("The Great Gatsby".into())),
-        );
+        let expected = ("", Statement::QueryItem(SearchBy::name("The Great Gatsby")));
 
         assert_eq!(parsed, Ok(expected));
     }
@@ -283,12 +259,12 @@ mod tests {
     #[test]
     fn query_ratings_statement() {
         let parsed = parse_statement("query_ratings(id(12345))");
-        let expected = ("", Statement::QueryRatings(Index::Id(12345.into())));
+        let expected = ("", Statement::QueryRatings(SearchBy::id("12345")));
 
         assert_eq!(parsed, Ok(expected));
 
         let parsed = parse_statement("query_ratings(name(Patrick C))");
-        let expected = ("", Statement::QueryRatings(Index::Name("Patrick C".into())));
+        let expected = ("", Statement::QueryRatings(SearchBy::name("Patrick C")));
 
         assert_eq!(parsed, Ok(expected));
     }
@@ -298,11 +274,7 @@ mod tests {
         let parsed = parse_statement("distance(id(32a), id(32b), euclidean)");
         let expected = (
             "",
-            Statement::Distance(
-                Index::Id("32a".into()),
-                Index::Id("32b".into()),
-                Method::Euclidean,
-            ),
+            Statement::Distance(SearchBy::id("32a"), SearchBy::id("32b"), Method::Euclidean),
         );
 
         assert_eq!(parsed, Ok(expected));
@@ -310,10 +282,10 @@ mod tests {
 
     #[test]
     fn knn_statement() {
-        let parsed = parse_statement("knn(id(324x), 4, minkowski(3))");
+        let parsed = parse_statement("knn(4, id(324x), minkowski(3))");
         let expected = (
             "",
-            Statement::KNN(4, Index::Id("324x".into()), Method::Minkowski(3)),
+            Statement::KNN(4, SearchBy::id("324x"), Method::Minkowski(3)),
         );
 
         assert_eq!(parsed, Ok(expected));
@@ -327,12 +299,12 @@ mod tests {
 
     #[test]
     fn parse_valid_line() {
-        let parsed = parse_line("knn(name(Patrick C), 5, cosine)");
+        let parsed = parse_line("knn(5, name(Patrick C), cosine)");
         assert_eq!(
             parsed,
             Some(Statement::KNN(
                 5,
-                Index::Name("Patrick C".into()),
+                SearchBy::name("Patrick C"),
                 Method::CosineSimilarity
             ))
         );
