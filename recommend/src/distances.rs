@@ -7,7 +7,7 @@ use std::{
     ops::{AddAssign, Mul, MulAssign, Sub},
 };
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Method {
     Manhattan,
     Euclidean,
