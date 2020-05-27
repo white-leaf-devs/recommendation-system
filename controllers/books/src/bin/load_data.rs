@@ -3,7 +3,7 @@ use books::establish_connection;
 use books::models::{books::NewBook, ratings::NewRating, users::NewUser};
 use books::schema::{books as books_sc, ratings, users};
 use books::BooksController;
-use controller::Controller;
+use controller::{Controller, SearchBy};
 use diesel::pg::PgConnection;
 use diesel::{insert_into, prelude::*};
 use indicatif::ProgressIterator;
@@ -93,9 +93,10 @@ fn insert_ratings(conn: &PgConnection) -> Result<(), Error> {
             let book_id = &record[1];
             let score: f64 = record[2].parse()?;
 
-            let book_res = controller.item_by_id(&book_id.into());
-            if book_res.is_err() {
-                continue;
+            match controller.items(&SearchBy::name(&book_id)) {
+                Ok(books) if books.is_empty() => continue,
+                Err(_) => continue,
+                Ok(_) => {}
             }
 
             ratings.push(NewRating {

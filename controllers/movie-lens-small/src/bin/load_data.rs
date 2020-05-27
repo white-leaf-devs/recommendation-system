@@ -1,5 +1,5 @@
 use anyhow::Error;
-use controller::Controller;
+use controller::{Controller, SearchBy};
 use diesel::pg::PgConnection;
 use diesel::{insert_into, prelude::*};
 use indicatif::ProgressIterator;
@@ -68,9 +68,10 @@ fn insert_ratings(conn: &PgConnection) -> Result<(), Error> {
             let movie_id: i32 = record[1].parse()?;
             let score: f64 = record[2].parse()?;
 
-            let book_res = controller.item_by_id(&movie_id.into());
-            if book_res.is_err() {
-                continue;
+            match controller.items(&SearchBy::id(&movie_id.to_string())) {
+                Ok(movies) if movies.is_empty() => continue,
+                Err(_) => continue,
+                Ok(_) => {}
             }
 
             ratings.push(NewRating {

@@ -7,7 +7,7 @@ pub mod schema;
 use crate::models::{movies::Movie, ratings::Rating, users::User};
 use crate::schema::{movies, ratings, users};
 use anyhow::Error;
-use controller::{Controller, Id, MapedRatings, Ratings};
+use controller::{error::ErrorKind, Controller, MapedRatings, Ratings, SearchBy};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use std::collections::HashMap;
@@ -32,53 +32,79 @@ impl SimpleMovieController {
 }
 
 impl Controller<User, Movie> for SimpleMovieController {
-    fn user_by_id(&self, id: &Id) -> Result<User, Error> {
-        let id: i32 = id.parse()?;
+    fn users(&self, by: &SearchBy) -> Result<Vec<User>, Error> {
+        match by {
+            SearchBy::Id(id) => {
+                let id: i32 = id.parse()?;
 
-        let user = users::table
-            .filter(users::id.eq(id))
-            .first::<User>(&self.pg_conn)?;
+                let users = users::table.filter(users::id.eq(id)).load(&self.pg_conn)?;
 
-        Ok(user)
+                if users.is_empty() {
+                    Err(ErrorKind::NotFoundById(id.to_string()).into())
+                } else {
+                    Ok(users)
+                }
+            }
+
+            SearchBy::Name(name) => {
+                let users = users::table
+                    .filter(users::name.eq(name))
+                    .load(&self.pg_conn)?;
+
+                if users.is_empty() {
+                    Err(ErrorKind::NotFoundByName(name.clone()).into())
+                } else {
+                    Ok(users)
+                }
+            }
+
+            SearchBy::Custom(k, v) => Err(ErrorKind::NotFoundByCustom(k.clone(), v.clone()).into()),
+        }
     }
 
-    fn item_by_id(&self, id: &Id) -> Result<Movie, Error> {
-        let id: i32 = id.parse()?;
+    fn items(&self, by: &SearchBy) -> Result<Vec<Movie>, Error> {
+        match by {
+            SearchBy::Id(id) => {
+                let id: i32 = id.parse()?;
 
-        let movie = movies::table
-            .filter(movies::id.eq(id))
-            .first::<Movie>(&self.pg_conn)?;
+                let movies = movies::table
+                    .filter(movies::id.eq(id))
+                    .load(&self.pg_conn)?;
 
-        Ok(movie)
+                if movies.is_empty() {
+                    Err(ErrorKind::NotFoundById(id.to_string()).into())
+                } else {
+                    Ok(movies)
+                }
+            }
+
+            SearchBy::Name(name) => {
+                let movies = movies::table
+                    .filter(movies::name.eq(name))
+                    .load(&self.pg_conn)?;
+
+                if movies.is_empty() {
+                    Err(ErrorKind::NotFoundByName(name.clone()).into())
+                } else {
+                    Ok(movies)
+                }
+            }
+
+            SearchBy::Custom(k, v) => Err(ErrorKind::NotFoundByCustom(k.clone(), v.clone()).into()),
+        }
     }
 
-    fn user_by_name(&self, name: &str) -> Result<Vec<User>, Error> {
-        let users: Vec<User> = users::table
-            .filter(users::name.eq(name))
-            .load(&self.pg_conn)?;
-
-        Ok(users)
-    }
-
-    fn item_by_name(&self, name: &str) -> Result<Vec<Movie>, Error> {
-        let movies: Vec<Movie> = movies::table
-            .filter(movies::name.eq(name))
-            .load(&self.pg_conn)?;
-
-        Ok(movies)
-    }
-
-    fn ratings_by_user(&self, user: &User) -> Result<Ratings, Error> {
-        let ratings: HashMap<_, _> = Rating::belonging_to(user)
+    fn ratings_by(&self, user: &User) -> Result<Ratings, Error> {
+        let ratings = Rating::belonging_to(user)
             .load::<Rating>(&self.pg_conn)?
             .iter()
-            .map(|rating| (rating.movie_id.into(), rating.score))
+            .map(|rating| (rating.movie_id.to_string(), rating.score))
             .collect();
 
         Ok(ratings)
     }
 
-    fn ratings_except_for(&self, user: &User) -> Result<MapedRatings, Error> {
+    fn ratings_except(&self, user: &User) -> Result<MapedRatings, Error> {
         let ratings: Vec<Rating> = ratings::table
             .filter(ratings::user_id.is_distinct_from(user.id))
             .load(&self.pg_conn)?;
@@ -86,9 +112,9 @@ impl Controller<User, Movie> for SimpleMovieController {
         let mut maped_ratings = HashMap::new();
         for rating in ratings {
             maped_ratings
-                .entry(rating.user_id.into())
+                .entry(rating.user_id.to_string())
                 .or_insert_with(HashMap::new)
-                .insert(rating.movie_id.into(), rating.score);
+                .insert(rating.movie_id.to_string(), rating.score);
         }
 
         Ok(maped_ratings)
@@ -105,8 +131,8 @@ mod tests {
     fn query_user_by_id() -> Result<(), Error> {
         let controller = SimpleMovieController::new()?;
 
-        let user = controller.user_by_id(&53.into())?;
-        assert_eq!(user.get_id(), 53.into());
+        let users = controller.users(&SearchBy::id("53"))?;
+        assert_eq!(users[0].get_id(), "53".to_string());
 
         Ok(())
     }
@@ -115,7 +141,7 @@ mod tests {
     fn query_user_by_name() -> Result<(), Error> {
         let controller = SimpleMovieController::new()?;
 
-        let users = controller.user_by_name("Chris")?;
+        let users = controller.users(&SearchBy::name("Chris"))?;
         assert_eq!(users.len(), 2);
 
         Ok(())
