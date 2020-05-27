@@ -18,7 +18,7 @@
 pub mod distances;
 
 use self::distances::Method;
-use controller::{Controller, Entity, Id};
+use controller::{Controller, Entity, SearchBy};
 use std::{
     cmp::{Ordering, PartialOrd, Reverse},
     collections::BinaryHeap,
@@ -26,7 +26,7 @@ use std::{
 };
 
 #[derive(Debug, Clone)]
-pub struct MapedDistance(pub Id, pub f64);
+pub struct MapedDistance(pub String, pub f64);
 
 impl PartialEq for MapedDistance {
     fn eq(&self, other: &Self) -> bool {
@@ -75,15 +75,15 @@ where
     }
 
     pub fn distance(&self, user_a: &User, user_b: &User, method: distances::Method) -> Option<f64> {
-        let rating_a = self.controller.ratings_by_user(user_a).ok()?;
-        let rating_b = self.controller.ratings_by_user(user_b).ok()?;
+        let rating_a = self.controller.ratings_by(user_a).ok()?;
+        let rating_b = self.controller.ratings_by(user_b).ok()?;
 
         distances::distance(&rating_a, &rating_b, method)
     }
 
     fn max_heap_knn(&self, k: usize, user: &User, method: Method) -> Option<Vec<MapedDistance>> {
-        let user_rating = self.controller.ratings_by_user(&user).ok()?;
-        let maped_ratings = self.controller.ratings_except_for(&user).ok()?;
+        let user_rating = self.controller.ratings_by(&user).ok()?;
+        let maped_ratings = self.controller.ratings_except(&user).ok()?;
 
         let mut max_heap = BinaryHeap::with_capacity(k);
         for (user_id, rating) in maped_ratings {
@@ -106,8 +106,8 @@ where
     }
 
     fn min_heap_knn(&self, k: usize, user: &User, method: Method) -> Option<Vec<MapedDistance>> {
-        let user_rating = self.controller.ratings_by_user(&user).ok()?;
-        let maped_ratings = self.controller.ratings_except_for(&user).ok()?;
+        let user_rating = self.controller.ratings_by(&user).ok()?;
+        let maped_ratings = self.controller.ratings_except(&user).ok()?;
 
         let mut min_heap = BinaryHeap::with_capacity(k);
         for (user_id, rating) in maped_ratings {
@@ -156,10 +156,10 @@ where
         let pearson_knn: Vec<_> = relevant_knn
             .into_iter()
             .filter_map(|MapedDistance(nn_id, _)| -> Option<MapedDistance> {
-                let nn_user = self.controller.user_by_id(&nn_id).ok()?;
+                let nn_user = &self.controller.users(&SearchBy::id(&nn_id)).ok()?[0];
 
                 // Check if the nn contains an score for the given item
-                let nn_ratings = self.controller.ratings_by_user(&nn_user).ok()?;
+                let nn_ratings = self.controller.ratings_by(nn_user).ok()?;
                 // If not, return early since we don't need this nn
                 if !nn_ratings.contains_key(&item_id) {
                     return None;
@@ -181,9 +181,9 @@ where
 
         let mut prediction = None;
         for MapedDistance(nn_id, distance) in pearson_knn {
-            let nn_user = self.controller.user_by_id(&nn_id).ok()?;
+            let nn_user = &self.controller.users(&SearchBy::id(&nn_id)).ok()?[0];
 
-            let nn_ratings = self.controller.ratings_by_user(&nn_user).ok()?;
+            let nn_ratings = self.controller.ratings_by(nn_user).ok()?;
             let nn_item_rating = nn_ratings.get(&item_id)?;
 
             *prediction.get_or_insert(0.0) += nn_item_rating * (distance / total);
@@ -206,12 +206,12 @@ mod tests {
         let controller = SimpleMovieController::new()?;
         let engine = Engine::with_controller(&controller);
 
-        let user_a = controller.user_by_id(&52.into())?;
-        let user_b = controller.user_by_id(&53.into())?;
+        let user_a = &controller.users(&SearchBy::id("52"))?[0];
+        let user_b = &controller.users(&SearchBy::id("53"))?[0];
 
         println!(
             "euclidean(52, 53): {:?}",
-            engine.distance(&user_a, &user_b, Method::Euclidean)
+            engine.distance(user_a, user_b, Method::Euclidean)
         );
 
         Ok(())
@@ -222,12 +222,12 @@ mod tests {
         let controller = SimpleMovieController::new()?;
         let engine = Engine::with_controller(&controller);
 
-        let user_a = controller.user_by_id(&52.into())?;
-        let user_b = controller.user_by_id(&53.into())?;
+        let user_a = &controller.users(&SearchBy::id("52"))?[0];
+        let user_b = &controller.users(&SearchBy::id("53"))?[0];
 
         println!(
             "manhattan(52, 53): {:?}",
-            engine.distance(&user_a, &user_b, Method::Manhattan)
+            engine.distance(user_a, user_b, Method::Manhattan)
         );
 
         Ok(())
@@ -238,12 +238,12 @@ mod tests {
         let controller = SimpleMovieController::new()?;
         let engine = Engine::with_controller(&controller);
 
-        let user_a = controller.user_by_id(&52.into())?;
-        let user_b = controller.user_by_id(&53.into())?;
+        let user_a = &controller.users(&SearchBy::id("52"))?[0];
+        let user_b = &controller.users(&SearchBy::id("53"))?[0];
 
         println!(
             "cosine(52, 53): {:?}",
-            engine.distance(&user_a, &user_b, Method::CosineSimilarity)
+            engine.distance(user_a, user_b, Method::CosineSimilarity)
         );
 
         Ok(())
@@ -254,11 +254,11 @@ mod tests {
         let controller = SimpleMovieController::new()?;
         let engine = Engine::with_controller(&controller);
 
-        let user = controller.user_by_id(&52.into())?;
+        let user = &controller.users(&SearchBy::id("52"))?[0];
 
         println!(
             "kNN(52, manhattan): {:?}",
-            engine.knn(4, &user, Method::Manhattan)
+            engine.knn(4, user, Method::Manhattan)
         );
 
         Ok(())
@@ -269,11 +269,11 @@ mod tests {
         let controller = SimpleMovieController::new()?;
         let engine = Engine::with_controller(&controller);
 
-        let user = controller.user_by_id(&52.into())?;
+        let user = &controller.users(&SearchBy::id("52"))?[0];
 
         println!(
             "kNN(52, 3, euclidean): {:?}",
-            engine.knn(3, &user, Method::Euclidean)
+            engine.knn(3, user, Method::Euclidean)
         );
 
         Ok(())
@@ -284,11 +284,11 @@ mod tests {
         let controller = SimpleMovieController::new()?;
         let engine = Engine::with_controller(&controller);
 
-        let user = controller.user_by_id(&52.into())?;
+        let user = &controller.users(&SearchBy::id("52"))?[0];
 
         println!(
             "kNN(52, 3, cosine): {:?}",
-            engine.knn(3, &user, Method::CosineSimilarity)
+            engine.knn(3, user, Method::CosineSimilarity)
         );
 
         Ok(())
@@ -299,11 +299,11 @@ mod tests {
         let controller = BooksController::new()?;
         let engine = Engine::with_controller(&controller);
 
-        let user = controller.user_by_id(&242.into())?;
+        let user = &controller.users(&SearchBy::id("242"))?[0];
 
         println!(
             "kNN(242, 5, manhattan): {:?}",
-            engine.knn(5, &user, Method::JaccardDistance)
+            engine.knn(5, user, Method::JaccardDistance)
         );
 
         Ok(())
