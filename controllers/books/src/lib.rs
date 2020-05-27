@@ -7,10 +7,13 @@ pub mod schema;
 use crate::models::{books::Book, ratings::Rating, users::User};
 use crate::schema::{books, ratings, users};
 use anyhow::Error;
-use controller::{make_hash, Controller, Id, MapedRatings, Ratings};
+use controller::{Controller, Id, MapedRatings, Ratings};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use std::collections::{hash_map::RandomState, HashMap};
+use std::{
+    collections::{hash_map::RandomState, HashMap},
+    hash::Hash,
+};
 
 pub fn establish_connection(url: &str) -> Result<PgConnection, Error> {
     Ok(PgConnection::establish(&url)?)
@@ -36,6 +39,10 @@ impl BooksController {
 }
 
 impl Controller<User, Book> for BooksController {
+    fn make_hash<K: Hash>(&self, k: K) -> u64 {
+        controller::make_hash(&self.hasher_builder, k)
+    }
+
     fn user_by_id(&self, id: &Id) -> Result<User, Error> {
         let id: i32 = id.parse()?;
 
@@ -69,7 +76,7 @@ impl Controller<User, Book> for BooksController {
             .load::<Rating>(&self.pg_conn)?
             .iter()
             .map(|rating| {
-                let book_id = make_hash(&self.hasher_builder, &rating.book_id);
+                let book_id = self.make_hash(&rating.book_id);
                 (book_id, rating.score)
             })
             .collect();
@@ -84,7 +91,7 @@ impl Controller<User, Book> for BooksController {
 
         let mut maped_ratings = HashMap::new();
         for rating in ratings {
-            let book_id = make_hash(&self.hasher_builder, &rating.book_id);
+            let book_id = self.make_hash(&rating.book_id);
 
             maped_ratings
                 .entry(rating.user_id.into())

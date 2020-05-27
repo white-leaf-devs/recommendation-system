@@ -39,6 +39,7 @@ pub trait Entity {
 }
 
 pub trait Controller<U, I> {
+    fn make_hash<K: Hash>(&self, k: K) -> u64;
     fn user_by_id(&self, id: &Id) -> Result<U>;
     fn item_by_id(&self, id: &Id) -> Result<I>;
     fn ratings_by_user(&self, user: &U) -> Result<Ratings>;
