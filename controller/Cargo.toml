@@ -10,3 +10,4 @@ workspace = ".."
 [dependencies]
 anyhow = "1"
 thiserror = "1"
+prettytable-rs = "0.8"

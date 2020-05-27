@@ -5,6 +5,8 @@ use std::{
     ops::Deref,
 };
 
+use prettytable::{cell, format::consts::FORMAT_BOX_CHARS, row, table, Table};
+
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct Id(pub String);
 
@@ -33,8 +35,19 @@ pub fn make_hash<H: BuildHasher, K: Hash>(hasher: &H, key: K) -> u64 {
 
 pub trait Entity {
     fn get_id(&self) -> Id;
+
     fn get_data(&self) -> HashMap<String, String> {
         Default::default()
+    }
+
+    fn to_table(&self) -> Table {
+        let mut table = table![["id", self.get_id().0]];
+        for (key, val) in self.get_data() {
+            table.add_row(row![key, val]);
+        }
+
+        table.set_format(*FORMAT_BOX_CHARS);
+        table
     }
 }
 
