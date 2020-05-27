@@ -48,25 +48,25 @@ impl Ord for MapedDistance {
     }
 }
 
-pub struct Engine<C, User, Item>
+pub struct Engine<'a, C, User, Item>
 where
     User: Entity,
     Item: Entity,
     C: Controller<User, Item>,
 {
-    controller: C,
+    controller: &'a C,
 
     user_type: PhantomData<User>,
     item_type: PhantomData<Item>,
 }
 
-impl<C, User, Item> Engine<C, User, Item>
+impl<'a, C, User, Item> Engine<'a, C, User, Item>
 where
     User: Entity,
     Item: Entity,
     C: Controller<User, Item>,
 {
-    pub fn with_controller(controller: C) -> Self {
+    pub fn with_controller(controller: &'a C) -> Self {
         Self {
             controller,
             user_type: PhantomData,
@@ -74,18 +74,14 @@ where
         }
     }
 
-    pub fn distance(&self, id_a: &Id, id_b: &Id, method: distances::Method) -> Option<f64> {
-        let user_a = self.controller.user_by_id(id_a).ok()?;
-        let user_b = self.controller.user_by_id(id_b).ok()?;
-
-        let rating_a = self.controller.ratings_by_user(&user_a).ok()?;
-        let rating_b = self.controller.ratings_by_user(&user_b).ok()?;
+    pub fn distance(&self, user_a: &User, user_b: &User, method: distances::Method) -> Option<f64> {
+        let rating_a = self.controller.ratings_by_user(user_a).ok()?;
+        let rating_b = self.controller.ratings_by_user(user_b).ok()?;
 
         distances::distance(&rating_a, &rating_b, method)
     }
 
-    fn max_heap_knn(&self, id: &Id, k: usize, method: Method) -> Option<Vec<MapedDistance>> {
-        let user = self.controller.user_by_id(id).ok()?;
+    fn max_heap_knn(&self, user: &User, k: usize, method: Method) -> Option<Vec<MapedDistance>> {
         let user_rating = self.controller.ratings_by_user(&user).ok()?;
         let maped_ratings = self.controller.ratings_except_for(&user).ok()?;
 
@@ -109,8 +105,7 @@ where
         Some(max_heap.into_sorted_vec())
     }
 
-    fn min_heap_knn(&self, id: &Id, k: usize, method: Method) -> Option<Vec<MapedDistance>> {
-        let user = self.controller.user_by_id(id).ok()?;
+    fn min_heap_knn(&self, user: &User, k: usize, method: Method) -> Option<Vec<MapedDistance>> {
         let user_rating = self.controller.ratings_by_user(&user).ok()?;
         let maped_ratings = self.controller.ratings_except_for(&user).ok()?;
 
@@ -140,14 +135,14 @@ where
         )
     }
 
-    pub fn knn(&self, id: &Id, k: usize, method: Method) -> Option<Vec<MapedDistance>> {
+    pub fn knn(&self, user: &User, k: usize, method: Method) -> Option<Vec<MapedDistance>> {
         match method {
             Method::Manhattan
             | Method::Euclidean
             | Method::Minkowski(_)
-            | Method::JaccardDistance => self.max_heap_knn(id, k, method),
+            | Method::JaccardDistance => self.max_heap_knn(user, k, method),
             Method::CosineSimilarity | Method::PearsonCorrelation | Method::JaccardIndex => {
-                self.min_heap_knn(id, k, method)
+                self.min_heap_knn(user, k, method)
             }
         }
     }
@@ -164,11 +159,14 @@ mod tests {
     #[test]
     fn euclidean_distance() -> Result<(), Error> {
         let controller = SimpleMovieController::new()?;
-        let engine = Engine::with_controller(controller);
+        let engine = Engine::with_controller(&controller);
+
+        let user_a = controller.user_by_id(&52.into())?;
+        let user_b = controller.user_by_id(&53.into())?;
 
         println!(
             "euclidean(52, 53): {:?}",
-            engine.distance(&52.into(), &53.into(), Method::Euclidean)
+            engine.distance(&user_a, &user_b, Method::Euclidean)
         );
 
         Ok(())
@@ -177,11 +175,14 @@ mod tests {
     #[test]
     fn manhattan_distance() -> Result<(), Error> {
         let controller = SimpleMovieController::new()?;
-        let engine = Engine::with_controller(controller);
+        let engine = Engine::with_controller(&controller);
+
+        let user_a = controller.user_by_id(&52.into())?;
+        let user_b = controller.user_by_id(&53.into())?;
 
         println!(
             "manhattan(52, 53): {:?}",
-            engine.distance(&52.into(), &53.into(), Method::Manhattan)
+            engine.distance(&user_a, &user_b, Method::Manhattan)
         );
 
         Ok(())
@@ -190,11 +191,14 @@ mod tests {
     #[test]
     fn cosine_similarity_distance() -> Result<(), Error> {
         let controller = SimpleMovieController::new()?;
-        let engine = Engine::with_controller(controller);
+        let engine = Engine::with_controller(&controller);
+
+        let user_a = controller.user_by_id(&52.into())?;
+        let user_b = controller.user_by_id(&53.into())?;
 
         println!(
             "cosine(52, 53): {:?}",
-            engine.distance(&52.into(), &53.into(), Method::CosineSimilarity)
+            engine.distance(&user_a, &user_b, Method::CosineSimilarity)
         );
 
         Ok(())
@@ -203,11 +207,13 @@ mod tests {
     #[test]
     fn knn_with_manhattan() -> Result<(), Error> {
         let controller = SimpleMovieController::new()?;
-        let engine = Engine::with_controller(controller);
+        let engine = Engine::with_controller(&controller);
+
+        let user = controller.user_by_id(&52.into())?;
 
         println!(
             "kNN(52, manhattan): {:?}",
-            engine.knn(&52.into(), 4, Method::Manhattan)
+            engine.knn(&user, 4, Method::Manhattan)
         );
 
         Ok(())
@@ -216,11 +222,13 @@ mod tests {
     #[test]
     fn knn_with_euclidean() -> Result<(), Error> {
         let controller = SimpleMovieController::new()?;
-        let engine = Engine::with_controller(controller);
+        let engine = Engine::with_controller(&controller);
+
+        let user = controller.user_by_id(&52.into())?;
 
         println!(
             "kNN(52, 3, euclidean): {:?}",
-            engine.knn(&52.into(), 3, Method::Euclidean)
+            engine.knn(&user, 3, Method::Euclidean)
         );
 
         Ok(())
@@ -229,11 +237,13 @@ mod tests {
     #[test]
     fn knn_with_cosine() -> Result<(), Error> {
         let controller = SimpleMovieController::new()?;
-        let engine = Engine::with_controller(controller);
+        let engine = Engine::with_controller(&controller);
+
+        let user = controller.user_by_id(&52.into())?;
 
         println!(
             "kNN(52, 3, cosine): {:?}",
-            engine.knn(&52.into(), 3, Method::CosineSimilarity)
+            engine.knn(&user, 3, Method::CosineSimilarity)
         );
 
         Ok(())
@@ -242,11 +252,13 @@ mod tests {
     #[test]
     fn knn_in_books() -> Result<(), Error> {
         let controller = BooksController::new()?;
-        let engine = Engine::with_controller(controller);
+        let engine = Engine::with_controller(&controller);
+
+        let user = controller.user_by_id(&242.into())?;
 
         println!(
             "kNN(242, 5, manhattan): {:?}",
-            engine.knn(&242.into(), 5, Method::JaccardDistance)
+            engine.knn(&user, 5, Method::JaccardDistance)
         );
 
         Ok(())
