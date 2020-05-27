@@ -2,21 +2,43 @@ pub mod parser;
 
 use anyhow::Error;
 use books::BooksController;
-use controller::{Controller, Entity};
+use controller::{ratings_to_table, Controller, Entity};
 use movie_lens_small::MovieLensSmallController;
 use parser::{Database, Index, Statement};
 use recommend::{Engine, MapedDistance};
 use simple_movie::SimpleMovieController;
 
 macro_rules! prompt {
-    () => {{
-        let mut rl = rustyline::Editor::<()>::new();
-        rl.readline(&format!("{}", PROMPT))
+    ($ed:ident) => {{
+        prompt!($ed, "")
     }};
 
-    ($db:expr) => {{
-        let mut rl = rustyline::Editor::<()>::new();
-        rl.readline(&format!("({}) {}", $db, PROMPT))
+    ($ed:ident, $db:expr) => {{
+        use rustyline::error::ReadlineError;
+
+        let msg = if $db.is_empty() {
+            format!("{}", PROMPT)
+        } else {
+            format!("({}) {}", $db, PROMPT)
+        };
+
+        match $ed.readline(&msg) {
+            Ok(line) => {
+                $ed.add_history_entry(line.as_str());
+                Ok(line)
+            }
+
+            Err(ReadlineError::Interrupted) => {
+                continue;
+            }
+
+            Err(ReadlineError::Eof) => {
+                println!("Bye!");
+                break;
+            }
+
+            Err(e) => Err(e),
+        }
     }};
 }
 
@@ -74,6 +96,7 @@ where
                     None
                 }
             }
+
             Err(e) => {
                 println!("{}", e);
                 None
@@ -89,9 +112,10 @@ where
     I: Entity,
 {
     let engine = Engine::with_controller(&controller);
+    let mut rl = rustyline::Editor::<()>::new();
 
     loop {
-        let opt: String = prompt!(name)?;
+        let opt: String = prompt!(rl, name)?;
 
         match opt.trim() {
             "q" | "quit" => {
@@ -148,6 +172,24 @@ where
                         },
                     },
 
+                    Statement::QueryRatings(index) => {
+                        let ratings = get_user(&controller, &index)
+                            .map(|user| controller.ratings_by_user(&user));
+
+                        match ratings {
+                            Some(Ok(ratings)) => {
+                                if ratings.is_empty() {
+                                    println!("Result is empty");
+                                    continue;
+                                }
+
+                                println!("{}", ratings_to_table(&ratings));
+                            }
+                            Some(Err(e)) => println!("{}", e),
+                            _ => println!("Not found, empty result"),
+                        }
+                    }
+
                     Statement::Distance(index_a, index_b, method) => {
                         let user_a = get_user(&controller, &index_a);
                         let user_b = get_user(&controller, &index_b);
@@ -161,13 +203,13 @@ where
 
                         match dist {
                             Some(dist) => println!("Distance is {}", dist),
-                            None => println!("Failed to calculate distance"),
+                            None => println!("Failed to calculate distance, maybe one is missing"),
                         }
                     }
 
-                    Statement::KNN(index, k, method) => {
-                        let user = get_user(&controller, &index);
-                        let knn = user.and_then(|user| engine.knn(&user, k, method));
+                    Statement::KNN(k, index, method) => {
+                        let knn = get_user(&controller, &index)
+                            .and_then(|user| engine.knn(k, &user, method));
 
                         match knn {
                             Some(knn) => {
@@ -183,7 +225,23 @@ where
                             None => println!("Failed to calculate distance"),
                         }
                     }
+
+                    Statement::Predict(k, index_user, index_item, method) => {
+                        let user = get_user(&controller, &index_user);
+                        let item = get_item(&controller, &index_item);
+
+                        let prediction = match (user, item) {
+                            (Some(user), Some(item)) => engine.predict(k, &user, &item, method),
+                            _ => None,
+                        };
+
+                        match prediction {
+                            Some(predicted) => println!("Predicted value is {}", predicted),
+                            None => println!("Failed to predict, maybe one is missing"),
+                        }
+                    }
                 },
+
                 None => println!("Invalid syntax"),
             },
         }
@@ -197,9 +255,10 @@ const PROMPT: &str = ">> ";
 
 fn main() -> Result<(), Error> {
     println!("Welcome to recommendation-system {}", VERSION);
+    let mut rl = rustyline::Editor::<()>::new();
 
     loop {
-        let opt: String = prompt!()?;
+        let opt: String = prompt!(rl)?;
 
         match opt.trim() {
             "?" | "h" | "help" => {
