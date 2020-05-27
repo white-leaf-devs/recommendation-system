@@ -31,8 +31,10 @@ pub enum Statement {
     Connect(Database),
     QueryUser(Index),
     QueryItem(Index),
+    QueryRatings(Index),
     Distance(Index, Index, Method),
-    KNN(Index, usize, Method),
+    KNN(usize, Index, Method),
+    Predict(usize, Index, Index, Method),
 }
 
 #[inline(always)]
@@ -70,7 +72,8 @@ fn parse_method(input: &str) -> IResult<&str, Method> {
     let (input, method) = alt! {
         input,
         tag!("cosine")        |
-        tag!("pearson")       |
+        tag!("pearson_c")     |
+        tag!("pearson_a")     |
         tag!("euclidean")     |
         tag!("manhattan")     |
         tag!("minkowski")     |
@@ -80,7 +83,8 @@ fn parse_method(input: &str) -> IResult<&str, Method> {
 
     let (input, method) = match method {
         "cosine" => (input, Method::CosineSimilarity),
-        "pearson" => (input, Method::PearsonCorrelation),
+        "pearson_c" => (input, Method::PearsonCorrelation),
+        "pearson_a" => (input, Method::PearsonApproximation),
         "euclidean" => (input, Method::Euclidean),
         "manhattan" => (input, Method::Manhattan),
         "jacc_index" => (input, Method::JaccardIndex),
@@ -124,7 +128,8 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
         tag!("predict")    |
         tag!("distance")   |
         tag!("query_user") |
-        tag!("query_item")
+        tag!("query_item") |
+        tag!("query_ratings")
     }?;
 
     let (input, statement) = match statement_type {
@@ -141,6 +146,11 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
         "query_item" => {
             let (input, index) = delimited!(input, char!('('), parse_index, char!(')'))?;
             (input, Statement::QueryItem(index))
+        }
+
+        "query_ratings" => {
+            let (input, index) = delimited!(input, char!('('), parse_index, char!(')'))?;
+            (input, Statement::QueryRatings(index))
         }
 
         "distance" => {
@@ -161,24 +171,45 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
         }
 
         "knn" => {
-            let (input, (index, _, k, _, method)) = delimited!(
+            let (input, (k, _, index, _, method)) = delimited!(
                 input,
                 char!('('),
                 tuple!(
-                    parse_index,
-                    parse_separator,
                     parse_number,
+                    parse_separator,
+                    parse_index,
                     parse_separator,
                     parse_method
                 ),
                 char!(')')
             )?;
 
-            (input, Statement::KNN(index, k.parse().unwrap(), method))
+            (input, Statement::KNN(k.parse().unwrap(), index, method))
         }
 
-        "predict" => todo!(),
-        _ => unreachable!(),
+        "predict" => {
+            let (input, (k, _, index_user, _, index_item, _, method)) = delimited!(
+                input,
+                char!('('),
+                tuple!(
+                    parse_number,
+                    parse_separator,
+                    parse_index,
+                    parse_separator,
+                    parse_index,
+                    parse_separator,
+                    parse_method
+                ),
+                char!(')')
+            )?;
+
+            (
+                input,
+                Statement::Predict(k.parse().unwrap(), index_user, index_item, method),
+            )
+        }
+
+        function => todo!("Function {}", function),
     };
 
     Ok((input, statement))
@@ -250,6 +281,19 @@ mod tests {
     }
 
     #[test]
+    fn query_ratings_statement() {
+        let parsed = parse_statement("query_ratings(id(12345))");
+        let expected = ("", Statement::QueryRatings(Index::Id(12345.into())));
+
+        assert_eq!(parsed, Ok(expected));
+
+        let parsed = parse_statement("query_ratings(name(Patrick C))");
+        let expected = ("", Statement::QueryRatings(Index::Name("Patrick C".into())));
+
+        assert_eq!(parsed, Ok(expected));
+    }
+
+    #[test]
     fn distance_statement() {
         let parsed = parse_statement("distance(id(32a), id(32b), euclidean)");
         let expected = (
@@ -269,7 +313,7 @@ mod tests {
         let parsed = parse_statement("knn(id(324x), 4, minkowski(3))");
         let expected = (
             "",
-            Statement::KNN(Index::Id("324x".into()), 4, Method::Minkowski(3)),
+            Statement::KNN(4, Index::Id("324x".into()), Method::Minkowski(3)),
         );
 
         assert_eq!(parsed, Ok(expected));
@@ -287,8 +331,8 @@ mod tests {
         assert_eq!(
             parsed,
             Some(Statement::KNN(
-                Index::Name("Patrick C".into()),
                 5,
+                Index::Name("Patrick C".into()),
                 Method::CosineSimilarity
             ))
         );

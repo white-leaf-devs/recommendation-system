@@ -81,7 +81,7 @@ where
         distances::distance(&rating_a, &rating_b, method)
     }
 
-    fn max_heap_knn(&self, user: &User, k: usize, method: Method) -> Option<Vec<MapedDistance>> {
+    fn max_heap_knn(&self, k: usize, user: &User, method: Method) -> Option<Vec<MapedDistance>> {
         let user_rating = self.controller.ratings_by_user(&user).ok()?;
         let maped_ratings = self.controller.ratings_except_for(&user).ok()?;
 
@@ -105,7 +105,7 @@ where
         Some(max_heap.into_sorted_vec())
     }
 
-    fn min_heap_knn(&self, user: &User, k: usize, method: Method) -> Option<Vec<MapedDistance>> {
+    fn min_heap_knn(&self, k: usize, user: &User, method: Method) -> Option<Vec<MapedDistance>> {
         let user_rating = self.controller.ratings_by_user(&user).ok()?;
         let maped_ratings = self.controller.ratings_except_for(&user).ok()?;
 
@@ -135,16 +135,61 @@ where
         )
     }
 
-    pub fn knn(&self, user: &User, k: usize, method: Method) -> Option<Vec<MapedDistance>> {
+    pub fn knn(&self, k: usize, user: &User, method: Method) -> Option<Vec<MapedDistance>> {
         match method {
             Method::Manhattan
             | Method::Euclidean
             | Method::Minkowski(_)
-            | Method::JaccardDistance => self.max_heap_knn(user, k, method),
-            Method::CosineSimilarity | Method::PearsonCorrelation | Method::JaccardIndex => {
-                self.min_heap_knn(user, k, method)
-            }
+            | Method::JaccardDistance => self.max_heap_knn(k, user, method),
+
+            Method::CosineSimilarity
+            | Method::PearsonCorrelation
+            | Method::JaccardIndex
+            | Method::PearsonApproximation => self.min_heap_knn(k, user, method),
         }
+    }
+
+    pub fn predict(&self, k: usize, user: &User, item: &Item, method: Method) -> Option<f64> {
+        let relevant_knn = self.knn(k, user, method)?;
+        let item_id = item.get_id();
+
+        let pearson_knn: Vec<_> = relevant_knn
+            .into_iter()
+            .filter_map(|MapedDistance(nn_id, _)| -> Option<MapedDistance> {
+                let nn_user = self.controller.user_by_id(&nn_id).ok()?;
+
+                // Check if the nn contains an score for the given item
+                let nn_ratings = self.controller.ratings_by_user(&nn_user).ok()?;
+                // If not, return early since we don't need this nn
+                if !nn_ratings.contains_key(&item_id) {
+                    return None;
+                }
+
+                let distance = self.distance(user, &nn_user, Method::PearsonApproximation)?;
+
+                if distance > 0.0 {
+                    Some(MapedDistance(nn_id, distance))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        let total = pearson_knn
+            .iter()
+            .fold(0.0, |acc, MapedDistance(_, dist)| acc + dist);
+
+        let mut prediction = None;
+        for MapedDistance(nn_id, distance) in pearson_knn {
+            let nn_user = self.controller.user_by_id(&nn_id).ok()?;
+
+            let nn_ratings = self.controller.ratings_by_user(&nn_user).ok()?;
+            let nn_item_rating = nn_ratings.get(&item_id)?;
+
+            *prediction.get_or_insert(0.0) += nn_item_rating * (distance / total);
+        }
+
+        prediction
     }
 }
 
@@ -213,7 +258,7 @@ mod tests {
 
         println!(
             "kNN(52, manhattan): {:?}",
-            engine.knn(&user, 4, Method::Manhattan)
+            engine.knn(4, &user, Method::Manhattan)
         );
 
         Ok(())
@@ -228,7 +273,7 @@ mod tests {
 
         println!(
             "kNN(52, 3, euclidean): {:?}",
-            engine.knn(&user, 3, Method::Euclidean)
+            engine.knn(3, &user, Method::Euclidean)
         );
 
         Ok(())
@@ -243,7 +288,7 @@ mod tests {
 
         println!(
             "kNN(52, 3, cosine): {:?}",
-            engine.knn(&user, 3, Method::CosineSimilarity)
+            engine.knn(3, &user, Method::CosineSimilarity)
         );
 
         Ok(())
@@ -258,7 +303,7 @@ mod tests {
 
         println!(
             "kNN(242, 5, manhattan): {:?}",
-            engine.knn(&user, 5, Method::JaccardDistance)
+            engine.knn(5, &user, Method::JaccardDistance)
         );
 
         Ok(())
