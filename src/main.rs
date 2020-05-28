@@ -76,7 +76,10 @@ where
 
             line => match parser::parse_line(line) {
                 Some(stmt) => match stmt {
-                    Statement::Connect(_) => println!("Invalid in this context!"),
+                    Statement::Connect(_) => {
+                        println!("Invalid statement in this context.");
+                        println!("Disconnect from current database first!");
+                    }
 
                     Statement::QueryUser(searchby) => match controller.users(&searchby) {
                         Ok(users) => {
@@ -103,7 +106,10 @@ where
                                     if !ratings.is_empty() {
                                         println!("{}", ratings.to_table());
                                     } else {
-                                        println!("No ratings found for id({})", user.get_id());
+                                        println!(
+                                            "No ratings found for user with id({})",
+                                            user.get_id()
+                                        );
                                     }
                                 }
                             }
@@ -112,19 +118,26 @@ where
                     },
 
                     Statement::Distance(searchby_a, searchby_b, method) => {
-                        let users_a = controller.users(&searchby_a);
-                        let users_b = controller.users(&searchby_b);
-
-                        let dist = match (users_a, users_b) {
-                            (Ok(users_a), Ok(users_b)) => {
-                                engine.distance(&users_a[0], &users_b[0], method)
+                        let users_a = match controller.users(&searchby_a) {
+                            Ok(users) => users,
+                            Err(e) => {
+                                println!("{}", e);
+                                continue;
                             }
-                            (_, _) => None,
                         };
 
+                        let users_b = match controller.users(&searchby_b) {
+                            Ok(users) => users,
+                            Err(e) => {
+                                println!("{}", e);
+                                continue;
+                            }
+                        };
+
+                        let dist = engine.distance(&users_a[0], &users_b[0], method);
                         match dist {
                             Some(dist) => println!("Distance is {}", dist),
-                            None => println!("Failed to calculate distance, maybe one is missing"),
+                            None => println!("Distance couldn't be calculated or gave NaN/∞/-∞"),
                         }
                     }
 
@@ -132,7 +145,6 @@ where
                         let users = controller.users(&searchby);
                         let knn = match users {
                             Ok(users) => engine.knn(k, &users[0], method),
-
                             Err(e) => {
                                 println!("{}", e);
                                 continue;
@@ -142,39 +154,55 @@ where
                         match knn {
                             Some(knn) => {
                                 if knn.is_empty() {
-                                    println!("Couldn't found {} neighbours", k);
+                                    println!("Couldn't found the {} nearest neighbours", k);
+                                    println!("Try using a different metric");
                                     continue;
                                 }
 
                                 for MapedDistance(nn_id, dist) in knn {
-                                    println!("Distance with id({}) is {}", nn_id, dist);
+                                    println!("Distance with user with id({}) is {}", nn_id, dist);
                                 }
                             }
 
-                            None => println!("Failed to calculate {} nearest neighbors", k),
+                            None => println!("Failed to calculate the {} nearest neighbors", k),
                         }
                     }
 
                     Statement::Predict(k, searchby_user, searchby_item, method) => {
-                        let users = controller.users(&searchby_user);
-                        let items = controller.items(&searchby_item);
-
-                        let prediction = match (users, items) {
-                            (Ok(users), Ok(items)) => {
-                                engine.predict(k, &users[0], &items[0], method)
+                        let users = match controller.users(&searchby_user) {
+                            Ok(users) => users,
+                            Err(e) => {
+                                println!("{}", e);
+                                continue;
                             }
-
-                            _ => None,
                         };
 
+                        let items = match controller.items(&searchby_item) {
+                            Ok(items) => items,
+                            Err(e) => {
+                                println!("{}", e);
+                                continue;
+                            }
+                        };
+
+                        let prediction = engine.predict(k, &users[0], &items[0], method);
                         match prediction {
-                            Some(predicted) => println!("Predicted value is {}", predicted),
-                            None => println!("Failed to predict an score"),
+                            Some(predicted) => println!(
+                                "Predicted score for item with id({}) is {}",
+                                items[0].get_id(),
+                                predicted
+                            ),
+                            None => {
+                                println!("Failed to predict the score");
+                                println!(
+                                    "Try increasing 'k' or using a different metric for inner knn"
+                                );
+                            }
                         }
                     }
                 },
 
-                None => println!("Invalid syntax"),
+                None => println!("Invalid syntax!"),
             },
         }
     }
@@ -193,13 +221,6 @@ fn main() -> Result<(), Error> {
         let opt: String = prompt!(rl)?;
 
         match opt.trim() {
-            "?" | "h" | "help" => {
-                println!("Main help:");
-                println!("h | help           Shows this help");
-                println!("q | quit           Quit");
-                println!("c | connect <DB>   Connect to DB");
-            }
-
             "q" | "quit" => {
                 println!("Bye!");
                 break;
@@ -228,7 +249,8 @@ fn main() -> Result<(), Error> {
                             )?,
                         }
                     } else {
-                        println!("Invalid statement in this context!");
+                        println!("Invalid statement in this context.");
+                        println!("Connect to a database first!");
                     }
                 }
                 None => println!("Invalid syntax!"),
