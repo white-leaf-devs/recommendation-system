@@ -1,5 +1,5 @@
 use anyhow::Error;
-use prettytable::{cell, format::consts::FORMAT_BOX_CHARS, row, table, Table};
+use prettytable::{cell, format::consts::FORMAT_NO_LINESEP, row, table, Table};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -42,7 +42,7 @@ impl<E: Entity> ToTable for E {
             table.add_row(row![key, val]);
         }
 
-        table.set_format(*FORMAT_BOX_CHARS);
+        table.set_format(*FORMAT_NO_LINESEP);
         table
     }
 }
@@ -59,7 +59,7 @@ where
             table.add_row(row![key, val]);
         }
 
-        table.set_format(*FORMAT_BOX_CHARS);
+        table.set_format(*FORMAT_NO_LINESEP);
         table
     }
 }
