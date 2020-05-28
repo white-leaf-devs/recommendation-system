@@ -1,8 +1,8 @@
-# Toy Recommendation System
+# (Toy) Recommendation System
 
 ## Installing Rust 
 Make sure that you have installed the latest stable Rust toolchain, if you
-don't have Rust installed on your computer, you can install it using `rustup`
+don't have Rust installed on your computer, you can install it using [`rustup`](https://rustup.rs/)
 
 ```bash
 rustup install stable
