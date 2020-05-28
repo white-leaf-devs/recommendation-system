@@ -308,4 +308,18 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn compare_maped_distance() {
+        let a = MapedDistance("".to_string(), 0.);
+        let b = MapedDistance("".to_string(), 1.);
+
+        assert!(b > a);
+        assert_ne!(a, b);
+
+        let b = a.clone();
+
+        assert_eq!(a, b);
+        assert!(!(a > b));
+    }
 }
