@@ -12,7 +12,7 @@ fn insert_users(conn: &PgConnection) -> Result<(), Error> {
     let mut csv = csv::ReaderBuilder::new()
         .has_headers(false)
         .delimiter(b';')
-        .from_path("data/users.csv")?;
+        .from_path("data/BX-Users.csv")?;
 
     let mut users = Vec::new();
     println!("Collecting records for users...");
@@ -44,7 +44,7 @@ fn insert_books(conn: &PgConnection) -> Result<(), Error> {
     let mut csv = csv::ReaderBuilder::new()
         .has_headers(false)
         .delimiter(b';')
-        .from_path("data/books.csv")?;
+        .from_path("data/BX-Books.csv")?;
 
     let mut books = Vec::new();
     println!("Collecting records for books...");
@@ -80,7 +80,7 @@ fn insert_ratings(conn: &PgConnection) -> Result<(), Error> {
     let mut csv = csv::ReaderBuilder::new()
         .has_headers(false)
         .delimiter(b',')
-        .from_path("data/ratings.csv")?;
+        .from_path("data/BX-Book-Ratings.csv")?;
 
     let mut ratings = Vec::new();
     println!("Collecting records for ratings...");
