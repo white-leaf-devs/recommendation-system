@@ -62,7 +62,7 @@ connected to, showing something like this:
 (books) >>
 ```
 
-Before you start digging into the provided functions you should now that some of the provided databases can query its users and items by `id` or `name`, we refer this as `searchby` and its syntax is pretty straightforward. You can write `id(<number>)` or `name(<string>)` to search an user or item by its id or name respectively. For distance methods you simply need to pass and identifier:
+Before you start digging into the provided functions you should now that some of the provided databases can query its users and items by `id` or `name`, we refer this as `searchby` and its syntax is pretty straightforward. You can write `id(<string>)` or `name(<string>)` to search an user or item by its id or name respectively. For distance methods you simply need to pass and identifier:
 
 - Manhattan distance: `manhattan`
 - Euclidean distance: `euclidean`
@@ -74,11 +74,11 @@ Before you start digging into the provided functions you should now that some of
 - Pearson's approximation: `pearson_a`
 
 Now it's time to play with the following provided functions:
-- `query_user(searchby)`: Query an user by its `id` or `name`, ex. `query_user(id(243))`
+- `query_user(searchby)`: Query an user by its `id` or `name`, ex. `query_user(id('243'))`
 - `query_item(searchby)`: Query an item by its `id` or `name`, ex. `query_item(name('Alien')`
-- `query_ratings(searchby)`: Query the ratings from the user with `id` or `name`, ex. `query_ratings(id(243))`
-- `distance(searchby, searchby, method)`: Calculate distance between both users using the specified method, ex. `distance(id(243), name('Alan'), minkowski(3))`
-- `knn(k, searchby, method)`: Calculate the kNN for the specified user and method, ex. `knn(5, id(243), euclidean)`
-- `predict(k, searchby, searchby, method)`: Predict an item score for the user with the specified k and method to use in the inner knn, ex. `predict(5, id(243), name('Alien'), euclidean)`
+- `query_ratings(searchby)`: Query the ratings from the user with `id` or `name`, ex. `query_ratings(id('243'))`
+- `distance(searchby, searchby, method)`: Calculate distance between both users using the specified method, ex. `distance(id('243'), name('Alan'), minkowski(3))`
+- `knn(k, searchby, method)`: Calculate the kNN for the specified user and method, ex. `knn(5, id('243'), euclidean)`
+- `predict(k, searchby, searchby, method)`: Predict an item score for the user with the specified k and method to use in the inner knn, ex. `predict(5, id('243'), name('Alien'), euclidean)`
 
 If you wish to try another database you can simple type `d<Enter>` and you will disconnect from the current database, `<CTRL+C>` and `<CTRL+D>` works as expected, cancelling current line and exiting.

@@ -1,5 +1,5 @@
 use controller::SearchBy;
-use nom::{alt, char, delimited, tag, take_while, take_while1, tuple, IResult};
+use nom::{alt, char, delimited, tag, take_till1, take_while, take_while1, tuple, IResult};
 use recommend::distances::Method;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -36,7 +36,12 @@ fn parse_ident(input: &str) -> IResult<&str, &str> {
 }
 
 fn parse_string(input: &str) -> IResult<&str, &str> {
-    take_while1!(input, |c: char| c.is_alphanumeric() || c == '_' || c == ' ')
+    delimited!(
+        input,
+        char!('\''),
+        take_till1!(|c: char| c == '\''),
+        char!('\'')
+    )
 }
 
 fn parse_number(input: &str) -> IResult<&str, &str> {
@@ -211,12 +216,12 @@ mod tests {
 
     #[test]
     fn index_tests() {
-        let parsed = parse_searchby("id(323)");
+        let parsed = parse_searchby("id('323')");
         let expected = ("", SearchBy::id("323"));
 
         assert_eq!(parsed, Ok(expected));
 
-        let parsed = parse_searchby("name(Patrick C)");
+        let parsed = parse_searchby("name('Patrick C')");
         let expected = ("", SearchBy::name("Patrick C"));
 
         assert_eq!(parsed, Ok(expected));
@@ -232,12 +237,12 @@ mod tests {
 
     #[test]
     fn query_user_statement() {
-        let parsed = parse_statement("query_user(id(3))");
+        let parsed = parse_statement("query_user(id('3'))");
         let expected = ("", Statement::QueryUser(SearchBy::id("3")));
 
         assert_eq!(parsed, Ok(expected));
 
-        let parsed = parse_statement("query_user(name(Patrick C))");
+        let parsed = parse_statement("query_user(name('Patrick C'))");
         let expected = ("", Statement::QueryUser(SearchBy::name("Patrick C")));
 
         assert_eq!(parsed, Ok(expected));
@@ -245,25 +250,28 @@ mod tests {
 
     #[test]
     fn query_item_statement() {
-        let parsed = parse_statement("query_item(id(bx32a))");
+        let parsed = parse_statement("query_item(id('bx32a'))");
         let expected = ("", Statement::QueryItem(SearchBy::id("bx32a")));
 
         assert_eq!(parsed, Ok(expected));
 
-        let parsed = parse_statement("query_item(name(The Great Gatsby))");
-        let expected = ("", Statement::QueryItem(SearchBy::name("The Great Gatsby")));
+        let parsed = parse_statement("query_item(name('The Great Gatsby (1925)'))");
+        let expected = (
+            "",
+            Statement::QueryItem(SearchBy::name("The Great Gatsby (1925)")),
+        );
 
         assert_eq!(parsed, Ok(expected));
     }
 
     #[test]
     fn query_ratings_statement() {
-        let parsed = parse_statement("query_ratings(id(12345))");
+        let parsed = parse_statement("query_ratings(id('12345'))");
         let expected = ("", Statement::QueryRatings(SearchBy::id("12345")));
 
         assert_eq!(parsed, Ok(expected));
 
-        let parsed = parse_statement("query_ratings(name(Patrick C))");
+        let parsed = parse_statement("query_ratings(name('Patrick C'))");
         let expected = ("", Statement::QueryRatings(SearchBy::name("Patrick C")));
 
         assert_eq!(parsed, Ok(expected));
@@ -271,7 +279,7 @@ mod tests {
 
     #[test]
     fn distance_statement() {
-        let parsed = parse_statement("distance(id(32a), id(32b), euclidean)");
+        let parsed = parse_statement("distance(id('32a'), id('32b'), euclidean)");
         let expected = (
             "",
             Statement::Distance(SearchBy::id("32a"), SearchBy::id("32b"), Method::Euclidean),
@@ -282,7 +290,7 @@ mod tests {
 
     #[test]
     fn knn_statement() {
-        let parsed = parse_statement("knn(4, id(324x), minkowski(3))");
+        let parsed = parse_statement("knn(4, id('324x'), minkowski(3))");
         let expected = (
             "",
             Statement::KNN(4, SearchBy::id("324x"), Method::Minkowski(3)),
@@ -293,13 +301,13 @@ mod tests {
 
     #[test]
     fn parse_invalid_line() {
-        let parsed = parse_line("query_user(id());");
+        let parsed = parse_line("query_user(id())xx");
         assert!(parsed.is_none());
     }
 
     #[test]
     fn parse_valid_line() {
-        let parsed = parse_line("knn(5, name(Patrick C), cosine)");
+        let parsed = parse_line("knn(5, name('Patrick C'), cosine)");
         assert_eq!(
             parsed,
             Some(Statement::KNN(
