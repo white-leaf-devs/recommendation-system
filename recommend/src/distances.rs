@@ -1,8 +1,8 @@
 #![allow(clippy::implicit_hasher)]
 
-use num_traits::real::Real;
+use num_traits::float::Float;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{hash_map::Iter as MapIter, HashMap, HashSet},
     hash::Hash,
     ops::{AddAssign, Mul, MulAssign, Sub},
 };
@@ -19,83 +19,118 @@ pub enum Method {
     PearsonApproximation,
 }
 
-pub fn distance<K, V>(lhs: &HashMap<K, V>, rhs: &HashMap<K, V>, method: Method) -> Option<V>
+#[derive(Debug)]
+pub struct CommonKeyIterator<'a, K, V>
 where
     K: Hash + Eq,
-    V: Real + AddAssign + Sub + Mul + MulAssign,
 {
-    match method {
-        Method::Manhattan => manhattan_distance(lhs, rhs),
-        Method::Euclidean => euclidean_distance(lhs, rhs),
-        Method::Minkowski(p) => minkowski_distance(lhs, rhs, p),
-        Method::JaccardIndex => jaccard_index(lhs, rhs),
-        Method::JaccardDistance => jaccard_distance(lhs, rhs),
-        Method::CosineSimilarity => cosine_similarity(lhs, rhs),
-        Method::PearsonCorrelation => pearson_correlation(lhs, rhs),
-        Method::PearsonApproximation => pearson_approximation(lhs, rhs),
+    a: MapIter<'a, K, V>,
+    b: &'a HashMap<K, V>,
+}
+
+impl<'a, K, V> CommonKeyIterator<'a, K, V>
+where
+    K: Hash + Eq,
+{
+    pub fn new(a: &'a HashMap<K, V>, b: &'a HashMap<K, V>) -> Self {
+        Self { a: a.iter(), b }
     }
 }
 
-pub fn manhattan_distance<K, V>(lhs: &HashMap<K, V>, rhs: &HashMap<K, V>) -> Option<V>
+impl<'a, K, V> Iterator for CommonKeyIterator<'a, K, V>
 where
     K: Hash + Eq,
-    V: Real + AddAssign + Sub,
+{
+    type Item = (&'a V, &'a V);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut a_val = self.a.next()?;
+        loop {
+            if let Some(b_val) = self.b.get(a_val.0) {
+                break Some((a_val.1, b_val));
+            } else {
+                a_val = self.a.next()?;
+            }
+        }
+    }
+}
+
+pub fn distance<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>, method: Method) -> Option<V>
+where
+    K: Hash + Eq,
+    V: Float + AddAssign + Sub + Mul + MulAssign,
+{
+    match method {
+        Method::Manhattan => manhattan_distance(a, b),
+        Method::Euclidean => euclidean_distance(a, b),
+        Method::Minkowski(p) => minkowski_distance(a, b, p),
+        Method::JaccardIndex => jaccard_index(a, b),
+        Method::JaccardDistance => jaccard_distance(a, b),
+        Method::CosineSimilarity => cosine_similarity(a, b),
+        Method::PearsonCorrelation => pearson_correlation(a, b),
+        Method::PearsonApproximation => pearson_approximation(a, b),
+    }
+}
+
+pub fn manhattan_distance<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Option<V>
+where
+    K: Hash + Eq,
+    V: Float + AddAssign + Sub,
 {
     let mut dist = None;
 
-    for (key, x) in lhs {
-        if let Some(y) = rhs.get(key) {
-            *dist.get_or_insert_with(V::zero) += (*y - *x).abs();
-        }
+    for (x, y) in CommonKeyIterator::new(a, b) {
+        *dist.get_or_insert_with(V::zero) += (*y - *x).abs();
     }
 
+    // Distance here is going to be None if there weren't matching components between both vecs
     dist
 }
 
-pub fn euclidean_distance<K, V>(lhs: &HashMap<K, V>, rhs: &HashMap<K, V>) -> Option<V>
+pub fn euclidean_distance<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Option<V>
 where
     K: Hash + Eq,
-    V: Real + AddAssign + Sub,
+    V: Float + AddAssign + Sub,
 {
     let mut dist = None;
 
-    for (key, x) in lhs {
-        if let Some(y) = rhs.get(key) {
-            *dist.get_or_insert_with(V::zero) += (*y - *x).powi(2);
-        }
+    for (x, y) in CommonKeyIterator::new(a, b) {
+        *dist.get_or_insert_with(V::zero) += (*y - *x).powi(2);
     }
 
+    // Distance here is going to be None if there weren't matching components between both vecs
     dist.map(V::sqrt)
 }
 
-pub fn minkowski_distance<K, V>(lhs: &HashMap<K, V>, rhs: &HashMap<K, V>, p: usize) -> Option<V>
+pub fn minkowski_distance<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>, p: usize) -> Option<V>
 where
     K: Hash + Eq,
-    V: Real + AddAssign + Sub,
+    V: Float + AddAssign + Sub,
 {
-    let mut dist = None;
-
-    for (key, x) in lhs {
-        if let Some(y) = rhs.get(key) {
-            *dist.get_or_insert_with(V::zero) += (*y - *x).abs().powi(p as i32);
-        }
+    if p == 0 {
+        return None;
     }
 
-    V::from(p)
-        .map(|p| dist.map(|v| v.powf(V::one() / p)))
-        .flatten()
+    let mut dist = None;
+
+    for (x, y) in CommonKeyIterator::new(a, b) {
+        *dist.get_or_insert_with(V::zero) += (*y - *x).abs().powi(p as i32);
+    }
+
+    // Distance here is going to be None if there weren't matching components between both vecs
+    Some(dist?.powf(V::one() / V::from(p)?))
 }
 
-pub fn jaccard_index<K, V>(lhs: &HashMap<K, V>, rhs: &HashMap<K, V>) -> Option<V>
+pub fn jaccard_index<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Option<V>
 where
     K: Hash + Eq,
-    V: Real + AddAssign + Sub,
+    V: Float + AddAssign + Sub,
 {
-    let lhs_keys: HashSet<_> = lhs.keys().collect();
-    let rhs_keys: HashSet<_> = rhs.keys().collect();
+    let a_keys: HashSet<_> = a.keys().collect();
+    let b_keys: HashSet<_> = b.keys().collect();
 
-    let inter = lhs_keys.intersection(&rhs_keys).count();
-    let union = lhs_keys.union(&rhs_keys).count();
+    let inter = a_keys.intersection(&b_keys).count();
+    let union = a_keys.union(&b_keys).count();
 
     if union == 0 {
         None
@@ -104,109 +139,115 @@ where
     }
 }
 
-pub fn jaccard_distance<K, V>(lhs: &HashMap<K, V>, rhs: &HashMap<K, V>) -> Option<V>
+pub fn jaccard_distance<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Option<V>
 where
     K: Hash + Eq,
-    V: Real + AddAssign + Sub,
+    V: Float + AddAssign + Sub,
 {
-    Some(V::one() - jaccard_index(lhs, rhs)?)
+    Some(V::one() - jaccard_index(a, b)?)
 }
 
-pub fn cosine_similarity<K, V>(lhs: &HashMap<K, V>, rhs: &HashMap<K, V>) -> Option<V>
+pub fn cosine_similarity<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Option<V>
 where
     K: Hash + Eq,
-    V: Real + AddAssign + Sub + Mul,
+    V: Float + AddAssign + Sub + Mul,
 {
     let mut a_norm = None;
     let mut b_norm = None;
     let mut dot_prod = None;
 
-    for (key, x) in lhs {
-        if let Some(y) = rhs.get(key) {
-            *a_norm.get_or_insert_with(V::zero) += x.powi(2);
-            *b_norm.get_or_insert_with(V::zero) += y.powi(2);
-            *dot_prod.get_or_insert_with(V::zero) += (*x) * (*y);
-        }
+    for (x, y) in CommonKeyIterator::new(a, b) {
+        *a_norm.get_or_insert_with(V::zero) += x.powi(2);
+        *b_norm.get_or_insert_with(V::zero) += y.powi(2);
+        *dot_prod.get_or_insert_with(V::zero) += (*x) * (*y);
     }
 
-    let norm = a_norm?.sqrt() * b_norm?.sqrt();
-    Some(dot_prod? / norm)
+    let dot_prod = dot_prod?;
+    let a_norm = a_norm?;
+    let b_norm = b_norm?;
+
+    let cos_sim = dot_prod / (a_norm.sqrt() * b_norm.sqrt());
+    if cos_sim.is_nan() || cos_sim.is_infinite() {
+        None
+    } else {
+        Some(cos_sim)
+    }
 }
 
-pub fn pearson_correlation<K, V>(lhs: &HashMap<K, V>, rhs: &HashMap<K, V>) -> Option<V>
+pub fn pearson_correlation<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Option<V>
 where
     K: Hash + Eq,
-    V: Real + AddAssign + Sub + Mul,
+    V: Float + AddAssign + Sub + Mul,
 {
     let mut mean_x = None;
     let mut mean_y = None;
-    let mut total = 0;
+    let mut n = 0;
 
-    for (key, x) in lhs {
-        if let Some(y) = rhs.get(key) {
-            *mean_x.get_or_insert_with(V::zero) += *x;
-            *mean_y.get_or_insert_with(V::zero) += *y;
-            total += 1;
-        }
+    for (x, y) in CommonKeyIterator::new(a, b) {
+        *mean_x.get_or_insert_with(V::zero) += *x;
+        *mean_y.get_or_insert_with(V::zero) += *y;
+        n += 1;
     }
 
-    let total = V::from(total)?;
-    let mean_x = mean_x? / total;
-    let mean_y = mean_y? / total;
+    let n = V::from(n)?;
+    let mean_x = mean_x? / n;
+    let mean_y = mean_y? / n;
 
     let mut cov = None;
     let mut std_dev_a = None;
     let mut std_dev_b = None;
 
-    for (key, x) in lhs {
-        if let Some(y) = rhs.get(key) {
-            *cov.get_or_insert_with(V::zero) += (*x - mean_x) * (*y - mean_y);
-            *std_dev_a.get_or_insert_with(V::zero) += (*x - mean_x).powi(2);
-            *std_dev_b.get_or_insert_with(V::zero) += (*y - mean_y).powi(2);
-        }
+    for (x, y) in CommonKeyIterator::new(a, b) {
+        *cov.get_or_insert_with(V::zero) += (*x - mean_x) * (*y - mean_y);
+        *std_dev_a.get_or_insert_with(V::zero) += (*x - mean_x).powi(2);
+        *std_dev_b.get_or_insert_with(V::zero) += (*y - mean_y).powi(2);
     }
 
+    let cov = cov?;
     let std_dev = std_dev_a?.sqrt() * std_dev_b?.sqrt();
 
-    Some(cov? / std_dev)
+    let pearson = cov / std_dev;
+    if pearson.is_nan() || pearson.is_infinite() {
+        None
+    } else {
+        Some(pearson)
+    }
 }
 
-fn pearson_approximation<K, V>(lhs: &HashMap<K, V>, rhs: &HashMap<K, V>) -> Option<V>
+fn pearson_approximation<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Option<V>
 where
     K: Hash + Eq,
-    V: Real + AddAssign + Sub + Mul,
+    V: Float + AddAssign + Sub + Mul,
 {
     let mut sum_x = None;
     let mut sum_y = None;
     let mut sum_x_sq = None;
     let mut sum_y_sq = None;
     let mut dot_prod = None;
-    let mut total = 0;
+    let mut n = 0;
 
-    for (key, x) in lhs {
-        if let Some(y) = rhs.get(key) {
-            *sum_x.get_or_insert_with(V::zero) += *x;
-            *sum_y.get_or_insert_with(V::zero) += *y;
-            *sum_x_sq.get_or_insert_with(V::zero) += x.powi(2);
-            *sum_y_sq.get_or_insert_with(V::zero) += y.powi(2);
-            *dot_prod.get_or_insert_with(V::zero) += (*x) * (*y);
-            total += 1;
-        }
+    for (x, y) in CommonKeyIterator::new(a, b) {
+        *sum_x.get_or_insert_with(V::zero) += *x;
+        *sum_y.get_or_insert_with(V::zero) += *y;
+        *sum_x_sq.get_or_insert_with(V::zero) += x.powi(2);
+        *sum_y_sq.get_or_insert_with(V::zero) += y.powi(2);
+        *dot_prod.get_or_insert_with(V::zero) += (*x) * (*y);
+        n += 1;
     }
 
-    if total == 0 {
-        return None;
-    }
+    let n = V::from(n)?;
+    let num = dot_prod? - (sum_x? * sum_y?) / n;
 
-    let total = V::from(total)?;
-
-    let num = dot_prod? - (sum_x? * sum_y?) / total;
-
-    let dem_x = sum_x_sq? - sum_x?.powi(2) / total;
-    let dem_y = sum_y_sq? - sum_y?.powi(2) / total;
+    let dem_x = sum_x_sq? - sum_x?.powi(2) / n;
+    let dem_y = sum_y_sq? - sum_y?.powi(2) / n;
     let dem = dem_x.sqrt() * dem_y.sqrt();
 
-    Some(num / dem)
+    let pearson = num / dem;
+    if pearson.is_nan() || pearson.is_infinite() {
+        None
+    } else {
+        Some(pearson)
+    }
 }
 
 #[cfg(test)]
@@ -216,56 +257,132 @@ mod tests {
     use common_macros::hash_map;
 
     #[test]
-    fn manhattan_distance_test() {
+    fn common_key_iterator() {
+        let a = hash_map! {
+            0 => 0.,
+            2 => 0.,
+            3 => 0.,
+            5 => 0.,
+        };
+
+        let b = hash_map! {
+            0 => 2.,
+            1 => 1.,
+            2 => 2.,
+            5 => 2.,
+        };
+
+        let mut iter = CommonKeyIterator::new(&a, &b);
+
+        assert_eq!(iter.next(), Some((&0., &2.)));
+        assert_eq!(iter.next(), Some((&0., &2.)));
+        assert_eq!(iter.next(), Some((&0., &2.)));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn invalid_distances_should_be_none() {
         let a = hash_map! {
             0 => 1.,
             2 => 2.,
+            3 => 2.,
+        };
+
+        let b = hash_map! {
+            4 => 1.,
+            5 => 2.,
+            6 => 2.,
+        };
+
+        assert!(manhattan_distance(&a, &b).is_none());
+        assert!(euclidean_distance(&a, &b).is_none());
+        assert!(minkowski_distance(&a, &b, 1).is_none());
+        assert!(minkowski_distance(&a, &b, 2).is_none());
+        assert!(minkowski_distance(&a, &b, 3).is_none());
+        assert!(cosine_similarity(&a, &b).is_none());
+        assert!(pearson_correlation(&a, &b).is_none());
+        assert!(pearson_approximation(&a, &b).is_none());
+    }
+
+    #[test]
+    fn manhattan_distance_ok() {
+        let a = hash_map! {
+            0 => 1.,
+            2 => 2.,
+            3 => 2.,
         };
 
         let b = hash_map! {
             0 => 1.,
             1 => 3.,
             2 => 3.,
+            3 => 4.,
         };
 
-        let d = manhattan_distance(&a, &b);
-
-        assert_approx_eq!(1., d.unwrap());
+        assert_approx_eq!(3., manhattan_distance(&a, &b).unwrap());
     }
 
     #[test]
-    fn euclidean_distance_test() {
+    fn euclidean_distance_ok() {
         let a = hash_map! {
             0 => 0.,
-            2 => 0.
-        };
-
-        let b = hash_map! {
-            0 => 2.,
-            1 => 1.,
-            2 => 2.
-        };
-
-        let d = euclidean_distance(&a, &b);
-
-        assert_approx_eq!(8f64.sqrt(), d.unwrap());
-    }
-
-    #[test]
-    fn minkowski3_distance_test() {
-        let a = hash_map! {
-            0 => 0.,
-            2 => 0.,
+            2 => 1.,
+            3 => 2.,
         };
 
         let b = hash_map! {
             0 => 2.,
             1 => 1.,
             2 => 2.,
+            3 => 4.,
         };
 
-        let d = minkowski_distance(&a, &b, 3);
+        assert_approx_eq!(3., euclidean_distance(&a, &b).unwrap());
+    }
 
-        assert_approx_eq!(16f64.powf(1. / 3.), d.unwrap());
+    #[test]
+    fn minkowski_distance_test() {
+        let a = hash_map! {
+            0 => 0.,
+            2 => 1.,
+            3 => 2.,
+        };
+
+        let b = hash_map! {
+            0 => 2.,
+            1 => 1.,
+            2 => 3.,
+            3 => 5.
+        };
+
+        assert_approx_eq!(
+            manhattan_distance(&a, &b).unwrap(),
+            minkowski_distance(&a, &b, 1).unwrap()
+        );
+
+        assert_approx_eq!(
+            euclidean_distance(&a, &b).unwrap(),
+            minkowski_distance(&a, &b, 2).unwrap()
+        );
+    }
+
+    #[test]
+    fn cosine_similarity_all_zeros_should_be_none() {
+        let a = hash_map! {
+            0 => 0.,
+            1 => 0.,
+            2 => 0.,
+            3 => 0.,
+            4 => 1.,
+        };
+
+        let b = hash_map! {
+            0 => 1.,
+            1 => 1.,
+            2 => 1.,
+            3 => 1.,
+        };
+
+        assert!(cosine_similarity(&a, &b).is_none());
     }
 }
