@@ -24,16 +24,25 @@ pub struct CommonKeyIterator<'a, K, V>
 where
     K: Hash + Eq,
 {
-    a: MapIter<'a, K, V>,
-    b: &'a HashMap<K, V>,
+    shortest: MapIter<'a, K, V>,
+    longest: &'a HashMap<K, V>,
 }
 
 impl<'a, K, V> CommonKeyIterator<'a, K, V>
 where
     K: Hash + Eq,
 {
+    // Creating a common key iterator is kinda interesting since it'll
+    // decide which map is going to be iterated based on it's length.
+    // Basically if one of them is empty, it'll choose it as the main
+    // iterator, therefore ending the iteration early.
     pub fn new(a: &'a HashMap<K, V>, b: &'a HashMap<K, V>) -> Self {
-        Self { a: a.iter(), b }
+        let (shortest, longest) = if a.len() > b.len() { (b, a) } else { (a, b) };
+
+        Self {
+            shortest: shortest.iter(),
+            longest,
+        }
     }
 }
 
@@ -44,12 +53,13 @@ where
     type Item = (&'a V, &'a V);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let mut a_val = self.a.next()?;
+        let mut a_val = self.shortest.next()?;
+
         loop {
-            if let Some(b_val) = self.b.get(a_val.0) {
+            if let Some(b_val) = self.longest.get(a_val.0) {
                 break Some((a_val.1, b_val));
             } else {
-                a_val = self.a.next()?;
+                a_val = self.shortest.next()?;
             }
         }
     }
@@ -78,12 +88,10 @@ where
     V: Float + AddAssign + Sub,
 {
     let mut dist = None;
-
     for (x, y) in CommonKeyIterator::new(a, b) {
         *dist.get_or_insert_with(V::zero) += (*y - *x).abs();
     }
 
-    // Distance here is going to be None if there weren't matching components between both vecs
     dist
 }
 
@@ -93,12 +101,10 @@ where
     V: Float + AddAssign + Sub,
 {
     let mut dist = None;
-
     for (x, y) in CommonKeyIterator::new(a, b) {
         *dist.get_or_insert_with(V::zero) += (*y - *x).powi(2);
     }
 
-    // Distance here is going to be None if there weren't matching components between both vecs
     dist.map(V::sqrt)
 }
 
@@ -108,17 +114,16 @@ where
     V: Float + AddAssign + Sub,
 {
     if p == 0 {
-        return None;
+        panic!("Received p = 0 for minkowski distance!");
     }
 
     let mut dist = None;
-
     for (x, y) in CommonKeyIterator::new(a, b) {
         *dist.get_or_insert_with(V::zero) += (*y - *x).abs().powi(p as i32);
     }
 
-    // Distance here is going to be None if there weren't matching components between both vecs
-    Some(dist?.powf(V::one() / V::from(p)?))
+    let exp = V::one() / V::from(p)?;
+    dist.map(|dist| dist.powf(exp))
 }
 
 pub fn jaccard_index<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Option<V>
@@ -126,16 +131,23 @@ where
     K: Hash + Eq,
     V: Float + AddAssign + Sub,
 {
-    let a_keys: HashSet<_> = a.keys().collect();
-    let b_keys: HashSet<_> = b.keys().collect();
+    match (a.is_empty(), b.is_empty()) {
+        // Both are empty, cannot compute the index
+        (true, true) => None,
 
-    let inter = a_keys.intersection(&b_keys).count();
-    let union = a_keys.union(&b_keys).count();
+        // One of them is empty, the result is zero
+        (true, _) | (_, true) => Some(V::zero()),
 
-    if union == 0 {
-        None
-    } else {
-        Some(V::from(inter)? / V::from(union)?)
+        // Both have at least one element, proceed
+        _ => {
+            let a_keys: HashSet<_> = a.keys().collect();
+            let b_keys: HashSet<_> = b.keys().collect();
+
+            let union = a_keys.union(&b_keys).count();
+            let inter = a_keys.intersection(&b_keys).count();
+
+            Some(V::from(inter)? / V::from(union)?)
+        }
     }
 }
 
