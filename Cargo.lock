@@ -463,6 +463,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "movie-lens"
+version = "0.1.0"
+
+[[package]]
 name = "movie-lens-small"
 version = "0.1.0"
 dependencies = [
