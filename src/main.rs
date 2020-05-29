@@ -5,8 +5,9 @@ use books::BooksController;
 use controller::{Controller, Entity, ToTable};
 use movie_lens_small::MovieLensSmallController;
 use parser::{Database, Statement};
-use recommend::{Engine, MapedDistance};
+use recommend::Engine;
 use simple_movie::SimpleMovieController;
+use std::time::Instant;
 
 macro_rules! prompt {
     ($ed:ident) => {{
@@ -134,15 +135,19 @@ where
                             }
                         };
 
+                        let now = Instant::now();
                         let dist = engine.distance(&users_a[0], &users_b[0], method);
                         match dist {
                             Some(dist) => println!("Distance is {}", dist),
                             None => println!("Distance couldn't be calculated or gave NaN/∞/-∞"),
                         }
+
+                        println!("Operation took {:.4} seconds", now.elapsed().as_secs_f64());
                     }
 
                     Statement::KNN(k, searchby, method) => {
                         let users = controller.users(&searchby);
+                        let now = Instant::now();
                         let knn = match users {
                             Ok(users) => engine.knn(k, &users[0], method),
                             Err(e) => {
@@ -150,6 +155,8 @@ where
                                 continue;
                             }
                         };
+
+                        let elapsed = now.elapsed().as_secs_f64();
 
                         match knn {
                             Some(knn) => {
@@ -159,13 +166,15 @@ where
                                     continue;
                                 }
 
-                                for MapedDistance(nn_id, dist) in knn {
+                                for (nn_id, dist) in knn {
                                     println!("Distance with user with id({}) is {}", nn_id, dist);
                                 }
                             }
 
                             None => println!("Failed to calculate the {} nearest neighbors", k),
                         }
+
+                        println!("Operation took {:.4} seconds", elapsed);
                     }
 
                     Statement::Predict(k, searchby_user, searchby_item, method) => {
@@ -185,6 +194,7 @@ where
                             }
                         };
 
+                        let now = Instant::now();
                         let prediction = engine.predict(k, &users[0], &items[0], method);
                         match prediction {
                             Some(predicted) => println!(
@@ -199,6 +209,8 @@ where
                                 );
                             }
                         }
+
+                        println!("Operation took {:.4} seconds", now.elapsed().as_secs_f64());
                     }
                 },
 
