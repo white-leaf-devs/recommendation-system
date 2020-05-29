@@ -465,6 +465,14 @@ dependencies = [
 [[package]]
 name = "movie-lens"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "common_macros",
+ "controller",
+ "csv",
+ "diesel",
+ "indicatif",
+]
 
 [[package]]
 name = "movie-lens-small"
