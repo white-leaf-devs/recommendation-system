@@ -16,37 +16,14 @@
 // along with recommend.  If not, see <http://www.gnu.org/licenses/>.
 
 pub mod distances;
+pub mod knn;
+pub mod maped_distance;
 
-use self::distances::Method;
-use controller::{Controller, Entity, MapedRatings, Ratings};
-use std::{
-    cmp::{Ordering, PartialOrd, Reverse},
-    collections::BinaryHeap,
-    marker::PhantomData,
-};
-
-#[derive(Debug, Clone)]
-pub struct MapedDistance<'a>(pub &'a str, pub f64, pub Option<&'a Ratings>);
-
-impl PartialEq for MapedDistance<'_> {
-    fn eq(&self, other: &Self) -> bool {
-        self.1.eq(&other.1)
-    }
-}
-
-impl Eq for MapedDistance<'_> {}
-
-impl PartialOrd for MapedDistance<'_> {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.1.partial_cmp(&other.1)
-    }
-}
-
-impl Ord for MapedDistance<'_> {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.1.partial_cmp(&other.1).unwrap()
-    }
-}
+use crate::distances::Method;
+use crate::maped_distance::MapedDistance;
+use controller::{Controller, Entity};
+use knn::{Knn, MaxHeapKnn, MinHeapKnn};
+use std::marker::PhantomData;
 
 pub struct Engine<'a, C, User, Item>
 where
@@ -81,142 +58,113 @@ where
         distances::distance(&rating_a, &rating_b, method)
     }
 
-    fn max_heap_knn<'b>(
+    pub fn knn(
         &self,
         k: usize,
-        user_rating: &'b Ratings,
-        maped_ratings: &'b MapedRatings,
+        user: &User,
         method: Method,
-    ) -> Option<Vec<MapedDistance<'b>>> {
-        let mut max_heap = BinaryHeap::with_capacity(k);
-        for (user_id, rating) in maped_ratings {
-            let distance = distances::distance(&user_rating, &rating, method);
-
-            if let Some(distance) = distance {
-                if max_heap.len() < k {
-                    max_heap.push(MapedDistance(user_id, distance, Some(&rating)));
-                } else {
-                    let maximum = max_heap.peek()?;
-                    if distance < maximum.1 {
-                        max_heap.pop();
-                        max_heap.push(MapedDistance(user_id, distance, Some(&rating)));
-                    }
-                }
-            }
+        chunk_size: Option<usize>,
+    ) -> Option<Vec<(String, f64)>> {
+        if k == 0 {
+            return None;
         }
 
-        Some(max_heap.into_sorted_vec())
-    }
+        let user_ratings = self.controller.ratings_by(user).ok()?;
+        let mut knn: Box<dyn Knn> = if method.is_similarity() {
+            Box::new(MinHeapKnn::new(k, method))
+        } else {
+            Box::new(MaxHeapKnn::new(k, method))
+        };
 
-    fn min_heap_knn<'b>(
-        &self,
-        k: usize,
-        user_rating: &'b Ratings,
-        maped_ratings: &'b MapedRatings,
-        method: Method,
-    ) -> Option<Vec<MapedDistance<'b>>> {
-        let mut min_heap = BinaryHeap::with_capacity(k);
-        for (user_id, rating) in maped_ratings {
-            let distance = distances::distance(&user_rating, &rating, method);
-
-            if let Some(distance) = distance {
-                if min_heap.len() < k {
-                    min_heap.push(Reverse(MapedDistance(user_id, distance, Some(&rating))));
-                } else {
-                    let minimum = min_heap.peek()?;
-                    if distance > (minimum.0).1 {
-                        min_heap.pop();
-                        min_heap.push(Reverse(MapedDistance(user_id, distance, Some(&rating))));
-                    }
-                }
+        if let Some(chunk_size) = chunk_size {
+            let users_chunks = self.controller.users_by_chunks(chunk_size);
+            for users in users_chunks {
+                let maped_ratings = self.controller.maped_ratings_by(&users).ok()?;
+                knn.update(&user_ratings, maped_ratings);
             }
+        } else {
+            let maped_ratings = self.controller.maped_ratings_except(user).ok()?;
+            knn.update(&user_ratings, maped_ratings);
         }
 
         Some(
-            min_heap
-                .into_sorted_vec()
+            knn.into_vec()
                 .into_iter()
-                .map(|r| r.0)
+                .map(|MapedDistance(id, dist, _)| (id, dist))
                 .collect(),
         )
     }
 
-    fn decide_knn<'b>(
+    pub fn predict(
         &self,
         k: usize,
-        user_rating: &'b Ratings,
-        maped_ratings: &'b MapedRatings,
+        user: &User,
+        item: &Item,
         method: Method,
-    ) -> Option<Vec<MapedDistance<'b>>> {
-        match method {
-            Method::Manhattan
-            | Method::Euclidean
-            | Method::Minkowski(_)
-            | Method::JaccardDistance => self.max_heap_knn(k, user_rating, maped_ratings, method),
-
-            Method::CosineSimilarity
-            | Method::PearsonCorrelation
-            | Method::JaccardIndex
-            | Method::PearsonApproximation => {
-                self.min_heap_knn(k, user_rating, maped_ratings, method)
-            }
-        }
-    }
-
-    pub fn knn(&self, k: usize, user: &User, method: Method) -> Option<Vec<(String, f64)>> {
-        let user_rating = self.controller.ratings_by(user).ok()?;
-        let maped_ratings = self.controller.ratings_except(user).ok()?;
-
-        let maped_distances = self.decide_knn(k, &user_rating, &maped_ratings, method);
-        maped_distances.map(|m| {
-            m.into_iter()
-                .map(|MapedDistance(id, dist, _)| (id.to_string(), dist))
-                .collect()
-        })
-    }
-
-    pub fn predict(&self, k: usize, user: &User, item: &Item, method: Method) -> Option<f64> {
+        chunk_size: Option<usize>,
+    ) -> Option<f64> {
         let item_id = item.get_id();
-        let user_rating = self.controller.ratings_by(user).ok()?;
-        let maped_ratings = self
-            .controller
-            .ratings_except(user)
-            .ok()?
-            .into_iter()
-            .filter(|(_id, ratings)| ratings.contains_key(&item_id))
-            .collect();
+        let user_ratings = self.controller.ratings_by(user).ok()?;
+        let mut knn: Box<dyn Knn> = if method.is_similarity() {
+            Box::new(MinHeapKnn::new(k, method))
+        } else {
+            Box::new(MaxHeapKnn::new(k, method))
+        };
 
-        let relevant_knn = self.decide_knn(k, &user_rating, &maped_ratings, method)?;
-        let user_rating = self.controller.ratings_by(user).ok()?;
+        if let Some(chunk_size) = chunk_size {
+            let users_chunks = self.controller.users_by_chunks(chunk_size);
+            for users in users_chunks {
+                let maped_ratings = self
+                    .controller
+                    .maped_ratings_by(&users)
+                    .ok()?
+                    .into_iter()
+                    .filter(|(_, ratings)| ratings.contains_key(&item_id))
+                    .collect();
 
-        let pearson_knn: Vec<_> = relevant_knn
+                knn.update(&user_ratings, maped_ratings);
+            }
+        } else {
+            let maped_ratings = self
+                .controller
+                .maped_ratings_except(user)
+                .ok()?
+                .into_iter()
+                .filter(|(_id, ratings)| ratings.contains_key(&item_id))
+                .collect();
+
+            knn.update(&user_ratings, maped_ratings);
+        }
+
+        let pearson_knn: Vec<_> = knn
+            .into_vec()
             .into_iter()
             .filter_map(
-                |MapedDistance(nn_id, _, nn_ratings)| -> Option<(MapedDistance, f64)> {
-                    let nn_ratings = nn_ratings?;
+                |MapedDistance(id, _, ratings)| -> Option<(MapedDistance, f64)> {
+                    let nn_ratings = ratings?;
 
                     if !nn_ratings.contains_key(&item_id) {
                         return None;
                     }
 
                     let coef = distances::distance(
-                        &user_rating,
+                        &user_ratings,
                         &nn_ratings,
                         Method::PearsonApproximation,
                     )?;
 
-                    Some((MapedDistance(nn_id, coef, None), *nn_ratings.get(&item_id)?))
+                    Some((MapedDistance(id, coef, None), *nn_ratings.get(&item_id)?))
                 },
             )
             .collect();
 
         let total = pearson_knn
             .iter()
-            .fold(0.0, |acc, (MapedDistance(_, coef, _), _)| acc + coef);
+            .fold(0.0, |acc, (maped_distance, _)| acc + maped_distance.dist());
 
         let mut prediction = None;
-        for (MapedDistance(_, coef, _), nn_rating) in pearson_knn {
-            *prediction.get_or_insert(0.0) += nn_rating * (coef / total);
+        for (maped_distance, nn_rating) in pearson_knn {
+            *prediction.get_or_insert(0.0) += nn_rating * (maped_distance.dist() / total);
         }
 
         prediction
@@ -289,7 +237,7 @@ mod tests {
 
         println!(
             "kNN(52, manhattan): {:?}",
-            engine.knn(4, user, Method::Manhattan)
+            engine.knn(4, user, Method::Manhattan, None)
         );
 
         Ok(())
@@ -304,7 +252,7 @@ mod tests {
 
         println!(
             "kNN(52, 3, euclidean): {:?}",
-            engine.knn(3, user, Method::Euclidean)
+            engine.knn(3, user, Method::Euclidean, None)
         );
 
         Ok(())
@@ -319,7 +267,7 @@ mod tests {
 
         println!(
             "kNN(52, 3, cosine): {:?}",
-            engine.knn(3, user, Method::CosineSimilarity)
+            engine.knn(3, user, Method::CosineSimilarity, None)
         );
 
         Ok(())
@@ -334,23 +282,9 @@ mod tests {
 
         println!(
             "kNN(242, 5, manhattan): {:?}",
-            engine.knn(5, user, Method::JaccardDistance)
+            engine.knn(5, user, Method::JaccardDistance, None)
         );
 
         Ok(())
-    }
-
-    #[test]
-    fn compare_maped_distance() {
-        let a = MapedDistance("", 0., None);
-        let b = MapedDistance("", 1., None);
-
-        assert!(b > a);
-        assert_ne!(a, b);
-
-        let b = a.clone();
-
-        assert_eq!(a, b);
-        assert!(!(a > b));
     }
 }

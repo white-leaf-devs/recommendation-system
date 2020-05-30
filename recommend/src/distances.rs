@@ -19,6 +19,22 @@ pub enum Method {
     PearsonApproximation,
 }
 
+impl Method {
+    pub fn is_similarity(&self) -> bool {
+        match self {
+            Method::Manhattan
+            | Method::Euclidean
+            | Method::Minkowski(_)
+            | Method::JaccardDistance => false,
+
+            Method::JaccardIndex
+            | Method::CosineSimilarity
+            | Method::PearsonCorrelation
+            | Method::PearsonApproximation => true,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct CommonKeyIterator<'a, K, V>
 where
