@@ -49,6 +49,15 @@ impl Controller<User, Movie> for MovieLensSmallController {
         }
     }
 
+    fn users_offset_limit(&self, offset: usize, limit: usize) -> Result<Vec<User>, Error> {
+        let users = users::table
+            .limit(limit as i64)
+            .offset(offset as i64)
+            .load::<User>(&self.pg_conn)?;
+
+        Ok(users)
+    }
+
     fn items(&self, by: &SearchBy) -> Result<Vec<Movie>, Error> {
         match by {
             SearchBy::Id(id) => {
@@ -90,10 +99,24 @@ impl Controller<User, Movie> for MovieLensSmallController {
         Ok(ratings)
     }
 
-    fn ratings_except(&self, user: &User) -> Result<MapedRatings, Error> {
-        let ratings: Vec<Rating> = ratings::table
+    fn maped_ratings_by(&self, users: &[User]) -> Result<MapedRatings, Error> {
+        let ratings = Rating::belonging_to(users).load::<Rating>(&self.pg_conn)?;
+
+        let mut maped_ratings = HashMap::new();
+        for rating in ratings {
+            maped_ratings
+                .entry(rating.user_id.to_string())
+                .or_insert_with(HashMap::new)
+                .insert(rating.movie_id.to_string(), rating.score);
+        }
+
+        Ok(maped_ratings)
+    }
+
+    fn maped_ratings_except(&self, user: &User) -> Result<MapedRatings, Error> {
+        let ratings = ratings::table
             .filter(ratings::user_id.is_distinct_from(user.id))
-            .load(&self.pg_conn)?;
+            .load::<Rating>(&self.pg_conn)?;
 
         let mut maped_ratings = HashMap::new();
         for rating in ratings {

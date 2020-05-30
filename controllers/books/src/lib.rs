@@ -50,6 +50,15 @@ impl Controller<User, Book> for BooksController {
         }
     }
 
+    fn users_offset_limit(&self, offset: usize, limit: usize) -> Result<Vec<User>, Error> {
+        let users = users::table
+            .offset(offset as i64)
+            .limit(limit as i64)
+            .load::<User>(&self.pg_conn)?;
+
+        Ok(users)
+    }
+
     fn items(&self, by: &SearchBy) -> Result<Vec<Book>, Error> {
         match by {
             SearchBy::Id(id) => {
@@ -81,24 +90,38 @@ impl Controller<User, Book> for BooksController {
     fn ratings_by(&self, user: &User) -> Result<Ratings, Error> {
         let ratings = Rating::belonging_to(user)
             .load::<Rating>(&self.pg_conn)?
-            .iter()
-            .map(|rating| (rating.book_id.clone(), rating.score))
+            .into_iter()
+            .map(|rating| (rating.book_id, rating.score))
             .collect();
 
         Ok(ratings)
     }
 
-    fn ratings_except(&self, user: &User) -> Result<MapedRatings, Error> {
-        let ratings: Vec<Rating> = ratings::table
-            .filter(ratings::user_id.is_distinct_from(user.id))
-            .load(&self.pg_conn)?;
+    fn maped_ratings_by(&self, users: &[User]) -> Result<MapedRatings, Error> {
+        let ratings = Rating::belonging_to(users).load::<Rating>(&self.pg_conn)?;
 
         let mut maped_ratings = HashMap::new();
         for rating in ratings {
             maped_ratings
                 .entry(rating.user_id.to_string())
                 .or_insert_with(HashMap::new)
-                .insert(rating.book_id.clone(), rating.score);
+                .insert(rating.book_id, rating.score);
+        }
+
+        Ok(maped_ratings)
+    }
+
+    fn maped_ratings_except(&self, user: &User) -> Result<MapedRatings, Error> {
+        let ratings = ratings::table
+            .filter(ratings::user_id.ne(user.id))
+            .load::<Rating>(&self.pg_conn)?;
+
+        let mut maped_ratings = HashMap::new();
+        for rating in ratings {
+            maped_ratings
+                .entry(rating.user_id.to_string())
+                .or_insert_with(HashMap::new)
+                .insert(rating.book_id, rating.score);
         }
 
         Ok(maped_ratings)
@@ -127,6 +150,20 @@ mod tests {
 
         let book = controller.items(&SearchBy::name("Jane Doe"))?;
         assert_eq!(book[0].get_id(), "1552041778".to_string());
+
+        Ok(())
+    }
+
+    #[test]
+    fn chunked_users() -> Result<(), Error> {
+        let controller = BooksController::new()?;
+        let mut chunk_iter = controller.users_by_chunks(80000);
+
+        assert_eq!(80000, chunk_iter.next().unwrap().len());
+        assert_eq!(80000, chunk_iter.next().unwrap().len());
+        assert_eq!(80000, chunk_iter.next().unwrap().len());
+        assert_eq!(38858, chunk_iter.next().unwrap().len());
+        assert!(chunk_iter.next().is_none());
 
         Ok(())
     }

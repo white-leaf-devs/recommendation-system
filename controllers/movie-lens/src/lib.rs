@@ -22,7 +22,7 @@ pub struct MovieLensController {
 
 impl MovieLensController {
     pub fn new() -> Result<Self, Error> {
-        Self::with_url("postgres://postgres:@localhost/movie-lens-small")
+        Self::with_url("postgres://postgres:@localhost/movie-lens")
     }
 
     pub fn with_url(url: &str) -> Result<Self, Error> {
@@ -47,6 +47,15 @@ impl Controller<User, Movie> for MovieLensController {
             SearchBy::Name(name) => Err(ErrorKind::NotFoundByName(name.clone()).into()),
             SearchBy::Custom(k, v) => Err(ErrorKind::NotFoundByCustom(k.clone(), v.clone()).into()),
         }
+    }
+
+    fn users_offset_limit(&self, offset: usize, limit: usize) -> Result<Vec<User>, Error> {
+        let users = users::table
+            .limit(limit as i64)
+            .offset(offset as i64)
+            .load::<User>(&self.pg_conn)?;
+
+        Ok(users)
     }
 
     fn items(&self, by: &SearchBy) -> Result<Vec<Movie>, Error> {
@@ -83,17 +92,15 @@ impl Controller<User, Movie> for MovieLensController {
     fn ratings_by(&self, user: &User) -> Result<Ratings, Error> {
         let ratings = Rating::belonging_to(user)
             .load::<Rating>(&self.pg_conn)?
-            .iter()
+            .into_iter()
             .map(|rating| (rating.movie_id.to_string(), rating.score))
             .collect();
 
         Ok(ratings)
     }
 
-    fn ratings_except(&self, user: &User) -> Result<MapedRatings, Error> {
-        let ratings: Vec<Rating> = ratings::table
-            .filter(ratings::user_id.is_distinct_from(user.id))
-            .load(&self.pg_conn)?;
+    fn maped_ratings_by(&self, users: &[User]) -> Result<MapedRatings, Error> {
+        let ratings = Rating::belonging_to(users).load::<Rating>(&self.pg_conn)?;
 
         let mut maped_ratings = HashMap::new();
         for rating in ratings {
@@ -104,5 +111,60 @@ impl Controller<User, Movie> for MovieLensController {
         }
 
         Ok(maped_ratings)
+    }
+
+    fn maped_ratings_except(&self, user: &User) -> Result<MapedRatings, Error> {
+        let ratings = ratings::table
+            .filter(ratings::user_id.is_distinct_from(user.id))
+            .load::<Rating>(&self.pg_conn)?;
+
+        let mut maped_ratings = HashMap::new();
+        for rating in ratings {
+            maped_ratings
+                .entry(rating.user_id.to_string())
+                .or_insert_with(HashMap::new)
+                .insert(rating.movie_id.to_string(), rating.score);
+        }
+
+        Ok(maped_ratings)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use anyhow::Error;
+
+    #[test]
+    fn chunked_users() -> Result<(), Error> {
+        let controller = MovieLensController::new()?;
+        let mut lazy_iter = controller.users_by_chunks(64);
+
+        assert_eq!(64, lazy_iter.next().unwrap().len());
+        assert_eq!(64, lazy_iter.next().unwrap().len());
+
+        Ok(())
+    }
+
+    #[test]
+    fn maped_ratings_with_users_chunks() -> Result<(), Error> {
+        let controller = MovieLensController::new()?;
+        let mut lazy_iter = controller.users_by_chunks(64);
+
+        assert_eq!(
+            64,
+            controller
+                .maped_ratings_by(&lazy_iter.next().unwrap())?
+                .len()
+        );
+
+        assert_eq!(
+            64,
+            controller
+                .maped_ratings_by(&lazy_iter.next().unwrap())?
+                .len()
+        );
+
+        Ok(())
     }
 }
