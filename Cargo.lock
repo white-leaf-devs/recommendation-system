@@ -693,6 +693,7 @@ dependencies = [
  "anyhow",
  "books",
  "controller",
+ "movie-lens",
  "movie-lens-small",
  "nom",
  "recommend",

@@ -3,6 +3,7 @@ pub mod parser;
 use anyhow::Error;
 use books::BooksController;
 use controller::{Controller, Entity, ToTable};
+use movie_lens::MovieLensController;
 use movie_lens_small::MovieLensSmallController;
 use parser::{Database, Statement};
 use recommend::Engine;
@@ -145,11 +146,11 @@ where
                         println!("Operation took {:.4} seconds", now.elapsed().as_secs_f64());
                     }
 
-                    Statement::KNN(k, searchby, method) => {
+                    Statement::KNN(k, searchby, method, chunks_opt) => {
                         let users = controller.users(&searchby);
                         let now = Instant::now();
                         let knn = match users {
-                            Ok(users) => engine.knn(k, &users[0], method),
+                            Ok(users) => engine.knn(k, &users[0], method, chunks_opt),
                             Err(e) => {
                                 println!("{}", e);
                                 continue;
@@ -177,7 +178,7 @@ where
                         println!("Operation took {:.4} seconds", elapsed);
                     }
 
-                    Statement::Predict(k, searchby_user, searchby_item, method) => {
+                    Statement::Predict(k, searchby_user, searchby_item, method, chunks_opt) => {
                         let users = match controller.users(&searchby_user) {
                             Ok(users) => users,
                             Err(e) => {
@@ -195,7 +196,8 @@ where
                         };
 
                         let now = Instant::now();
-                        let prediction = engine.predict(k, &users[0], &items[0], method);
+                        let prediction =
+                            engine.predict(k, &users[0], &items[0], method, chunks_opt);
                         match prediction {
                             Some(predicted) => println!(
                                 "Predicted score for item with id({}) is {}",
@@ -254,6 +256,10 @@ fn main() -> Result<(), Error> {
                             Database::SimpleMovie => database_connected_prompt(
                                 SimpleMovieController::new()?,
                                 "simple-movie",
+                            )?,
+                            Database::MovieLens => database_connected_prompt(
+                                MovieLensController::new()?,
+                                "movie-lens",
                             )?,
                             Database::MovieLensSmall => database_connected_prompt(
                                 MovieLensSmallController::new()?,

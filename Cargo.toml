@@ -15,6 +15,7 @@ members = [
 anyhow = "1"
 books = { version = "*", path = "controllers/books" }
 controller = { version = "*", path = "controller" }
+movie-lens= { version = "*", path = "controllers/movie-lens" }
 movie-lens-small = { version = "*", path = "controllers/movie-lens-small" }
 nom = "5"
 recommend = { version = "*", path = "recommend" }

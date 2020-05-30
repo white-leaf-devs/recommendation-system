@@ -1,11 +1,12 @@
 use controller::SearchBy;
-use nom::{alt, char, delimited, tag, take_till1, take_while, take_while1, tuple, IResult};
+use nom::{alt, char, delimited, opt, tag, take_till1, take_while, take_while1, tuple, IResult};
 use recommend::distances::Method;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Database {
     Books,
     SimpleMovie,
+    MovieLens,
     MovieLensSmall,
 }
 
@@ -14,6 +15,7 @@ impl From<&str> for Database {
         match s {
             "books" => Self::Books,
             "simple-movie" => Self::SimpleMovie,
+            "movie-lens" => Self::MovieLens,
             "movie-lens-small" => Self::MovieLensSmall,
             _ => unreachable!(),
         }
@@ -27,8 +29,8 @@ pub enum Statement {
     QueryItem(SearchBy),
     QueryRatings(SearchBy),
     Distance(SearchBy, SearchBy, Method),
-    KNN(usize, SearchBy, Method),
-    Predict(usize, SearchBy, SearchBy, Method),
+    KNN(usize, SearchBy, Method, Option<usize>),
+    Predict(usize, SearchBy, SearchBy, Method, Option<usize>),
 }
 
 fn parse_ident(input: &str) -> IResult<&str, &str> {
@@ -155,7 +157,7 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
         }
 
         "knn" => {
-            let (input, (k, _, index, _, method)) = delimited!(
+            let (input, (k, _, index, _, method, chunks_opt)) = delimited!(
                 input,
                 char!('('),
                 tuple!(
@@ -163,16 +165,31 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
                     parse_separator,
                     parse_searchby,
                     parse_separator,
-                    parse_method
+                    parse_method,
+                    opt!(tuple!(parse_separator, parse_number))
                 ),
                 char!(')')
             )?;
 
-            (input, Statement::KNN(k.parse().unwrap(), index, method))
+            match chunks_opt {
+                Some((_, chunk_size)) => (
+                    input,
+                    Statement::KNN(
+                        k.parse().unwrap(),
+                        index,
+                        method,
+                        Some(chunk_size.parse().unwrap()),
+                    ),
+                ),
+                None => (
+                    input,
+                    Statement::KNN(k.parse().unwrap(), index, method, None),
+                ),
+            }
         }
 
         "predict" => {
-            let (input, (k, _, index_user, _, index_item, _, method)) = delimited!(
+            let (input, (k, _, index_user, _, index_item, _, method, chunks_opt)) = delimited!(
                 input,
                 char!('('),
                 tuple!(
@@ -182,15 +199,28 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
                     parse_separator,
                     parse_searchby,
                     parse_separator,
-                    parse_method
+                    parse_method,
+                    opt!(tuple!(parse_separator, parse_number))
                 ),
                 char!(')')
             )?;
 
-            (
-                input,
-                Statement::Predict(k.parse().unwrap(), index_user, index_item, method),
-            )
+            match chunks_opt {
+                Some((_, chunk_size)) => (
+                    input,
+                    Statement::Predict(
+                        k.parse().unwrap(),
+                        index_user,
+                        index_item,
+                        method,
+                        Some(chunk_size.parse().unwrap()),
+                    ),
+                ),
+                None => (
+                    input,
+                    Statement::Predict(k.parse().unwrap(), index_user, index_item, method, None),
+                ),
+            }
         }
 
         function => unimplemented!("Unimplemented parser for {}", function),
@@ -293,7 +323,46 @@ mod tests {
         let parsed = parse_statement("knn(4, id('324x'), minkowski(3))");
         let expected = (
             "",
-            Statement::KNN(4, SearchBy::id("324x"), Method::Minkowski(3)),
+            Statement::KNN(4, SearchBy::id("324x"), Method::Minkowski(3), None),
+        );
+
+        assert_eq!(parsed, Ok(expected));
+
+        let parsed = parse_statement("knn(4, id('324x'), minkowski(3), 10)");
+        let expected = (
+            "",
+            Statement::KNN(4, SearchBy::id("324x"), Method::Minkowski(3), Some(10)),
+        );
+
+        assert_eq!(parsed, Ok(expected));
+    }
+
+    #[test]
+    fn predict_statement() {
+        let parsed = parse_statement("predict(4, id('324x'), name('Alien'), minkowski(3))");
+        let expected = (
+            "",
+            Statement::Predict(
+                4,
+                SearchBy::id("324x"),
+                SearchBy::name("Alien"),
+                Method::Minkowski(3),
+                None,
+            ),
+        );
+
+        assert_eq!(parsed, Ok(expected));
+
+        let parsed = parse_statement("predict(4, id('324x'), name('Alien'), minkowski(3), 100)");
+        let expected = (
+            "",
+            Statement::Predict(
+                4,
+                SearchBy::id("324x"),
+                SearchBy::name("Alien"),
+                Method::Minkowski(3),
+                Some(100),
+            ),
         );
 
         assert_eq!(parsed, Ok(expected));
@@ -313,7 +382,8 @@ mod tests {
             Some(Statement::KNN(
                 5,
                 SearchBy::name("Patrick C"),
-                Method::CosineSimilarity
+                Method::CosineSimilarity,
+                None
             ))
         );
     }
