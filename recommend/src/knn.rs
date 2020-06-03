@@ -10,7 +10,7 @@ type MinHeap<T> = BinaryHeap<Reverse<T>>;
 
 pub trait Knn {
     fn update(&mut self, user_ratings: &Ratings, maped_ratings: MapedRatings);
-    fn into_vec(&self) -> Vec<MapedDistance>;
+    fn into_vec(self: Box<Self>) -> Vec<MapedDistance>;
 }
 
 pub struct MaxHeapKnn {
@@ -51,8 +51,8 @@ impl Knn for MaxHeapKnn {
         }
     }
 
-    fn into_vec(&self) -> Vec<MapedDistance> {
-        self.max_heap.clone().into_sorted_vec()
+    fn into_vec(self: Box<Self>) -> Vec<MapedDistance> {
+        self.max_heap.into_sorted_vec()
     }
 }
 
@@ -94,9 +94,8 @@ impl Knn for MinHeapKnn {
         }
     }
 
-    fn into_vec(&self) -> Vec<MapedDistance> {
+    fn into_vec(self: Box<Self>) -> Vec<MapedDistance> {
         self.min_heap
-            .clone()
             .into_sorted_vec()
             .into_iter()
             .map(|r| r.0)
