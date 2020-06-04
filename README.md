@@ -19,7 +19,7 @@ cargo install diesel_cli --no-default-features --features postgres
 
 #### Running migrations and loading data
 Supported controllers are defined in `controllers` folder, to setup the database 
-run `diesel setup` and then `diesel migration run` on each controller directory, this should create the database 
+run `diesel setup` on each controller directory, this should create the database 
 and create the tables. After that you just need to load data into the database by using 
 the following command on each controller directory:
 
