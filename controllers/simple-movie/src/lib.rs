@@ -32,7 +32,12 @@ impl SimpleMovieController {
 }
 
 impl Controller<User, Movie> for SimpleMovieController {
-    fn users(&self, by: &SearchBy) -> Result<Vec<User>, Error> {
+    fn users(&self) -> Result<Vec<User>, Error> {
+        let users = users::table.load::<User>(&self.pg_conn)?;
+        Ok(users)
+    }
+
+    fn users_by(&self, by: &SearchBy) -> Result<Vec<User>, Error> {
         match by {
             SearchBy::Id(id) => {
                 let id: i32 = id.parse()?;
@@ -71,7 +76,12 @@ impl Controller<User, Movie> for SimpleMovieController {
         Ok(users)
     }
 
-    fn items(&self, by: &SearchBy) -> Result<Vec<Movie>, Error> {
+    fn items(&self) -> Result<Vec<Movie>, Error> {
+        let movies = movies::table.load::<Movie>(&self.pg_conn)?;
+        Ok(movies)
+    }
+
+    fn items_by(&self, by: &SearchBy) -> Result<Vec<Movie>, Error> {
         match by {
             SearchBy::Id(id) => {
                 let id: i32 = id.parse()?;
@@ -103,6 +113,15 @@ impl Controller<User, Movie> for SimpleMovieController {
         }
     }
 
+    fn items_offset_limit(&self, offset: usize, limit: usize) -> Result<Vec<Movie>, Error> {
+        let items = movies::table
+            .limit(limit as i64)
+            .offset(offset as i64)
+            .load::<Movie>(&self.pg_conn)?;
+
+        Ok(items)
+    }
+
     fn ratings_by(&self, user: &User) -> Result<Ratings, Error> {
         let ratings = Rating::belonging_to(user)
             .load::<Rating>(&self.pg_conn)?
@@ -111,6 +130,20 @@ impl Controller<User, Movie> for SimpleMovieController {
             .collect();
 
         Ok(ratings)
+    }
+
+    fn maped_ratings(&self) -> Result<MapedRatings, Error> {
+        let ratings = ratings::table.load::<Rating>(&self.pg_conn)?;
+
+        let mut maped_ratings = HashMap::new();
+        for rating in ratings {
+            maped_ratings
+                .entry(rating.user_id.to_string())
+                .or_insert_with(HashMap::new)
+                .insert(rating.movie_id.to_string(), rating.score);
+        }
+
+        Ok(maped_ratings)
     }
 
     fn maped_ratings_by(&self, users: &[User]) -> Result<MapedRatings, Error> {
@@ -154,7 +187,7 @@ mod tests {
     fn query_user_by_id() -> Result<(), Error> {
         let controller = SimpleMovieController::new()?;
 
-        let users = controller.users(&SearchBy::id("53"))?;
+        let users = controller.users_by(&SearchBy::id("53"))?;
         assert_eq!(users[0].get_id(), "53".to_string());
 
         Ok(())
@@ -164,7 +197,7 @@ mod tests {
     fn query_user_by_name() -> Result<(), Error> {
         let controller = SimpleMovieController::new()?;
 
-        let users = controller.users(&SearchBy::name("Chris"))?;
+        let users = controller.users_by(&SearchBy::name("Chris"))?;
         assert_eq!(users.len(), 2);
 
         Ok(())

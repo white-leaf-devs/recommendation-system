@@ -32,7 +32,12 @@ impl BooksController {
 }
 
 impl Controller<User, Book> for BooksController {
-    fn users(&self, by: &SearchBy) -> Result<Vec<User>, Error> {
+    fn users(&self) -> Result<Vec<User>, Error> {
+        let users = users::table.load::<User>(&self.pg_conn)?;
+        Ok(users)
+    }
+
+    fn users_by(&self, by: &SearchBy) -> Result<Vec<User>, Error> {
         match by {
             SearchBy::Id(id) => {
                 let id: i32 = id.parse()?;
@@ -59,7 +64,12 @@ impl Controller<User, Book> for BooksController {
         Ok(users)
     }
 
-    fn items(&self, by: &SearchBy) -> Result<Vec<Book>, Error> {
+    fn items(&self) -> Result<Vec<Book>, Error> {
+        let items = books::table.load::<Book>(&self.pg_conn)?;
+        Ok(items)
+    }
+
+    fn items_by(&self, by: &SearchBy) -> Result<Vec<Book>, Error> {
         match by {
             SearchBy::Id(id) => {
                 let books = books::table.filter(books::id.eq(id)).load(&self.pg_conn)?;
@@ -87,6 +97,15 @@ impl Controller<User, Book> for BooksController {
         }
     }
 
+    fn items_offset_limit(&self, offset: usize, limit: usize) -> Result<Vec<Book>, Error> {
+        let items = books::table
+            .offset(offset as i64)
+            .limit(limit as i64)
+            .load::<Book>(&self.pg_conn)?;
+
+        Ok(items)
+    }
+
     fn ratings_by(&self, user: &User) -> Result<Ratings, Error> {
         let ratings = Rating::belonging_to(user)
             .load::<Rating>(&self.pg_conn)?
@@ -95,6 +114,20 @@ impl Controller<User, Book> for BooksController {
             .collect();
 
         Ok(ratings)
+    }
+
+    fn maped_ratings(&self) -> Result<MapedRatings, Error> {
+        let ratings = ratings::table.load::<Rating>(&self.pg_conn)?;
+
+        let mut maped_ratings = HashMap::new();
+        for rating in ratings {
+            maped_ratings
+                .entry(rating.user_id.to_string())
+                .or_insert_with(HashMap::new)
+                .insert(rating.book_id, rating.score);
+        }
+
+        Ok(maped_ratings)
     }
 
     fn maped_ratings_by(&self, users: &[User]) -> Result<MapedRatings, Error> {
@@ -138,7 +171,7 @@ mod tests {
     fn query_user_by_id() -> Result<(), Error> {
         let controller = BooksController::new()?;
 
-        let users = controller.users(&SearchBy::id("2"))?;
+        let users = controller.users_by(&SearchBy::id("2"))?;
         assert_eq!(users[0].get_id(), "2".to_string());
 
         Ok(())
@@ -148,7 +181,7 @@ mod tests {
     fn query_item_by_name() -> Result<(), Error> {
         let controller = BooksController::new()?;
 
-        let book = controller.items(&SearchBy::name("Jane Doe"))?;
+        let book = controller.items_by(&SearchBy::name("Jane Doe"))?;
         assert_eq!(book[0].get_id(), "1552041778".to_string());
 
         Ok(())

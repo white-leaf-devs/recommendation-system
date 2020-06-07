@@ -76,7 +76,7 @@ fn insert_ratings(conn: &PgConnection) -> Result<(), Error> {
             let movie_id: i32 = record[1].parse()?;
             let score: f64 = record[2].parse()?;
 
-            match controller.items(&SearchBy::id(&movie_id.to_string())) {
+            match controller.items_by(&SearchBy::id(&movie_id.to_string())) {
                 Ok(movies) if movies.is_empty() => continue,
                 Err(_) => continue,
                 Ok(_) => {}
@@ -90,7 +90,7 @@ fn insert_ratings(conn: &PgConnection) -> Result<(), Error> {
         }
 
         // Push the ratings vec when it's 10K length
-        if !ratings.is_empty() && ratings.len() % 10_000 == 0 { 
+        if !ratings.is_empty() && ratings.len() % 10_000 == 0 {
             insert_into(ratings::table).values(&ratings).execute(conn)?;
 
             // Clear ratings for the following iterations
