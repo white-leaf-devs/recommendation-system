@@ -18,6 +18,7 @@
 pub mod distances;
 pub mod knn;
 pub mod maped_distance;
+pub mod utils;
 
 use crate::distances::Method;
 use crate::maped_distance::MapedDistance;
