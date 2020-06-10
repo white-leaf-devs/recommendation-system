@@ -1,14 +1,31 @@
 # (Toy) Recommendation System
 
-## Installing Rust 
+## Cloning with Git LFS
+
+This repository uses Git LFS to keep track of some large files (those ones that contain the data), if you don't have LFS on your system you'll not have access to these files, which indeed may not be a problem since you can download them manually from the repository:
+
+- `controllers/books/data.zip`
+
+- `controllers/movie-lens/data.zip`
+
+If you have Git LFS installed in your system it's enough to just clone this repo:
+
+```shell
+git clone https://github.com/white-leaf-devs/recommendation-system
+```
+
+## Installing Rust
+
 Make sure that you have installed the latest stable Rust toolchain, if you
 don't have Rust installed on your computer, you can install it using [`rustup`](https://rustup.rs/)
 
-```bash
+```shell
 rustup install stable
 rustup default stable
 ```
+
 ## Populating databases
+
 In order to run anywhere you need to have PostgreSQL installed and running. After
 that you have to install [diesel](http://diesel.rs/) CLI (an ORM manager), as you 
 may already got `cargo` installed in your system do the following to install `diesel`.
@@ -18,6 +35,7 @@ cargo install diesel_cli --no-default-features --features postgres
 ```
 
 #### Running migrations and loading data
+
 Supported controllers are defined in `controllers` folder, to setup the database 
 run `diesel setup` on each controller directory, this should create the database 
 and create the tables. After that you just need to load data into the database by using 
@@ -27,13 +45,10 @@ the following command on each controller directory:
 cargo run --release --bin load_data
 ```
 
-**Note:** `books` controller data is too heavy to be included in this repository, but 
-it can be downloaded from [here](http://guidetodatamining.com/assets/data/BX-Dump.zip).
-After you finish your download you must unzip it and place the `csv` files inside a `data`
-folder in `controllers/books`.
-
+**Note:**  If you don't have Git LFS  you need to download `data.zip` for `books` and `movie-lens` controllers manually from the repository as stated above, if you already have both zips you only need to unzip them and you're ready to go.
 
 ## Running and using the CLI
+
 If you managed to get the above steps good you should be able to run the main CLI
 tool under the root project just by typing:
 
@@ -74,6 +89,7 @@ Before you start digging into the provided functions you should now that some of
 - Pearson's approximation: `pearson_a`
 
 Now it's time to play with the following provided functions:
+
 - `query_user(searchby)`: Query an user by its `id` or `name`, ex. `query_user(id('243'))`
 - `query_item(searchby)`: Query an item by its `id` or `name`, ex. `query_item(name('Alien')`
 - `query_ratings(searchby)`: Query the ratings from the user with `id` or `name`, ex. `query_ratings(id('243'))`
