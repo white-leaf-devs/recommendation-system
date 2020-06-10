@@ -83,7 +83,7 @@ where
                         println!("Disconnect from current database first!");
                     }
 
-                    Statement::QueryUser(searchby) => match controller.users(&searchby) {
+                    Statement::QueryUser(searchby) => match controller.users_by(&searchby) {
                         Ok(users) => {
                             for user in users {
                                 println!("{}", user.to_table());
@@ -92,7 +92,7 @@ where
                         Err(e) => println!("{}", e),
                     },
 
-                    Statement::QueryItem(searchby) => match controller.items(&searchby) {
+                    Statement::QueryItem(searchby) => match controller.items_by(&searchby) {
                         Ok(items) => {
                             for item in items {
                                 println!("{}", item.to_table());
@@ -101,7 +101,7 @@ where
                         Err(e) => println!("{}", e),
                     },
 
-                    Statement::QueryRatings(searchby) => match controller.users(&searchby) {
+                    Statement::QueryRatings(searchby) => match controller.users_by(&searchby) {
                         Ok(users) => {
                             for user in users {
                                 if let Ok(ratings) = controller.ratings_by(&user) {
@@ -120,7 +120,7 @@ where
                     },
 
                     Statement::Distance(searchby_a, searchby_b, method) => {
-                        let users_a = match controller.users(&searchby_a) {
+                        let users_a = match controller.users_by(&searchby_a) {
                             Ok(users) => users,
                             Err(e) => {
                                 println!("{}", e);
@@ -128,7 +128,7 @@ where
                             }
                         };
 
-                        let users_b = match controller.users(&searchby_b) {
+                        let users_b = match controller.users_by(&searchby_b) {
                             Ok(users) => users,
                             Err(e) => {
                                 println!("{}", e);
@@ -147,7 +147,7 @@ where
                     }
 
                     Statement::KNN(k, searchby, method, chunks_opt) => {
-                        let users = controller.users(&searchby);
+                        let users = controller.users_by(&searchby);
                         let now = Instant::now();
                         let knn = match users {
                             Ok(users) => engine.knn(k, &users[0], method, chunks_opt),
@@ -179,7 +179,7 @@ where
                     }
 
                     Statement::Predict(k, searchby_user, searchby_item, method, chunks_opt) => {
-                        let users = match controller.users(&searchby_user) {
+                        let users = match controller.users_by(&searchby_user) {
                             Ok(users) => users,
                             Err(e) => {
                                 println!("{}", e);
@@ -187,7 +187,7 @@ where
                             }
                         };
 
-                        let items = match controller.items(&searchby_item) {
+                        let items = match controller.items_by(&searchby_item) {
                             Ok(items) => items,
                             Err(e) => {
                                 println!("{}", e);

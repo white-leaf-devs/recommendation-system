@@ -18,6 +18,7 @@
 pub mod distances;
 pub mod knn;
 pub mod maped_distance;
+pub mod utils;
 
 use crate::distances::Method;
 use crate::maped_distance::MapedDistance;
@@ -185,8 +186,8 @@ mod tests {
         let controller = SimpleMovieController::new()?;
         let engine = Engine::with_controller(&controller);
 
-        let user_a = &controller.users(&SearchBy::id("52"))?[0];
-        let user_b = &controller.users(&SearchBy::id("53"))?[0];
+        let user_a = &controller.users_by(&SearchBy::id("52"))?[0];
+        let user_b = &controller.users_by(&SearchBy::id("53"))?[0];
 
         println!(
             "euclidean(52, 53): {:?}",
@@ -201,8 +202,8 @@ mod tests {
         let controller = SimpleMovieController::new()?;
         let engine = Engine::with_controller(&controller);
 
-        let user_a = &controller.users(&SearchBy::id("52"))?[0];
-        let user_b = &controller.users(&SearchBy::id("53"))?[0];
+        let user_a = &controller.users_by(&SearchBy::id("52"))?[0];
+        let user_b = &controller.users_by(&SearchBy::id("53"))?[0];
 
         println!(
             "manhattan(52, 53): {:?}",
@@ -217,8 +218,8 @@ mod tests {
         let controller = SimpleMovieController::new()?;
         let engine = Engine::with_controller(&controller);
 
-        let user_a = &controller.users(&SearchBy::id("52"))?[0];
-        let user_b = &controller.users(&SearchBy::id("53"))?[0];
+        let user_a = &controller.users_by(&SearchBy::id("52"))?[0];
+        let user_b = &controller.users_by(&SearchBy::id("53"))?[0];
 
         println!(
             "cosine(52, 53): {:?}",
@@ -233,7 +234,7 @@ mod tests {
         let controller = SimpleMovieController::new()?;
         let engine = Engine::with_controller(&controller);
 
-        let user = &controller.users(&SearchBy::id("52"))?[0];
+        let user = &controller.users_by(&SearchBy::id("52"))?[0];
 
         println!(
             "kNN(52, manhattan): {:?}",
@@ -248,7 +249,7 @@ mod tests {
         let controller = SimpleMovieController::new()?;
         let engine = Engine::with_controller(&controller);
 
-        let user = &controller.users(&SearchBy::id("52"))?[0];
+        let user = &controller.users_by(&SearchBy::id("52"))?[0];
 
         println!(
             "kNN(52, 3, euclidean): {:?}",
@@ -263,7 +264,7 @@ mod tests {
         let controller = SimpleMovieController::new()?;
         let engine = Engine::with_controller(&controller);
 
-        let user = &controller.users(&SearchBy::id("52"))?[0];
+        let user = &controller.users_by(&SearchBy::id("52"))?[0];
 
         println!(
             "kNN(52, 3, cosine): {:?}",
@@ -278,7 +279,7 @@ mod tests {
         let controller = BooksController::new()?;
         let engine = Engine::with_controller(&controller);
 
-        let user = &controller.users(&SearchBy::id("242"))?[0];
+        let user = &controller.users_by(&SearchBy::id("242"))?[0];
 
         println!(
             "kNN(242, 5, manhattan): {:?}",

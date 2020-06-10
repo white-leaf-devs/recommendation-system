@@ -79,13 +79,13 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub type Ratings = HashMap<String, f64>;
 pub type MapedRatings = HashMap<String, Ratings>;
 
-pub struct LazyChunker<'a, U, I> {
+pub struct LazyUserChunks<'a, U, I> {
     curr_offset: usize,
     chunk_size: usize,
     controller: &'a dyn Controller<U, I>,
 }
 
-impl<'a, U, I> Iterator for LazyChunker<'a, U, I> {
+impl<'a, U, I> Iterator for LazyUserChunks<'a, U, I> {
     type Item = Vec<U>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -108,18 +108,43 @@ impl<'a, U, I> Iterator for LazyChunker<'a, U, I> {
     }
 }
 
-pub trait Controller<U, I> {
-    fn users(&self, by: &SearchBy) -> Result<Vec<U>>;
-    fn items(&self, by: &SearchBy) -> Result<Vec<I>>;
-    fn ratings_by(&self, user: &U) -> Result<Ratings>;
-    fn maped_ratings_by(&self, users: &[U]) -> Result<MapedRatings>;
-    fn maped_ratings_except(&self, user: &U) -> Result<MapedRatings>;
+pub struct LazyItemChunks<'a, U, I> {
+    curr_offset: usize,
+    chunk_size: usize,
+    controller: &'a dyn Controller<U, I>,
+}
 
-    fn users_by_chunks(&self, chunk_size: usize) -> LazyChunker<U, I>
+impl<'a, U, I> Iterator for LazyItemChunks<'a, U, I> {
+    type Item = Vec<I>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let items = self
+            .controller
+            .items_offset_limit(self.curr_offset, self.chunk_size)
+            .ok();
+
+        self.curr_offset += self.chunk_size;
+        match items {
+            Some(items) => {
+                if items.is_empty() {
+                    None
+                } else {
+                    Some(items)
+                }
+            }
+            None => None,
+        }
+    }
+}
+
+pub trait Controller<U, I> {
+    fn users(&self) -> Result<Vec<U>>;
+    fn users_by(&self, by: &SearchBy) -> Result<Vec<U>>;
+    fn users_by_chunks(&self, chunk_size: usize) -> LazyUserChunks<U, I>
     where
         Self: Sized,
     {
-        LazyChunker {
+        LazyUserChunks {
             curr_offset: 0,
             chunk_size,
             controller: self,
@@ -130,6 +155,29 @@ pub trait Controller<U, I> {
     fn users_offset_limit(&self, offset: usize, limit: usize) -> Result<Vec<U>> {
         Err(error::ErrorKind::NotImplemented.into())
     }
+
+    fn items(&self) -> Result<Vec<I>>;
+    fn items_by(&self, by: &SearchBy) -> Result<Vec<I>>;
+    fn items_by_chunks(&self, chunk_size: usize) -> LazyItemChunks<U, I>
+    where
+        Self: Sized,
+    {
+        LazyItemChunks {
+            curr_offset: 0,
+            chunk_size,
+            controller: self,
+        }
+    }
+
+    #[allow(unused_variables)]
+    fn items_offset_limit(&self, offset: usize, limit: usize) -> Result<Vec<I>> {
+        Err(error::ErrorKind::NotImplemented.into())
+    }
+
+    fn ratings_by(&self, user: &U) -> Result<Ratings>;
+    fn maped_ratings(&self) -> Result<MapedRatings>;
+    fn maped_ratings_by(&self, users: &[U]) -> Result<MapedRatings>;
+    fn maped_ratings_except(&self, user: &U) -> Result<MapedRatings>;
 }
 
 pub mod error {

@@ -1,8 +1,9 @@
 #![allow(clippy::implicit_hasher)]
 
+use crate::utils::common_keys_iter;
 use num_traits::float::Float;
 use std::{
-    collections::{hash_map::Iter as MapIter, HashMap, HashSet},
+    collections::{HashMap, HashSet},
     hash::Hash,
     ops::{AddAssign, Mul, MulAssign, Sub},
 };
@@ -33,51 +34,9 @@ impl Method {
             | Method::PearsonApproximation => true,
         }
     }
-}
 
-#[derive(Debug)]
-pub struct CommonKeyIterator<'a, K, V>
-where
-    K: Hash + Eq,
-{
-    shortest: MapIter<'a, K, V>,
-    longest: &'a HashMap<K, V>,
-}
-
-impl<'a, K, V> CommonKeyIterator<'a, K, V>
-where
-    K: Hash + Eq,
-{
-    // Creating a common key iterator is kinda interesting since it'll
-    // decide which map is going to be iterated based on it's length.
-    // Basically if one of them is empty, it'll choose it as the main
-    // iterator, therefore ending the iteration early.
-    pub fn new(a: &'a HashMap<K, V>, b: &'a HashMap<K, V>) -> Self {
-        let (shortest, longest) = if a.len() > b.len() { (b, a) } else { (a, b) };
-
-        Self {
-            shortest: shortest.iter(),
-            longest,
-        }
-    }
-}
-
-impl<'a, K, V> Iterator for CommonKeyIterator<'a, K, V>
-where
-    K: Hash + Eq,
-{
-    type Item = (&'a V, &'a V);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let mut a_val = self.shortest.next()?;
-
-        loop {
-            if let Some(b_val) = self.longest.get(a_val.0) {
-                break Some((a_val.1, b_val));
-            } else {
-                a_val = self.shortest.next()?;
-            }
-        }
+    pub fn is_distance(&self) -> bool {
+        !self.is_similarity()
     }
 }
 
@@ -104,7 +63,7 @@ where
     V: Float + AddAssign + Sub,
 {
     let mut dist = None;
-    for (x, y) in CommonKeyIterator::new(a, b) {
+    for (x, y) in common_keys_iter(a, b) {
         *dist.get_or_insert_with(V::zero) += (*y - *x).abs();
     }
 
@@ -117,7 +76,7 @@ where
     V: Float + AddAssign + Sub,
 {
     let mut dist = None;
-    for (x, y) in CommonKeyIterator::new(a, b) {
+    for (x, y) in common_keys_iter(a, b) {
         *dist.get_or_insert_with(V::zero) += (*y - *x).powi(2);
     }
 
@@ -134,7 +93,7 @@ where
     }
 
     let mut dist = None;
-    for (x, y) in CommonKeyIterator::new(a, b) {
+    for (x, y) in common_keys_iter(a, b) {
         *dist.get_or_insert_with(V::zero) += (*y - *x).abs().powi(p as i32);
     }
 
@@ -184,7 +143,7 @@ where
     let mut b_norm = None;
     let mut dot_prod = None;
 
-    for (x, y) in CommonKeyIterator::new(a, b) {
+    for (x, y) in common_keys_iter(a, b) {
         *a_norm.get_or_insert_with(V::zero) += x.powi(2);
         *b_norm.get_or_insert_with(V::zero) += y.powi(2);
         *dot_prod.get_or_insert_with(V::zero) += (*x) * (*y);
@@ -211,7 +170,7 @@ where
     let mut mean_y = None;
     let mut n = 0;
 
-    for (x, y) in CommonKeyIterator::new(a, b) {
+    for (x, y) in common_keys_iter(a, b) {
         *mean_x.get_or_insert_with(V::zero) += *x;
         *mean_y.get_or_insert_with(V::zero) += *y;
         n += 1;
@@ -225,7 +184,7 @@ where
     let mut std_dev_a = None;
     let mut std_dev_b = None;
 
-    for (x, y) in CommonKeyIterator::new(a, b) {
+    for (x, y) in common_keys_iter(a, b) {
         *cov.get_or_insert_with(V::zero) += (*x - mean_x) * (*y - mean_y);
         *std_dev_a.get_or_insert_with(V::zero) += (*x - mean_x).powi(2);
         *std_dev_b.get_or_insert_with(V::zero) += (*y - mean_y).powi(2);
@@ -254,7 +213,7 @@ where
     let mut dot_prod = None;
     let mut n = 0;
 
-    for (x, y) in CommonKeyIterator::new(a, b) {
+    for (x, y) in common_keys_iter(a, b) {
         *sum_x.get_or_insert_with(V::zero) += *x;
         *sum_y.get_or_insert_with(V::zero) += *y;
         *sum_x_sq.get_or_insert_with(V::zero) += x.powi(2);
@@ -278,35 +237,126 @@ where
     }
 }
 
+pub fn pre_adjusted_cosine<U, K, V>(vecs: &HashMap<U, HashMap<K, V>>) -> HashMap<U, V>
+where
+    U: Hash + Eq + Clone,
+    K: Hash + Eq,
+    V: Float + AddAssign,
+{
+    let mut means = HashMap::new();
+    for (id, vec) in vecs {
+        let mut mean = None;
+        let mut n = 0;
+
+        for x in vec.values() {
+            *mean.get_or_insert_with(V::zero) += *x;
+            n += 1;
+        }
+
+        if let Some(mean) = mean {
+            let mean = mean / V::from(n).unwrap();
+            means.insert(id.to_owned(), mean);
+        }
+    }
+
+    means
+}
+
+pub fn post_adjusted_cosine<U, K, V>(
+    means: &HashMap<U, V>,
+    vecs: &HashMap<U, HashMap<K, V>>,
+    a: &K,
+    b: &K,
+) -> Option<V>
+where
+    U: Hash + Eq,
+    K: Hash + Eq,
+    V: Float + AddAssign + Sub + Mul + std::fmt::Display,
+{
+    let mut cov = None;
+    let mut dev_a = None;
+    let mut dev_b = None;
+
+    for (id, vec) in vecs {
+        let mean = if let Some(mean) = means.get(id) {
+            *mean
+        } else {
+            continue;
+        };
+
+        match (vec.get(a), vec.get(b)) {
+            (Some(val_a), Some(val_b)) => {
+                *cov.get_or_insert_with(V::zero) += (*val_a - mean) * (*val_b - mean);
+                *dev_a.get_or_insert_with(V::zero) += (*val_a - mean).powi(2);
+                *dev_b.get_or_insert_with(V::zero) += (*val_b - mean).powi(2);
+
+                println!("({} - {mean})({} - {mean}) +", val_a, val_b, mean = mean);
+            }
+            _ => continue,
+        }
+    }
+
+    let num = cov?;
+    let dem = dev_a?.sqrt() * dev_b?.sqrt();
+
+    let res = num / dem;
+    if res.is_nan() || res.is_infinite() {
+        None
+    } else {
+        Some(res)
+    }
+}
+
+pub fn adjusted_cosine<U, K, V>(vecs: &HashMap<U, HashMap<K, V>>, a: &K, b: &K) -> Option<V>
+where
+    U: Hash + Eq,
+    K: Hash + Eq,
+    V: Float + AddAssign + Sub + Mul,
+{
+    let mut cov = None;
+    let mut dev_a = None;
+    let mut dev_b = None;
+
+    for vec in vecs.values() {
+        let mut mean = None;
+        let mut n = 0;
+        for x in vec.values() {
+            *mean.get_or_insert_with(V::zero) += *x;
+            n += 1;
+        }
+
+        let mean = if let Some(mean) = mean {
+            mean / V::from(n)?
+        } else {
+            continue;
+        };
+
+        match (vec.get(a), vec.get(b)) {
+            (Some(val_a), Some(val_b)) => {
+                *cov.get_or_insert_with(V::zero) += (*val_a - mean) * (*val_b - mean);
+                *dev_a.get_or_insert_with(V::zero) += (*val_a - mean).powi(2);
+                *dev_b.get_or_insert_with(V::zero) += (*val_b - mean).powi(2);
+            }
+            _ => continue,
+        }
+    }
+
+    let num = cov?;
+    let dem = dev_a?.sqrt() * dev_b?.sqrt();
+
+    let res = num / dem;
+    if res.is_nan() || res.is_infinite() {
+        None
+    } else {
+        Some(res)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use assert_approx_eq::*;
     use common_macros::hash_map;
-
-    #[test]
-    fn common_key_iterator() {
-        let a = hash_map! {
-            0 => 0.,
-            2 => 0.,
-            3 => 0.,
-            5 => 0.,
-        };
-
-        let b = hash_map! {
-            0 => 2.,
-            1 => 1.,
-            2 => 2.,
-            5 => 2.,
-        };
-
-        let mut iter = CommonKeyIterator::new(&a, &b);
-
-        assert_eq!(iter.next(), Some((&0., &2.)));
-        assert_eq!(iter.next(), Some((&0., &2.)));
-        assert_eq!(iter.next(), Some((&0., &2.)));
-        assert_eq!(iter.next(), None);
-    }
 
     #[test]
     fn invalid_distances_should_be_none() {

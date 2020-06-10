@@ -19,6 +19,8 @@ common_macros = "0.1"
 criterion = "0.3"
 rand = "0.7"
 simple-movie = { version = "*", path = "../controllers/simple-movie" }
+movie-lens-small = { version = "*", path = "../controllers/movie-lens-small" }
+thiserror = "1.0.19"
 
 [[bench]]
 name = "distances"
