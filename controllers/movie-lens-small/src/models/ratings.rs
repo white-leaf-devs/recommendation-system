@@ -1,9 +1,11 @@
+use super::movies::Movie;
 use super::users::User;
 use crate::schema::ratings;
 
 // To query data from the database
 #[derive(Debug, Clone, Identifiable, Queryable, Associations)]
 #[belongs_to(User)]
+#[belongs_to(Movie)]
 pub struct Rating {
     pub id: i32,
     pub user_id: i32,

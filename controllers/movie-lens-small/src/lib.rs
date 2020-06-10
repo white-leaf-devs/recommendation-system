@@ -7,10 +7,10 @@ pub mod schema;
 use crate::models::{movies::Movie, ratings::Rating, users::User};
 use crate::schema::{movies, ratings, users};
 use anyhow::Error;
-use controller::{error::ErrorKind, Controller, MapedRatings, Ratings, SearchBy};
+use controller::{error::ErrorKind, Controller, MapedRatings, Ratings, SearchBy, ItemsUsers};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub fn establish_connection(url: &str) -> Result<PgConnection, Error> {
     Ok(PgConnection::establish(&url)?)
@@ -130,6 +130,30 @@ impl Controller<User, Movie> for MovieLensSmallController {
         }
 
         Ok(maped_ratings)
+    }
+
+    fn users_who_rated(&self, items: &[Movie]) -> Result<ItemsUsers, Error> {
+        let ratings = Rating::belonging_to(items).load::<Rating>(&self.pg_conn)?;
+        let mut items_users = HashMap::new();
+
+        for rating in ratings{
+            items_users
+                .entry(rating.movie_id.to_string())
+                .or_insert_with(HashSet::new)
+                .insert(rating.user_id.to_string());
+        }
+        Ok(items_users)
+    }
+
+    fn create_partial_users(&self, user_ids: &[String]) -> Result<Vec<User>, Error> {
+        user_ids
+            .iter()
+            .map(|id| -> Result<User, Error>{
+                Ok(User{
+                    id: id.parse()?
+                })
+            })
+            .collect()
     }
 
     fn maped_ratings_by(&self, users: &[User]) -> Result<MapedRatings, Error> {

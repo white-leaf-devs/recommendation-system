@@ -1,6 +1,6 @@
 use anyhow::Error;
 use prettytable::{cell, format::consts::FORMAT_NO_LINESEP, row, table, Table};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::{self, Display};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -78,6 +78,7 @@ where
 pub type Result<T> = std::result::Result<T, Error>;
 pub type Ratings = HashMap<String, f64>;
 pub type MapedRatings = HashMap<String, Ratings>;
+pub type ItemsUsers = HashMap<String, HashSet<String>>;
 
 pub struct LazyUserChunks<'a, U, I> {
     curr_offset: usize,
@@ -173,6 +174,9 @@ pub trait Controller<U, I> {
     fn items_offset_limit(&self, offset: usize, limit: usize) -> Result<Vec<I>> {
         Err(error::ErrorKind::NotImplemented.into())
     }
+
+    fn users_who_rated(&self, items: &[I]) -> Result<ItemsUsers>;
+    fn create_partial_users(&self, user_ids: &[String]) -> Result<Vec<U>>;
 
     fn ratings_by(&self, user: &U) -> Result<Ratings>;
     fn maped_ratings(&self) -> Result<MapedRatings>;
