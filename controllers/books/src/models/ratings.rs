@@ -1,9 +1,11 @@
+use super::books::Book;
 use super::users::User;
 use crate::schema::ratings;
 
 // To query data from the database
 #[derive(Debug, Clone, Identifiable, Queryable, Associations)]
 #[belongs_to(User)]
+#[belongs_to(Book)]
 pub struct Rating {
     pub id: i32,
     pub user_id: i32,
