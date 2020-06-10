@@ -1,0 +1,54 @@
+name: CI (master)
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  clippy:
+    runs-on: ubuntu-latest
+    container:
+      image: rust:latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache cargo files
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Add clippy component
+        run: rustup component add clippy
+      - name: Run clippy
+        run: cargo clippy -- -D warnings
+
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: rust:latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache cargo files
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Build
+        run: cargo build
+
+  test:
+    runs-on: ubuntu-latest
+    container:
+      image: rust:latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache cargo files
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Test
+        run: cargo test
