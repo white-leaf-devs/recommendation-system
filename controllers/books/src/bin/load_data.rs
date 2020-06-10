@@ -93,7 +93,7 @@ fn insert_ratings(conn: &PgConnection) -> Result<(), Error> {
             let book_id = &record[1];
             let score: f64 = record[2].parse()?;
 
-            match controller.items(&SearchBy::id(&book_id)) {
+            match controller.items_by(&SearchBy::id(&book_id)) {
                 Ok(books) if books.is_empty() => continue,
                 Err(_) => continue,
                 Ok(_) => {}
