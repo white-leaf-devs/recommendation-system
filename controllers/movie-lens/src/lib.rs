@@ -163,6 +163,7 @@ impl Controller<User, Movie> for MovieLensController {
     }
 }
 
+#[cfg(feature = "test-controller")]
 #[cfg(test)]
 mod tests {
     use super::*;

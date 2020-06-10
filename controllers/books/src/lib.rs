@@ -161,6 +161,7 @@ impl Controller<User, Book> for BooksController {
     }
 }
 
+#[cfg(feature = "test-controller")]
 #[cfg(test)]
 mod tests {
     use super::*;

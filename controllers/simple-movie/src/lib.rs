@@ -177,6 +177,7 @@ impl Controller<User, Movie> for SimpleMovieController {
     }
 }
 
+#[cfg(feature = "test-controller")]
 #[cfg(test)]
 mod tests {
     use super::*;
