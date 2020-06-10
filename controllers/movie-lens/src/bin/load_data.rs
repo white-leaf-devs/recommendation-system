@@ -76,12 +76,6 @@ fn insert_ratings(conn: &PgConnection) -> Result<(), Error> {
             let movie_id: i32 = record[1].parse()?;
             let score: f64 = record[2].parse()?;
 
-            match controller.items_by(&SearchBy::id(&movie_id.to_string())) {
-                Ok(movies) if movies.is_empty() => continue,
-                Err(_) => continue,
-                Ok(_) => {}
-            }
-
             ratings.push(NewRating {
                 score,
                 user_id,
