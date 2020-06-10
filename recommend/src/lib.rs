@@ -172,6 +172,7 @@ where
     }
 }
 
+#[cfg(feature = "test-engine")]
 #[cfg(test)]
 mod tests {
     use super::distances::Method;
