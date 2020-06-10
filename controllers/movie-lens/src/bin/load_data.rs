@@ -1,12 +1,10 @@
 use anyhow::Error;
-use controller::{Controller, SearchBy};
 use diesel::pg::PgConnection;
 use diesel::{insert_into, prelude::*};
 use indicatif::ProgressIterator;
 use movie_lens::establish_connection;
 use movie_lens::models::{movies::NewMovie, ratings::NewRating, users::NewUser};
 use movie_lens::schema::{movies, ratings, users};
-use movie_lens::MovieLensController;
 use std::fs::File;
 use std::io::BufReader;
 
@@ -69,7 +67,6 @@ fn insert_ratings(conn: &PgConnection) -> Result<(), Error> {
     let mut ratings = Vec::new();
 
     println!("Collecting records for ratings...");
-    let controller = MovieLensController::new()?;
     for record in csv.records().progress() {
         if let Ok(record) = record {
             let user_id: i32 = record[0].parse()?;

@@ -14,3 +14,7 @@ controller = { version = "*", path = "../../controller" }
 csv = "1"
 diesel = { version = "1", features = [ "postgres" ] }
 indicatif = "0.14"
+
+[features]
+default = []
+test-controller = []
