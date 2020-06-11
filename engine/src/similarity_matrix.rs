@@ -32,7 +32,7 @@ where
     }
 
     fn approximate_chunk_size(&self) -> usize {
-        todo!("Implement for each controller a 'counter' method")
+        todo!("Implement for each controller a 'counter' method for ratings")
     }
 
     pub fn optimize_chunks(&mut self) {
@@ -97,9 +97,14 @@ where
                     continue;
                 }
 
-                if let Some(similarity) =
-                    fast_adjusted_cosine(&means, &maped_ratings, &users_a, &users_b, &item_a, &item_b)
-                {
+                if let Some(similarity) = fast_adjusted_cosine(
+                    &means,
+                    &maped_ratings,
+                    &users_a,
+                    &users_b,
+                    &item_a,
+                    &item_b,
+                ) {
                     matrix
                         .entry(item_a)
                         .or_insert_with(HashMap::new)
