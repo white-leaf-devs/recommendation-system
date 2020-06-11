@@ -119,8 +119,7 @@ impl Controller<User, Book> for ShelvesController {
             .iter()
             .map(|id| -> Result<User, Error> {
                 Ok(User {
-                    id: id.parse()?,
-                    ..Default::default()
+                    id: id.parse()?
                 })
             })
             .collect()

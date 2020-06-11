@@ -17,6 +17,7 @@ books = { version = "*", path = "controllers/books" }
 controller = { version = "*", path = "controller" }
 movie-lens= { version = "*", path = "controllers/movie-lens" }
 movie-lens-small = { version = "*", path = "controllers/movie-lens-small" }
+shelves = {version = "*", path = "controllers/shelves"}
 nom = "5"
 recommend = { version = "*", path = "recommend" }
 simple-movie = { version = "*", path = "controllers/simple-movie" }

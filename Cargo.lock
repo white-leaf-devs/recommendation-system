@@ -700,6 +700,7 @@ dependencies = [
  "nom",
  "recommend",
  "rustyline",
+ "shelves",
  "simple-movie",
 ]
 
