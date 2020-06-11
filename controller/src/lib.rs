@@ -107,6 +107,11 @@ impl<'a, U, I> Iterator for LazyUserChunks<'a, U, I> {
             None => None,
         }
     }
+
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        self.curr_offset = n * self.chunk_size;
+        self.next()
+    }
 }
 
 pub struct LazyItemChunks<'a, U, I> {
@@ -135,6 +140,11 @@ impl<'a, U, I> Iterator for LazyItemChunks<'a, U, I> {
             }
             None => None,
         }
+    }
+
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        self.curr_offset = n * self.chunk_size;
+        self.next()
     }
 }
 
