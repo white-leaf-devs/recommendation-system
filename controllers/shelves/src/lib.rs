@@ -181,27 +181,27 @@ mod tests {
 
     #[test]
     fn query_user_by_id() -> Result<(), Error> {
-        let controller = BooksController::new()?;
+        let controller = ShelvesController::new()?;
 
         let users = controller.users_by(&SearchBy::id("2"))?;
-        assert_eq!(users[0].get_id(), "2".to_string());
+        assert_eq!(users[0].get_id(), 2);
 
         Ok(())
     }
 
     #[test]
     fn query_item_by_id() -> Result<(), Error> {
-        let controller = BooksController::new()?;
+        let controller = ShelvesController::new()?;
 
         let book = controller.items_by(&SearchBy::name("0"))?;
-        assert_eq!(book[0].get_id(), "0".to_string());
+        assert_eq!(book[0].get_id(), 0);
 
         Ok(())
     }
 
     #[test]
     fn chunked_users() -> Result<(), Error> {
-        let controller = BooksController::new()?;
+        let controller = ShelvesController::new()?;
         let mut chunk_iter = controller.users_by_chunks(80000);
 
         assert_eq!(80000, chunk_iter.next().unwrap().len());

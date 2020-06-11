@@ -199,7 +199,7 @@ mod tests {
         let controller = BooksController::new()?;
 
         let users = controller.users_by(&SearchBy::id("2"))?;
-        assert_eq!(users[0].get_id(), "2".to_string());
+        assert_eq!(users[0].get_id(), 2);
 
         Ok(())
     }

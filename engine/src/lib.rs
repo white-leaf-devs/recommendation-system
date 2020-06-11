@@ -318,7 +318,7 @@ mod tests {
         let mut sim_matrix = engine.similarity_matrix(100, 100, 100);
 
         let now = Instant::now();
-        let matrix = sim_matrix.get_chunk(0, 0);
+        let _matrix = sim_matrix.get_chunk(0, 0);
         println!("Elapsed: {}", now.elapsed().as_secs_f64());
         //println!("{:#?}", matrix);
 

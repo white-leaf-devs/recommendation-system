@@ -8,7 +8,7 @@ use movie_lens::MovieLensController;
 use movie_lens_small::MovieLensSmallController;
 use parser::{Database, Statement};
 use simple_movie::SimpleMovieController;
-use std::time::Instant;
+use std::{fmt::Display, hash::Hash, time::Instant};
 
 macro_rules! prompt {
     ($ed:ident) => {{
@@ -49,11 +49,16 @@ macro_rules! prompt {
     }};
 }
 
-fn database_connected_prompt<C, U, I>(controller: C, name: &str) -> Result<(), Error>
+fn database_connected_prompt<C, User, UserId, Item, ItemId>(
+    controller: C,
+    name: &str,
+) -> Result<(), Error>
 where
-    C: Controller<U, I>,
-    U: Entity,
-    I: Entity,
+    C: Controller<User, UserId, Item, ItemId>,
+    User: Entity<Id = UserId> + ToTable,
+    Item: Entity<Id = ItemId> + ToTable,
+    UserId: Hash + Eq + Display,
+    ItemId: Hash + Eq + Display,
 {
     let engine = Engine::with_controller(&controller);
     let mut rl = rustyline::Editor::<()>::new();
