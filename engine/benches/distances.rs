@@ -16,7 +16,7 @@
 // along with recommend.  If not, see <http://www.gnu.org/licenses/>.
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use engine::distances::{euclidean_distance, manhattan_distance};
+use engine::distances::users::{euclidean_distance, manhattan_distance};
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 
