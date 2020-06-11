@@ -1,5 +1,5 @@
 use crate::{
-    distances::{self, Method},
+    distances::{self, users::Method},
     maped_distance::MapedDistance,
 };
 use controller::{MapedRatings, Ratings};
@@ -32,7 +32,7 @@ impl MaxHeapKnn {
 impl Knn for MaxHeapKnn {
     fn update(&mut self, user_ratings: &Ratings, maped_ratings: MapedRatings) {
         for (user_id, ratings) in maped_ratings {
-            let distance = distances::distance(user_ratings, &ratings, self.method);
+            let distance = distances::users::distance(user_ratings, &ratings, self.method);
 
             if let Some(distance) = distance {
                 if self.max_heap.len() < self.k {
@@ -75,7 +75,7 @@ impl MinHeapKnn {
 impl Knn for MinHeapKnn {
     fn update(&mut self, user_ratings: &Ratings, maped_ratings: MapedRatings) {
         for (user_id, ratings) in maped_ratings {
-            let distance = distances::distance(user_ratings, &ratings, self.method);
+            let distance = distances::users::distance(user_ratings, &ratings, self.method);
 
             if let Some(distance) = distance {
                 if self.min_heap.len() < self.k {

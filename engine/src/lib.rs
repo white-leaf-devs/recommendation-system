@@ -20,7 +20,7 @@ pub mod knn;
 pub mod maped_distance;
 pub mod utils;
 
-use crate::distances::Method;
+use crate::distances::users::Method;
 use crate::maped_distance::MapedDistance;
 use controller::{Controller, Entity};
 use knn::{Knn, MaxHeapKnn, MinHeapKnn};
@@ -52,11 +52,16 @@ where
         }
     }
 
-    pub fn distance(&self, user_a: &User, user_b: &User, method: distances::Method) -> Option<f64> {
+    pub fn distance(
+        &self,
+        user_a: &User,
+        user_b: &User,
+        method: distances::users::Method,
+    ) -> Option<f64> {
         let rating_a = self.controller.ratings_by(user_a).ok()?;
         let rating_b = self.controller.ratings_by(user_b).ok()?;
 
-        distances::distance(&rating_a, &rating_b, method)
+        distances::users::distance(&rating_a, &rating_b, method)
     }
 
     pub fn knn(
@@ -148,7 +153,7 @@ where
                         return None;
                     }
 
-                    let coef = distances::distance(
+                    let coef = distances::users::distance(
                         &user_ratings,
                         &nn_ratings,
                         Method::PearsonApproximation,
