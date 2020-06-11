@@ -1,6 +1,9 @@
 use crate::distances::items::{adjusted_cosine_means, fast_adjusted_cosine};
 use controller::{Controller, Entity, ItemsUsers, LazyItemChunks};
-use std::{hash::Hash, collections::{HashMap, HashSet}};
+use std::{
+    collections::{HashMap, HashSet},
+    hash::Hash,
+};
 
 pub struct SimilarityMatrix<'a, C, User, UserId, Item, ItemId>
 where
@@ -89,31 +92,25 @@ where
         let means = adjusted_cosine_means(&maped_ratings);
 
         let mut matrix = HashMap::new();
-        for (item_a, users_a) in &ver_items_users {
-            for (item_b, users_b) in &hor_items_users {
-                let item_a = item_a.clone();
-                let item_b = item_b.clone();
+        for (i, (item_a, users_a)) in ver_items_users.iter().enumerate() {
+            matrix
+                .entry(item_a.clone())
+                .or_insert_with(HashMap::new)
+                .insert(item_a.clone(), 1.0);
 
-                if item_a == item_b {
+            for (item_b, users_b) in hor_items_users.iter().skip(i + 1) {
+                if let Some(similarity) =
+                    fast_adjusted_cosine(&means, &maped_ratings, &users_a, &users_b, item_a, item_b)
+                {
                     matrix
-                        .entry(item_a)
+                        .entry(item_a.clone())
                         .or_insert_with(HashMap::new)
-                        .insert(item_b, 1.0);
-                    continue;
-                }
+                        .insert(item_b.clone(), similarity);
 
-                if let Some(similarity) = fast_adjusted_cosine(
-                    &means,
-                    &maped_ratings,
-                    &users_a,
-                    &users_b,
-                    &item_a,
-                    &item_b,
-                ) {
                     matrix
-                        .entry(item_a)
+                        .entry(item_b.clone())
                         .or_insert_with(HashMap::new)
-                        .insert(item_b, similarity);
+                        .insert(item_a.clone(), similarity);
                 }
             }
         }
