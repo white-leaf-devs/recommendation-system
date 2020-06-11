@@ -53,15 +53,18 @@ where
     let mut dev_a = None;
     let mut dev_b = None;
 
-    let common_users = users_a.intersection(users_b);
-
-    for common_user in common_users {
-        let val_a = vecs[common_user][a];
-        let val_b = vecs[common_user][b];
-        let mean = means[common_user];
-        *cov.get_or_insert_with(V::zero) += (val_a-mean) * (val_b-mean);
-        *dev_a.get_or_insert_with(V::zero) += (val_a - mean).powi(2);
-        *dev_b.get_or_insert_with(V::zero) += (val_b - mean).powi(2);
+    for common_user in users_a.intersection(users_b) {
+        if vecs.get(common_user) == None {
+            continue;
+        }
+        match (vecs[common_user].get(a), vecs[common_user].get(b), means.get(common_user)) {
+            (Some(val_a), Some(val_b), Some(mean)) => {
+                *cov.get_or_insert_with(V::zero) += (*val_a-*mean) * (*val_b-*mean);
+                *dev_a.get_or_insert_with(V::zero) += (*val_a - *mean).powi(2);
+                *dev_b.get_or_insert_with(V::zero) += (*val_b - *mean).powi(2);
+            }
+            _ => continue
+        }
     }
 
     let num = cov?;
