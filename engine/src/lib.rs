@@ -315,7 +315,7 @@ mod tests {
 
         let controller = MovieLensSmallController::new()?;
         let engine = Engine::with_controller(&controller);
-        let mut sim_matrix = engine.similarity_matrix(100, 100, 100);
+        let mut sim_matrix = engine.similarity_matrix(10000, 10000, 100);
 
         let now = Instant::now();
         let _matrix = sim_matrix.get_chunk(0, 0);

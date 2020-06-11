@@ -106,11 +106,6 @@ where
                         .entry(item_a.clone())
                         .or_insert_with(HashMap::new)
                         .insert(item_b.clone(), similarity);
-
-                    matrix
-                        .entry(item_b.clone())
-                        .or_insert_with(HashMap::new)
-                        .insert(item_a.clone(), similarity);
                 }
             }
         }
