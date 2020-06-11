@@ -200,7 +200,7 @@ where
     }
 
     fn users_who_rated(&self, items: &[Item]) -> Result<ItemsUsers<ItemId, UserId>>;
-    fn create_partial_users(&self, user_ids: &[String]) -> Result<Vec<User>>;
+    fn create_partial_users(&self, user_ids: &[UserId]) -> Result<Vec<User>>;
 
     fn ratings_by(&self, user: &User) -> Result<Ratings<ItemId>>;
     fn maped_ratings(&self) -> Result<MapedRatings<UserId, ItemId>>;

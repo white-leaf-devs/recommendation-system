@@ -122,14 +122,10 @@ impl Controller<User, i32, Movie, i32> for MovieLensController {
         Ok(items_users)
     }
 
-    fn create_partial_users(&self, user_ids: &[String]) -> Result<Vec<User>, Error> {
+    fn create_partial_users(&self, user_ids: &[i32]) -> Result<Vec<User>, Error> {
         user_ids
             .iter()
-            .map(|id| -> Result<User, Error> {
-                Ok(User {
-                    id: id.parse()?
-                })
-            })
+            .map(|id| -> Result<User, Error> { Ok(User { id: *id }) })
             .collect()
     }
 

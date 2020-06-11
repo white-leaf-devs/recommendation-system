@@ -7,7 +7,7 @@ pub mod schema;
 use crate::models::{movies::Movie, ratings::Rating, users::User};
 use crate::schema::{movies, ratings, users};
 use anyhow::Error;
-use controller::{error::ErrorKind, Controller, MapedRatings, Ratings, SearchBy, ItemsUsers};
+use controller::{error::ErrorKind, Controller, ItemsUsers, MapedRatings, Ratings, SearchBy};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use std::collections::{HashMap, HashSet};
@@ -136,7 +136,7 @@ impl Controller<User, i32, Movie, i32> for MovieLensSmallController {
         let ratings = Rating::belonging_to(items).load::<Rating>(&self.pg_conn)?;
         let mut items_users = HashMap::new();
 
-        for rating in ratings{
+        for rating in ratings {
             items_users
                 .entry(rating.movie_id)
                 .or_insert_with(HashSet::new)
@@ -145,14 +145,10 @@ impl Controller<User, i32, Movie, i32> for MovieLensSmallController {
         Ok(items_users)
     }
 
-    fn create_partial_users(&self, user_ids: &[String]) -> Result<Vec<User>, Error> {
+    fn create_partial_users(&self, user_ids: &[i32]) -> Result<Vec<User>, Error> {
         user_ids
             .iter()
-            .map(|id| -> Result<User, Error>{
-                Ok(User{
-                    id: id.parse()?
-                })
-            })
+            .map(|id| -> Result<User, Error> { Ok(User { id: *id }) })
             .collect()
     }
 
