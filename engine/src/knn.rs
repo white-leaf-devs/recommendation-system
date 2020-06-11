@@ -9,7 +9,11 @@ type MaxHeap<T> = BinaryHeap<T>;
 type MinHeap<T> = BinaryHeap<Reverse<T>>;
 
 pub trait Knn<UserId, ItemId> {
-    fn update(&mut self, user_ratings: &Ratings<ItemId>, maped_ratings: MapedRatings<UserId, ItemId>);
+    fn update(
+        &mut self,
+        user_ratings: &Ratings<ItemId>,
+        maped_ratings: MapedRatings<UserId, ItemId>,
+    );
     fn into_vec(self: Box<Self>) -> Vec<MapedDistance<UserId, ItemId>>;
 }
 
@@ -29,12 +33,16 @@ impl<UserId, ItemId> MaxHeapKnn<UserId, ItemId> {
     }
 }
 
-impl<UserId, ItemId> Knn<UserId, ItemId> for MaxHeapKnn<UserId, ItemId> 
+impl<UserId, ItemId> Knn<UserId, ItemId> for MaxHeapKnn<UserId, ItemId>
 where
     UserId: Hash + Eq,
-    ItemId: Hash + Eq
+    ItemId: Hash + Eq,
 {
-    fn update(&mut self, user_ratings: &Ratings<ItemId>, maped_ratings: MapedRatings<UserId, ItemId>) {
+    fn update(
+        &mut self,
+        user_ratings: &Ratings<ItemId>,
+        maped_ratings: MapedRatings<UserId, ItemId>,
+    ) {
         for (user_id, ratings) in maped_ratings {
             let distance = distances::users::distance(user_ratings, &ratings, self.method);
 
@@ -76,12 +84,16 @@ impl<UserId, ItemId> MinHeapKnn<UserId, ItemId> {
     }
 }
 
-impl<UserId, ItemId> Knn<UserId, ItemId> for MinHeapKnn<UserId, ItemId> 
+impl<UserId, ItemId> Knn<UserId, ItemId> for MinHeapKnn<UserId, ItemId>
 where
     UserId: Hash + Eq,
-    ItemId: Hash + Eq
+    ItemId: Hash + Eq,
 {
-    fn update(&mut self, user_ratings: &Ratings<ItemId>, maped_ratings: MapedRatings<UserId, ItemId>) {
+    fn update(
+        &mut self,
+        user_ratings: &Ratings<ItemId>,
+        maped_ratings: MapedRatings<UserId, ItemId>,
+    ) {
         for (user_id, ratings) in maped_ratings {
             let distance = distances::users::distance(user_ratings, &ratings, self.method);
 
