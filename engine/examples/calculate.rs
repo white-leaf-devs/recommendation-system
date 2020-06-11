@@ -1,7 +1,7 @@
 use anyhow::Error;
 use books::BooksController;
 use controller::{Controller, Entity, SearchBy};
-use engine::distances::items::{post_adjusted_cosine, pre_adjusted_cosine};
+use engine::distances::items::{adjusted_cosine_means, fast_adjusted_cosine};
 use movie_lens_small::MovieLensSmallController;
 use simple_movie::SimpleMovieController;
 use std::env;
@@ -18,7 +18,7 @@ where
     C: Controller<U, I>,
 {
     let maped_ratings = controller.maped_ratings()?;
-    let means = pre_adjusted_cosine(&maped_ratings);
+    let means = adjusted_cosine_means(&maped_ratings);
 
     println!("{:#?}", means);
 
@@ -26,28 +26,28 @@ where
     let item_b = controller.items_by(&SearchBy::name("Avatar"))?[0].get_id();
     println!(
         "{:?}",
-        post_adjusted_cosine(&means, &maped_ratings, &item_a, &item_b)
+        fast_adjusted_cosine(&means, &maped_ratings, &item_a, &item_b)
     );
 
     let item_a = controller.items_by(&SearchBy::name("Star Wars"))?[0].get_id();
     let item_b = controller.items_by(&SearchBy::name("Jaws"))?[0].get_id();
     println!(
         "{:?}",
-        post_adjusted_cosine(&means, &maped_ratings, &item_a, &item_b)
+        fast_adjusted_cosine(&means, &maped_ratings, &item_a, &item_b)
     );
 
     let item_a = controller.items_by(&SearchBy::name("Pulp Fiction"))?[0].get_id();
     let item_b = controller.items_by(&SearchBy::name("Braveheart"))?[0].get_id();
     println!(
         "{:?}",
-        post_adjusted_cosine(&means, &maped_ratings, &item_a, &item_b)
+        fast_adjusted_cosine(&means, &maped_ratings, &item_a, &item_b)
     );
 
     let item_a = controller.items_by(&SearchBy::name("You Got Mail"))?[0].get_id();
     let item_b = controller.items_by(&SearchBy::name("The Matrix"))?[0].get_id();
     println!(
         "{:?}",
-        post_adjusted_cosine(&means, &maped_ratings, &item_a, &item_b)
+        fast_adjusted_cosine(&means, &maped_ratings, &item_a, &item_b)
     );
 
     Ok(())
@@ -60,34 +60,34 @@ where
     C: Controller<U, I>,
 {
     let maped_ratings = controller.maped_ratings()?;
-    let means = pre_adjusted_cosine(&maped_ratings);
+    let means = adjusted_cosine_means(&maped_ratings);
 
     let item_a = controller.items_by(&SearchBy::name("Iron Will (1994)"))?[0].get_id();
     let item_b = controller.items_by(&SearchBy::name("Friday (1995)"))?[0].get_id();
     println!(
         "{:?}",
-        post_adjusted_cosine(&means, &maped_ratings, &item_a, &item_b)
+        fast_adjusted_cosine(&means, &maped_ratings, &item_a, &item_b)
     );
 
     let item_a = controller.items_by(&SearchBy::name("Room, The (2003)"))?[0].get_id();
     let item_b = controller.items_by(&SearchBy::name("Dangerous Minds (1995)"))?[0].get_id();
     println!(
         "{:?}",
-        post_adjusted_cosine(&means, &maped_ratings, &item_a, &item_b)
+        fast_adjusted_cosine(&means, &maped_ratings, &item_a, &item_b)
     );
 
     let item_a = controller.items_by(&SearchBy::name("Spider-Man (2002)"))?[0].get_id();
     let item_b = controller.items_by(&SearchBy::name("Casino (1995)"))?[0].get_id();
     println!(
         "{:?}",
-        post_adjusted_cosine(&means, &maped_ratings, &item_a, &item_b)
+        fast_adjusted_cosine(&means, &maped_ratings, &item_a, &item_b)
     );
 
     let item_a = controller.items_by(&SearchBy::name("Multiplicity (1996)"))?[0].get_id();
     let item_b = controller.items_by(&SearchBy::name("Forbidden Planet (1956)"))?[0].get_id();
     println!(
         "{:?}",
-        post_adjusted_cosine(&means, &maped_ratings, &item_a, &item_b)
+        fast_adjusted_cosine(&means, &maped_ratings, &item_a, &item_b)
     );
 
     Ok(())
@@ -100,13 +100,13 @@ where
     C: Controller<U, I>,
 {
     let maped_ratings = controller.maped_ratings()?;
-    let means = pre_adjusted_cosine(&maped_ratings);
+    let means = adjusted_cosine_means(&maped_ratings);
 
     let item_a = controller.items_by(&SearchBy::name("The yawning heights"))?[0].get_id();
     let item_b = controller.items_by(&SearchBy::name("Gangster"))?[0].get_id();
     println!(
         "{:?}",
-        post_adjusted_cosine(&means, &maped_ratings, &item_a, &item_b)
+        fast_adjusted_cosine(&means, &maped_ratings, &item_a, &item_b)
     );
 
     Ok(())

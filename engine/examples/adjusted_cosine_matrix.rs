@@ -1,6 +1,6 @@
 use anyhow::Error;
 use controller::{Controller, Entity};
-use engine::distances::items::{post_adjusted_cosine, pre_adjusted_cosine};
+use engine::distances::items::{adjusted_cosine_means, fast_adjusted_cosine};
 use movie_lens_small::MovieLensSmallController;
 use simple_movie::SimpleMovieController;
 use std::collections::HashMap;
@@ -23,13 +23,13 @@ where
     let mut matrix = HashMap::new();
 
     println!("Calculating for {} items", items.len());
-    let means = pre_adjusted_cosine(&maped_ratings);
+    let means = adjusted_cosine_means(&maped_ratings);
 
     for (i, item_a) in items.iter().enumerate() {
         println!("Calculating row for item with id('{}')", item_a.get_id());
         for item_b in items.iter().skip(i + 1) {
             let val =
-                post_adjusted_cosine(&means, &maped_ratings, &item_a.get_id(), &item_b.get_id());
+                fast_adjusted_cosine(&means, &maped_ratings, &item_a.get_id(), &item_b.get_id());
 
             if let Some(val) = val {
                 matrix
