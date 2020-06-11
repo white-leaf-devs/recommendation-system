@@ -31,7 +31,7 @@ impl SimpleMovieController {
     }
 }
 
-impl Controller<User, Movie> for SimpleMovieController {
+impl Controller<User, i32, Movie, i32> for SimpleMovieController {
     fn users(&self) -> Result<Vec<User>, Error> {
         let users = users::table.load::<User>(&self.pg_conn)?;
         Ok(users)
@@ -122,15 +122,15 @@ impl Controller<User, Movie> for SimpleMovieController {
         Ok(items)
     }
 
-    fn users_who_rated(&self, items: &[Movie]) -> Result<ItemsUsers, Error> {
+    fn users_who_rated(&self, items: &[Movie]) -> Result<ItemsUsers<i32, i32>, Error> {
         let ratings = Rating::belonging_to(items).load::<Rating>(&self.pg_conn)?;
 
         let mut items_users = HashMap::new();
         for rating in ratings {
             items_users
-                .entry(rating.movie_id.to_string())
+                .entry(rating.movie_id)
                 .or_insert_with(HashSet::new)
-                .insert(rating.user_id.to_string());
+                .insert(rating.user_id);
         }
 
         Ok(items_users)
@@ -148,45 +148,45 @@ impl Controller<User, Movie> for SimpleMovieController {
             .collect()
     }
 
-    fn ratings_by(&self, user: &User) -> Result<Ratings, Error> {
+    fn ratings_by(&self, user: &User) -> Result<Ratings<i32>, Error> {
         let ratings = Rating::belonging_to(user)
             .load::<Rating>(&self.pg_conn)?
             .into_iter()
-            .map(|rating| (rating.movie_id.to_string(), rating.score))
+            .map(|rating| (rating.movie_id, rating.score))
             .collect();
 
         Ok(ratings)
     }
 
-    fn maped_ratings(&self) -> Result<MapedRatings, Error> {
+    fn maped_ratings(&self) -> Result<MapedRatings<i32, i32>, Error> {
         let ratings = ratings::table.load::<Rating>(&self.pg_conn)?;
 
         let mut maped_ratings = HashMap::new();
         for rating in ratings {
             maped_ratings
-                .entry(rating.user_id.to_string())
+                .entry(rating.user_id)
                 .or_insert_with(HashMap::new)
-                .insert(rating.movie_id.to_string(), rating.score);
+                .insert(rating.movie_id, rating.score);
         }
 
         Ok(maped_ratings)
     }
 
-    fn maped_ratings_by(&self, users: &[User]) -> Result<MapedRatings, Error> {
+    fn maped_ratings_by(&self, users: &[User]) -> Result<MapedRatings<i32, i32>, Error> {
         let ratings = Rating::belonging_to(users).load::<Rating>(&self.pg_conn)?;
 
         let mut maped_ratings = HashMap::new();
         for rating in ratings {
             maped_ratings
-                .entry(rating.user_id.to_string())
+                .entry(rating.user_id)
                 .or_insert_with(HashMap::new)
-                .insert(rating.movie_id.to_string(), rating.score);
+                .insert(rating.movie_id, rating.score);
         }
 
         Ok(maped_ratings)
     }
 
-    fn maped_ratings_except(&self, user: &User) -> Result<MapedRatings, Error> {
+    fn maped_ratings_except(&self, user: &User) -> Result<MapedRatings<i32, i32>, Error> {
         let ratings = ratings::table
             .filter(ratings::user_id.is_distinct_from(user.id))
             .load::<Rating>(&self.pg_conn)?;
@@ -194,9 +194,9 @@ impl Controller<User, Movie> for SimpleMovieController {
         let mut maped_ratings = HashMap::new();
         for rating in ratings {
             maped_ratings
-                .entry(rating.user_id.to_string())
+                .entry(rating.user_id)
                 .or_insert_with(HashMap::new)
-                .insert(rating.movie_id.to_string(), rating.score);
+                .insert(rating.movie_id, rating.score);
         }
 
         Ok(maped_ratings)
