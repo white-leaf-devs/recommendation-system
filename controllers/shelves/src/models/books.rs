@@ -15,7 +15,9 @@ pub struct NewBook {
 }
 
 impl Entity for Book {
-    fn get_id(&self) -> String {
-        self.id.to_string()
+    type Id = i32;
+
+    fn get_id(&self) -> Self::Id {
+        self.id
     }
 }

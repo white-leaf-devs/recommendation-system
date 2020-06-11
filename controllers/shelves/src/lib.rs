@@ -31,7 +31,7 @@ impl ShelvesController {
     }
 }
 
-impl Controller<User, Book> for ShelvesController {
+impl Controller<User, i32, Book, i32> for ShelvesController {
     fn users(&self) -> Result<Vec<User>, Error> {
         let users = users::table.load::<User>(&self.pg_conn)?;
         Ok(users)
@@ -41,9 +41,7 @@ impl Controller<User, Book> for ShelvesController {
         match by {
             SearchBy::Id(id) => {
                 let id: i32 = id.parse()?;
-                let users = users::table
-                    .filter(users::id.eq(id))
-                    .load(&self.pg_conn)?;
+                let users = users::table.filter(users::id.eq(id)).load(&self.pg_conn)?;
 
                 if users.is_empty() {
                     Err(ErrorKind::NotFoundById(id.to_string()).into())
@@ -75,9 +73,7 @@ impl Controller<User, Book> for ShelvesController {
         match by {
             SearchBy::Id(id) => {
                 let id: i32 = id.parse()?;
-                let books = books::table
-                    .filter(books::id.eq(id))
-                    .load(&self.pg_conn)?;
+                let books = books::table.filter(books::id.eq(id)).load(&self.pg_conn)?;
 
                 if books.is_empty() {
                     Err(ErrorKind::NotFoundById(id.to_string()).into())
@@ -100,15 +96,15 @@ impl Controller<User, Book> for ShelvesController {
         Ok(items)
     }
 
-    fn users_who_rated(&self, items: &[Book]) -> Result<ItemsUsers, Error> {
+    fn users_who_rated(&self, items: &[Book]) -> Result<ItemsUsers<i32, i32>, Error> {
         let ratings = Rating::belonging_to(items).load::<Rating>(&self.pg_conn)?;
 
         let mut items_users = HashMap::new();
         for rating in ratings {
             items_users
-                .entry(rating.book_id.to_string())
+                .entry(rating.book_id)
                 .or_insert_with(HashSet::new)
-                .insert(rating.user_id.to_string());
+                .insert(rating.user_id);
         }
 
         Ok(items_users)
@@ -117,53 +113,49 @@ impl Controller<User, Book> for ShelvesController {
     fn create_partial_users(&self, user_ids: &[String]) -> Result<Vec<User>, Error> {
         user_ids
             .iter()
-            .map(|id| -> Result<User, Error> {
-                Ok(User {
-                    id: id.parse()?
-                })
-            })
+            .map(|id| -> Result<User, Error> { Ok(User { id: id.parse()? }) })
             .collect()
     }
 
-    fn ratings_by(&self, user: &User) -> Result<Ratings, Error> {
+    fn ratings_by(&self, user: &User) -> Result<Ratings<i32>, Error> {
         let ratings = Rating::belonging_to(user)
             .load::<Rating>(&self.pg_conn)?
             .into_iter()
-            .map(|rating| (rating.book_id.to_string(), rating.score))
+            .map(|rating| (rating.book_id, rating.score))
             .collect();
 
         Ok(ratings)
     }
 
-    fn maped_ratings(&self) -> Result<MapedRatings, Error> {
+    fn maped_ratings(&self) -> Result<MapedRatings<i32, i32>, Error> {
         let ratings = ratings::table.load::<Rating>(&self.pg_conn)?;
 
         let mut maped_ratings = HashMap::new();
         for rating in ratings {
             maped_ratings
-                .entry(rating.user_id.to_string())
+                .entry(rating.user_id)
                 .or_insert_with(HashMap::new)
-                .insert(rating.book_id.to_string(), rating.score);
+                .insert(rating.book_id, rating.score);
         }
 
         Ok(maped_ratings)
     }
 
-    fn maped_ratings_by(&self, users: &[User]) -> Result<MapedRatings, Error> {
+    fn maped_ratings_by(&self, users: &[User]) -> Result<MapedRatings<i32, i32>, Error> {
         let ratings = Rating::belonging_to(users).load::<Rating>(&self.pg_conn)?;
 
         let mut maped_ratings = HashMap::new();
         for rating in ratings {
             maped_ratings
-                .entry(rating.user_id.to_string())
+                .entry(rating.user_id)
                 .or_insert_with(HashMap::new)
-                .insert(rating.book_id.to_string(), rating.score);
+                .insert(rating.book_id, rating.score);
         }
 
         Ok(maped_ratings)
     }
 
-    fn maped_ratings_except(&self, user: &User) -> Result<MapedRatings, Error> {
+    fn maped_ratings_except(&self, user: &User) -> Result<MapedRatings<i32, i32>, Error> {
         let ratings = ratings::table
             .filter(ratings::user_id.ne(user.id))
             .load::<Rating>(&self.pg_conn)?;
@@ -171,9 +163,9 @@ impl Controller<User, Book> for ShelvesController {
         let mut maped_ratings = HashMap::new();
         for rating in ratings {
             maped_ratings
-                .entry(rating.user_id.to_string())
+                .entry(rating.user_id)
                 .or_insert_with(HashMap::new)
-                .insert(rating.book_id.to_string(), rating.score);
+                .insert(rating.book_id, rating.score);
         }
 
         Ok(maped_ratings)
