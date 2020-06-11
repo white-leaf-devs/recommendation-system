@@ -1,5 +1,5 @@
 use crate::distances::items::{adjusted_cosine_means, fast_adjusted_cosine};
-use controller::{Controller, Entity, LazyItemChunks};
+use controller::{Controller, Entity, ItemsUsers, LazyItemChunks};
 use std::collections::{HashMap, HashSet};
 
 pub struct SimilarityMatrix<'a, C, U, I>
@@ -52,17 +52,30 @@ where
         let ver_items = self.ver_iter.nth(i)?;
         let hor_items = self.hor_iter.nth(j)?;
 
-        let ver_items_users = self.controller.users_who_rated(&ver_items).ok()?;
-        let hor_items_users = self.controller.users_who_rated(&hor_items).ok()?;
+        let ver_items_users: ItemsUsers = self
+            .controller
+            .users_who_rated(&ver_items)
+            .ok()?
+            .into_iter()
+            .filter(|(_, set)| !set.is_empty())
+            .collect();
+
+        let hor_items_users: ItemsUsers = self
+            .controller
+            .users_who_rated(&hor_items)
+            .ok()?
+            .into_iter()
+            .filter(|(_, set)| !set.is_empty())
+            .collect();
 
         let all_users = ver_items_users
-            .into_iter()
+            .iter()
             .fold(HashSet::new(), |whole_set, (_, users)| {
                 whole_set.union(&users).cloned().collect()
             });
 
         let all_users = hor_items_users
-            .into_iter()
+            .iter()
             .fold(all_users, |whole_set, (_, users)| {
                 whole_set.union(&users).cloned().collect()
             });
@@ -74,10 +87,10 @@ where
         let means = adjusted_cosine_means(&maped_ratings);
 
         let mut matrix = HashMap::new();
-        for item_a in &ver_items {
-            for item_b in &hor_items {
-                let item_a = item_a.get_id();
-                let item_b = item_b.get_id();
+        for item_a in ver_items_users.keys() {
+            for item_b in hor_items_users.keys() {
+                let item_a = item_a.clone();
+                let item_b = item_b.clone();
 
                 if item_a == item_b {
                     matrix
