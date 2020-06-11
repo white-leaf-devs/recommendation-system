@@ -8,7 +8,7 @@ edition = "2018"
 members = [
     "controller",
     "controllers/*",
-    "recommend",
+    "engine",
 ]
 
 [dependencies]
