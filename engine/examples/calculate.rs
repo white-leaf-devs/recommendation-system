@@ -1,8 +1,8 @@
 use anyhow::Error;
 use books::BooksController;
 use controller::{Controller, Entity, SearchBy};
+use engine::distances::{post_adjusted_cosine, pre_adjusted_cosine};
 use movie_lens_small::MovieLensSmallController;
-use recommend::distances::{post_adjusted_cosine, pre_adjusted_cosine};
 use simple_movie::SimpleMovieController;
 use std::env;
 use std::time::Instant;

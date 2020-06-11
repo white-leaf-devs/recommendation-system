@@ -18,6 +18,6 @@ controller = { version = "*", path = "controller" }
 movie-lens= { version = "*", path = "controllers/movie-lens" }
 movie-lens-small = { version = "*", path = "controllers/movie-lens-small" }
 nom = "5"
-recommend = { version = "*", path = "recommend" }
+engine = { version = "*", path = "engine" }
 simple-movie = { version = "*", path = "controllers/simple-movie" }
 rustyline = "6"

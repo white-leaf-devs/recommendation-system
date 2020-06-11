@@ -352,6 +352,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a357d28ed41a50f9c765dbfe56cbc04a64e53e5fc58ba79fbc34c10ef3df831f"
 
 [[package]]
+name = "engine"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "assert_approx_eq",
+ "books",
+ "common_macros",
+ "controller",
+ "criterion",
+ "movie-lens-small",
+ "num-traits",
+ "rand",
+ "simple-movie",
+ "thiserror",
+]
+
+[[package]]
 name = "getrandom"
 version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -672,33 +689,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "recommend"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "assert_approx_eq",
- "books",
- "common_macros",
- "controller",
- "criterion",
- "movie-lens-small",
- "num-traits",
- "rand",
- "simple-movie",
- "thiserror",
-]
-
-[[package]]
 name = "recommendation-system"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "books",
  "controller",
+ "engine",
  "movie-lens",
  "movie-lens-small",
  "nom",
- "recommend",
  "rustyline",
  "simple-movie",
 ]

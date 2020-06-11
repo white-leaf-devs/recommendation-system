@@ -1,6 +1,6 @@
 use controller::SearchBy;
+use engine::distances::Method;
 use nom::{alt, char, delimited, opt, tag, take_till1, take_while, take_while1, tuple, IResult};
-use recommend::distances::Method;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Database {

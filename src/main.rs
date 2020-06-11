@@ -3,10 +3,10 @@ pub mod parser;
 use anyhow::Error;
 use books::BooksController;
 use controller::{Controller, Entity, ToTable};
+use engine::Engine;
 use movie_lens::MovieLensController;
 use movie_lens_small::MovieLensSmallController;
 use parser::{Database, Statement};
-use recommend::Engine;
 use simple_movie::SimpleMovieController;
 use std::time::Instant;
 

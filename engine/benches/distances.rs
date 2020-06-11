@@ -16,8 +16,8 @@
 // along with recommend.  If not, see <http://www.gnu.org/licenses/>.
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use engine::distances::{euclidean_distance, manhattan_distance};
 use rand::{thread_rng, Rng};
-use recommend::distances::{euclidean_distance, manhattan_distance};
 use std::collections::HashMap;
 
 fn generate_records(size: u64) -> (HashMap<u64, f64>, HashMap<u64, f64>) {
