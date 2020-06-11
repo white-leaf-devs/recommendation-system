@@ -12,8 +12,9 @@ pub struct User {
 }
 
 impl Entity for User {
-    fn get_id(&self) -> String {
-        self.id.to_string()
+    type Id = i32;
+    fn get_id(&self) -> Self::Id {
+        self.id
     }
 
     fn get_data(&self) -> HashMap<String, String> {

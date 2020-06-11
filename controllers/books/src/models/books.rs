@@ -25,7 +25,8 @@ pub struct NewBook<'a> {
 }
 
 impl Entity for Book {
-    fn get_id(&self) -> String {
+    type Id = String;
+    fn get_id(&self) -> Self::Id {
         self.id.clone()
     }
 
