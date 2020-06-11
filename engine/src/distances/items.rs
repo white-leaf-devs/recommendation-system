@@ -83,12 +83,12 @@ where
     }
 }
 
-pub fn slow_adjusted_cosine<U, K, V>(vecs: &HashMap<U, HashMap<K, V>>, a: &K, b: &K) -> Option<V>
+pub fn slow_adjusted_cosine<U, K, V>(vecs: &HashMap<U, HashMap<K, V>>, users_a: &HashSet<U>,  users_b: &HashSet<U>, a : &K, b: &K) -> Option<V>
 where
     U: Hash + Eq + Clone,
     K: Hash + Eq,
     V: Float + AddAssign + Sub + Mul,
 {
     let means = adjusted_cosine_means(vecs);
-    fast_adjusted_cosine(&means, vecs, a, b)
+    fast_adjusted_cosine(&means, vecs, users_a, users_b, a, b)
 }

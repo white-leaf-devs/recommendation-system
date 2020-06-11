@@ -84,8 +84,8 @@ where
         let means = adjusted_cosine_means(&maped_ratings);
 
         let mut matrix = HashMap::new();
-        for item_a in ver_items_users.keys() {
-            for item_b in hor_items_users.keys() {
+        for (item_a, users_a) in &ver_items_users {
+            for (item_b, users_b) in &hor_items_users {
                 let item_a = item_a.clone();
                 let item_b = item_b.clone();
 
@@ -98,7 +98,7 @@ where
                 }
 
                 if let Some(similarity) =
-                    fast_adjusted_cosine(&means, &maped_ratings, &item_a, &item_b)
+                    fast_adjusted_cosine(&means, &maped_ratings, &users_a, &users_b, &item_a, &item_b)
                 {
                     matrix
                         .entry(item_a)
