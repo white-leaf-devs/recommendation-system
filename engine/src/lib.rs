@@ -18,12 +18,14 @@
 pub mod distances;
 pub mod knn;
 pub mod maped_distance;
+pub mod similarity_matrix;
 pub mod utils;
 
 use crate::distances::users::Method;
 use crate::maped_distance::MapedDistance;
 use controller::{Controller, Entity};
 use knn::{Knn, MaxHeapKnn, MinHeapKnn};
+use similarity_matrix::SimilarityMatrix;
 use std::marker::PhantomData;
 
 pub struct Engine<'a, C, User, Item>
@@ -175,12 +177,21 @@ where
 
         prediction
     }
+
+    pub fn similarity_matrix(
+        &self,
+        m: usize,
+        n: usize,
+        threshold: usize,
+    ) -> SimilarityMatrix<'a, C, User, Item> {
+        SimilarityMatrix::new(&self.controller, m, n, threshold)
+    }
 }
 
 #[cfg(feature = "test-engine")]
 #[cfg(test)]
 mod tests {
-    use super::distances::Method;
+    use super::distances::users::Method;
     use super::*;
     use anyhow::Error;
     use books::BooksController;
@@ -291,6 +302,23 @@ mod tests {
             "kNN(242, 5, manhattan): {:?}",
             engine.knn(5, user, Method::JaccardDistance, None)
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn similarity_matrix() -> Result<(), Error> {
+        use movie_lens_small::MovieLensSmallController;
+        use std::time::Instant;
+
+        let controller = MovieLensSmallController::new()?;
+        let engine = Engine::with_controller(&controller);
+        let mut sim_matrix = engine.similarity_matrix(100, 100, 100);
+
+        let now = Instant::now();
+        let matrix = sim_matrix.get_chunk(0, 0);
+        println!("Elapsed: {}", now.elapsed().as_secs_f64());
+        //println!("{:#?}", matrix);
 
         Ok(())
     }
