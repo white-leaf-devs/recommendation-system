@@ -68,17 +68,14 @@ where
             .filter(|(_, set)| !set.is_empty())
             .collect();
 
-        let all_users = ver_items_users
-            .iter()
-            .fold(HashSet::new(), |whole_set, (_, users)| {
-                whole_set.union(&users).cloned().collect()
-            });
+        let all_users_iter = ver_items_users.values().chain(hor_items_users.values());
+        let mut all_users = HashSet::new();
 
-        let all_users = hor_items_users
-            .iter()
-            .fold(all_users, |whole_set, (_, users)| {
-                whole_set.union(&users).cloned().collect()
-            });
+        for users in all_users_iter {
+            for user in users {
+                all_users.insert(user.clone());
+            }
+        }
 
         let all_users: Vec<_> = all_users.into_iter().collect();
         let all_partial_users = self.controller.create_partial_users(&all_users).ok()?;
