@@ -849,6 +849,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "shelves"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "common_macros",
+ "controller",
+ "csv",
+ "diesel",
+ "indicatif",
+]
+
+[[package]]
 name = "simple-movie"
 version = "0.1.0"
 dependencies = [

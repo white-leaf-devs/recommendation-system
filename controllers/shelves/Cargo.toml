@@ -1,0 +1,20 @@
+[package]
+name = "shelves"
+version = "0.1.0"
+authors = ["Maria <mb.lev17@gmail.com>"]
+edition = "2018"
+workspace = "../.."
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1"
+common_macros = "0.1"
+controller = { version = "*", path = "../../controller" }
+csv = "1"
+diesel = { version = "1", features = [ "postgres" ] }
+indicatif = "0.14"
+
+[features]
+default = []
+test-controller = []
