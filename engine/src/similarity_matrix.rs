@@ -92,22 +92,27 @@ where
         let means = adjusted_cosine_means(&maped_ratings);
 
         let mut matrix = HashMap::new();
-        for (i, (item_a, users_a)) in ver_items_users.iter().enumerate() {
-            matrix
-                .entry(item_a.clone())
-                .or_insert_with(HashMap::new)
-                .insert(item_a.clone(), 1.0);
-
+        for (i, (item_a, users_a)) in ver_items_users.into_iter().enumerate() {
             for (item_b, users_b) in hor_items_users.iter().skip(i + 1) {
-                if let Some(similarity) =
-                    fast_adjusted_cosine(&means, &maped_ratings, &users_a, &users_b, item_a, item_b)
-                {
+                if let Some(similarity) = fast_adjusted_cosine(
+                    &means,
+                    &maped_ratings,
+                    &users_a,
+                    &users_b,
+                    &item_a,
+                    item_b,
+                ) {
                     matrix
                         .entry(item_a.clone())
                         .or_insert_with(HashMap::new)
                         .insert(item_b.clone(), similarity);
                 }
             }
+
+            matrix
+                .entry(item_a.clone())
+                .or_insert_with(HashMap::new)
+                .insert(item_a, 1.0);
         }
 
         Some(matrix)
