@@ -700,6 +700,7 @@ dependencies = [
  "movie-lens-small",
  "nom",
  "rustyline",
+ "shelves",
  "simple-movie",
 ]
 
