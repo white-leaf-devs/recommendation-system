@@ -1,6 +1,6 @@
 use num_traits::float::Float;
 use std::{
-    collections::HashMap,
+    collections::{HashSet, HashMap},
     hash::Hash,
     ops::{AddAssign, Mul, Sub},
 };
@@ -39,8 +39,10 @@ where
 pub fn fast_adjusted_cosine<U, K, V>(
     means: &HashMap<U, V>,
     vecs: &HashMap<U, HashMap<K, V>>,
+    users_a: &HashSet<U>,
+    users_b: &HashSet<U>,
     a: &K,
-    b: &K,
+    b: &K
 ) -> Option<V>
 where
     U: Hash + Eq,
@@ -51,21 +53,15 @@ where
     let mut dev_a = None;
     let mut dev_b = None;
 
-    for (id, vec) in vecs {
-        let mean = if let Some(mean) = means.get(id) {
-            *mean
-        } else {
-            continue;
-        };
+    let common_users = users_a.intersection(users_b);
 
-        match (vec.get(a), vec.get(b)) {
-            (Some(val_a), Some(val_b)) => {
-                *cov.get_or_insert_with(V::zero) += (*val_a - mean) * (*val_b - mean);
-                *dev_a.get_or_insert_with(V::zero) += (*val_a - mean).powi(2);
-                *dev_b.get_or_insert_with(V::zero) += (*val_b - mean).powi(2);
-            }
-            _ => continue,
-        }
+    for common_user in common_users {
+        let val_a = vecs[common_user][a];
+        let val_b = vecs[common_user][b];
+        let mean = means[common_user];
+        *cov.get_or_insert_with(V::zero) += (val_a-mean) * (val_b-mean);
+        *dev_a.get_or_insert_with(V::zero) += (val_a - mean).powi(2);
+        *dev_b.get_or_insert_with(V::zero) += (val_b - mean).powi(2);
     }
 
     let num = cov?;
