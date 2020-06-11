@@ -7,7 +7,7 @@ pub mod schema;
 use crate::models::{movies::Movie, ratings::Rating, users::User};
 use crate::schema::{movies, ratings, users};
 use anyhow::Error;
-use controller::{error::ErrorKind, Controller, MapedRatings, Ratings, SearchBy, ItemsUsers};
+use controller::{error::ErrorKind, Controller, ItemsUsers, MapedRatings, Ratings, SearchBy};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use std::collections::{HashMap, HashSet};
@@ -31,7 +31,7 @@ impl MovieLensSmallController {
     }
 }
 
-impl Controller<User, Movie> for MovieLensSmallController {
+impl Controller<User, i32, Movie, i32> for MovieLensSmallController {
     fn users(&self) -> Result<Vec<User>, Error> {
         let users = users::table.load::<User>(&self.pg_conn)?;
         Ok(users)
@@ -108,69 +108,65 @@ impl Controller<User, Movie> for MovieLensSmallController {
         Ok(items)
     }
 
-    fn ratings_by(&self, user: &User) -> Result<Ratings, Error> {
+    fn ratings_by(&self, user: &User) -> Result<Ratings<i32>, Error> {
         let ratings = Rating::belonging_to(user)
             .load::<Rating>(&self.pg_conn)?
             .iter()
-            .map(|rating| (rating.movie_id.to_string(), rating.score))
+            .map(|rating| (rating.movie_id, rating.score))
             .collect();
 
         Ok(ratings)
     }
 
-    fn maped_ratings(&self) -> Result<MapedRatings, Error> {
+    fn maped_ratings(&self) -> Result<MapedRatings<i32, i32>, Error> {
         let ratings = ratings::table.load::<Rating>(&self.pg_conn)?;
 
         let mut maped_ratings = HashMap::new();
         for rating in ratings {
             maped_ratings
-                .entry(rating.user_id.to_string())
+                .entry(rating.user_id)
                 .or_insert_with(HashMap::new)
-                .insert(rating.movie_id.to_string(), rating.score);
+                .insert(rating.movie_id, rating.score);
         }
 
         Ok(maped_ratings)
     }
 
-    fn users_who_rated(&self, items: &[Movie]) -> Result<ItemsUsers, Error> {
+    fn users_who_rated(&self, items: &[Movie]) -> Result<ItemsUsers<i32, i32>, Error> {
         let ratings = Rating::belonging_to(items).load::<Rating>(&self.pg_conn)?;
         let mut items_users = HashMap::new();
 
-        for rating in ratings{
+        for rating in ratings {
             items_users
-                .entry(rating.movie_id.to_string())
+                .entry(rating.movie_id)
                 .or_insert_with(HashSet::new)
-                .insert(rating.user_id.to_string());
+                .insert(rating.user_id);
         }
         Ok(items_users)
     }
 
-    fn create_partial_users(&self, user_ids: &[String]) -> Result<Vec<User>, Error> {
+    fn create_partial_users(&self, user_ids: &[i32]) -> Result<Vec<User>, Error> {
         user_ids
             .iter()
-            .map(|id| -> Result<User, Error>{
-                Ok(User{
-                    id: id.parse()?
-                })
-            })
+            .map(|id| -> Result<User, Error> { Ok(User { id: *id }) })
             .collect()
     }
 
-    fn maped_ratings_by(&self, users: &[User]) -> Result<MapedRatings, Error> {
+    fn maped_ratings_by(&self, users: &[User]) -> Result<MapedRatings<i32, i32>, Error> {
         let ratings = Rating::belonging_to(users).load::<Rating>(&self.pg_conn)?;
 
         let mut maped_ratings = HashMap::new();
         for rating in ratings {
             maped_ratings
-                .entry(rating.user_id.to_string())
+                .entry(rating.user_id)
                 .or_insert_with(HashMap::new)
-                .insert(rating.movie_id.to_string(), rating.score);
+                .insert(rating.movie_id, rating.score);
         }
 
         Ok(maped_ratings)
     }
 
-    fn maped_ratings_except(&self, user: &User) -> Result<MapedRatings, Error> {
+    fn maped_ratings_except(&self, user: &User) -> Result<MapedRatings<i32, i32>, Error> {
         let ratings = ratings::table
             .filter(ratings::user_id.is_distinct_from(user.id))
             .load::<Rating>(&self.pg_conn)?;
@@ -178,9 +174,9 @@ impl Controller<User, Movie> for MovieLensSmallController {
         let mut maped_ratings = HashMap::new();
         for rating in ratings {
             maped_ratings
-                .entry(rating.user_id.to_string())
+                .entry(rating.user_id)
                 .or_insert_with(HashMap::new)
-                .insert(rating.movie_id.to_string(), rating.score);
+                .insert(rating.movie_id, rating.score);
         }
 
         Ok(maped_ratings)

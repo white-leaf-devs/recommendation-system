@@ -31,7 +31,7 @@ impl BooksController {
     }
 }
 
-impl Controller<User, Book> for BooksController {
+impl Controller<User, i32, Book, String> for BooksController {
     fn users(&self) -> Result<Vec<User>, Error> {
         let users = users::table.load::<User>(&self.pg_conn)?;
         Ok(users)
@@ -106,7 +106,7 @@ impl Controller<User, Book> for BooksController {
         Ok(items)
     }
 
-    fn users_who_rated(&self, items: &[Book]) -> Result<ItemsUsers, Error> {
+    fn users_who_rated(&self, items: &[Book]) -> Result<ItemsUsers<String, i32>, Error> {
         let ratings = Rating::belonging_to(items).load::<Rating>(&self.pg_conn)?;
 
         let mut items_users = HashMap::new();
@@ -114,25 +114,25 @@ impl Controller<User, Book> for BooksController {
             items_users
                 .entry(rating.book_id.to_string())
                 .or_insert_with(HashSet::new)
-                .insert(rating.user_id.to_string());
+                .insert(rating.user_id);
         }
 
         Ok(items_users)
     }
 
-    fn create_partial_users(&self, user_ids: &[String]) -> Result<Vec<User>, Error> {
+    fn create_partial_users(&self, user_ids: &[i32]) -> Result<Vec<User>, Error> {
         user_ids
             .iter()
             .map(|id| -> Result<User, Error> {
                 Ok(User {
-                    id: id.parse()?,
+                    id: *id,
                     ..Default::default()
                 })
             })
             .collect()
     }
 
-    fn ratings_by(&self, user: &User) -> Result<Ratings, Error> {
+    fn ratings_by(&self, user: &User) -> Result<Ratings<String>, Error> {
         let ratings = Rating::belonging_to(user)
             .load::<Rating>(&self.pg_conn)?
             .into_iter()
@@ -142,13 +142,13 @@ impl Controller<User, Book> for BooksController {
         Ok(ratings)
     }
 
-    fn maped_ratings(&self) -> Result<MapedRatings, Error> {
+    fn maped_ratings(&self) -> Result<MapedRatings<i32, String>, Error> {
         let ratings = ratings::table.load::<Rating>(&self.pg_conn)?;
 
         let mut maped_ratings = HashMap::new();
         for rating in ratings {
             maped_ratings
-                .entry(rating.user_id.to_string())
+                .entry(rating.user_id)
                 .or_insert_with(HashMap::new)
                 .insert(rating.book_id, rating.score);
         }
@@ -156,13 +156,13 @@ impl Controller<User, Book> for BooksController {
         Ok(maped_ratings)
     }
 
-    fn maped_ratings_by(&self, users: &[User]) -> Result<MapedRatings, Error> {
+    fn maped_ratings_by(&self, users: &[User]) -> Result<MapedRatings<i32, String>, Error> {
         let ratings = Rating::belonging_to(users).load::<Rating>(&self.pg_conn)?;
 
         let mut maped_ratings = HashMap::new();
         for rating in ratings {
             maped_ratings
-                .entry(rating.user_id.to_string())
+                .entry(rating.user_id)
                 .or_insert_with(HashMap::new)
                 .insert(rating.book_id, rating.score);
         }
@@ -170,7 +170,7 @@ impl Controller<User, Book> for BooksController {
         Ok(maped_ratings)
     }
 
-    fn maped_ratings_except(&self, user: &User) -> Result<MapedRatings, Error> {
+    fn maped_ratings_except(&self, user: &User) -> Result<MapedRatings<i32, String>, Error> {
         let ratings = ratings::table
             .filter(ratings::user_id.ne(user.id))
             .load::<Rating>(&self.pg_conn)?;
@@ -178,7 +178,7 @@ impl Controller<User, Book> for BooksController {
         let mut maped_ratings = HashMap::new();
         for rating in ratings {
             maped_ratings
-                .entry(rating.user_id.to_string())
+                .entry(rating.user_id)
                 .or_insert_with(HashMap::new)
                 .insert(rating.book_id, rating.score);
         }
@@ -199,7 +199,7 @@ mod tests {
         let controller = BooksController::new()?;
 
         let users = controller.users_by(&SearchBy::id("2"))?;
-        assert_eq!(users[0].get_id(), "2".to_string());
+        assert_eq!(users[0].get_id(), 2);
 
         Ok(())
     }

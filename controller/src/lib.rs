@@ -35,7 +35,9 @@ impl Display for SearchBy {
 }
 
 pub trait Entity {
-    fn get_id(&self) -> String;
+    type Id;
+
+    fn get_id(&self) -> Self::Id;
     fn get_data(&self) -> HashMap<String, String> {
         Default::default()
     }
@@ -45,7 +47,7 @@ pub trait ToTable {
     fn to_table(&self) -> Table;
 }
 
-impl<E: Entity> ToTable for E {
+impl<I: ToString, E: Entity<Id = I>> ToTable for E {
     fn to_table(&self) -> Table {
         let mut table = table![["id", self.get_id()]];
 
@@ -76,18 +78,22 @@ where
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
-pub type Ratings = HashMap<String, f64>;
-pub type MapedRatings = HashMap<String, Ratings>;
-pub type ItemsUsers = HashMap<String, HashSet<String>>;
+pub type Ratings<ItemId> = HashMap<ItemId, f64>;
+pub type MapedRatings<UserId, ItemId> = HashMap<UserId, Ratings<ItemId>>;
+pub type ItemsUsers<ItemId, UserId> = HashMap<ItemId, HashSet<UserId>>;
 
-pub struct LazyUserChunks<'a, U, I> {
+pub struct LazyUserChunks<'a, User, UserId, Item, ItemId> {
     curr_offset: usize,
     chunk_size: usize,
-    controller: &'a dyn Controller<U, I>,
+    controller: &'a dyn Controller<User, UserId, Item, ItemId>,
 }
 
-impl<'a, U, I> Iterator for LazyUserChunks<'a, U, I> {
-    type Item = Vec<U>;
+impl<'a, User, UserId, Item, ItemId> Iterator for LazyUserChunks<'a, User, UserId, Item, ItemId>
+where
+    User: Entity<Id = UserId>,
+    Item: Entity<Id = ItemId>,
+{
+    type Item = Vec<User>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let users = self
@@ -114,14 +120,18 @@ impl<'a, U, I> Iterator for LazyUserChunks<'a, U, I> {
     }
 }
 
-pub struct LazyItemChunks<'a, U, I> {
+pub struct LazyItemChunks<'a, User, UserId, Item, ItemId> {
     curr_offset: usize,
     chunk_size: usize,
-    controller: &'a dyn Controller<U, I>,
+    controller: &'a dyn Controller<User, UserId, Item, ItemId>,
 }
 
-impl<'a, U, I> Iterator for LazyItemChunks<'a, U, I> {
-    type Item = Vec<I>;
+impl<'a, User, UserId, Item, ItemId> Iterator for LazyItemChunks<'a, User, UserId, Item, ItemId>
+where
+    User: Entity<Id = UserId>,
+    Item: Entity<Id = ItemId>,
+{
+    type Item = Vec<Item>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let items = self
@@ -148,10 +158,14 @@ impl<'a, U, I> Iterator for LazyItemChunks<'a, U, I> {
     }
 }
 
-pub trait Controller<U, I> {
-    fn users(&self) -> Result<Vec<U>>;
-    fn users_by(&self, by: &SearchBy) -> Result<Vec<U>>;
-    fn users_by_chunks(&self, chunk_size: usize) -> LazyUserChunks<U, I>
+pub trait Controller<User, UserId, Item, ItemId>
+where
+    User: Entity<Id = UserId>,
+    Item: Entity<Id = ItemId>,
+{
+    fn users(&self) -> Result<Vec<User>>;
+    fn users_by(&self, by: &SearchBy) -> Result<Vec<User>>;
+    fn users_by_chunks(&self, chunk_size: usize) -> LazyUserChunks<User, UserId, Item, ItemId>
     where
         Self: Sized,
     {
@@ -163,13 +177,13 @@ pub trait Controller<U, I> {
     }
 
     #[allow(unused_variables)]
-    fn users_offset_limit(&self, offset: usize, limit: usize) -> Result<Vec<U>> {
+    fn users_offset_limit(&self, offset: usize, limit: usize) -> Result<Vec<User>> {
         Err(error::ErrorKind::NotImplemented.into())
     }
 
-    fn items(&self) -> Result<Vec<I>>;
-    fn items_by(&self, by: &SearchBy) -> Result<Vec<I>>;
-    fn items_by_chunks(&self, chunk_size: usize) -> LazyItemChunks<U, I>
+    fn items(&self) -> Result<Vec<Item>>;
+    fn items_by(&self, by: &SearchBy) -> Result<Vec<Item>>;
+    fn items_by_chunks(&self, chunk_size: usize) -> LazyItemChunks<User, UserId, Item, ItemId>
     where
         Self: Sized,
     {
@@ -181,17 +195,17 @@ pub trait Controller<U, I> {
     }
 
     #[allow(unused_variables)]
-    fn items_offset_limit(&self, offset: usize, limit: usize) -> Result<Vec<I>> {
+    fn items_offset_limit(&self, offset: usize, limit: usize) -> Result<Vec<Item>> {
         Err(error::ErrorKind::NotImplemented.into())
     }
 
-    fn users_who_rated(&self, items: &[I]) -> Result<ItemsUsers>;
-    fn create_partial_users(&self, user_ids: &[String]) -> Result<Vec<U>>;
+    fn users_who_rated(&self, items: &[Item]) -> Result<ItemsUsers<ItemId, UserId>>;
+    fn create_partial_users(&self, user_ids: &[UserId]) -> Result<Vec<User>>;
 
-    fn ratings_by(&self, user: &U) -> Result<Ratings>;
-    fn maped_ratings(&self) -> Result<MapedRatings>;
-    fn maped_ratings_by(&self, users: &[U]) -> Result<MapedRatings>;
-    fn maped_ratings_except(&self, user: &U) -> Result<MapedRatings>;
+    fn ratings_by(&self, user: &User) -> Result<Ratings<ItemId>>;
+    fn maped_ratings(&self) -> Result<MapedRatings<UserId, ItemId>>;
+    fn maped_ratings_by(&self, users: &[User]) -> Result<MapedRatings<UserId, ItemId>>;
+    fn maped_ratings_except(&self, user: &User) -> Result<MapedRatings<UserId, ItemId>>;
 }
 
 pub mod error {

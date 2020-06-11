@@ -3,23 +3,23 @@ use crate::{
     maped_distance::MapedDistance,
 };
 use controller::{MapedRatings, Ratings};
-use std::{cmp::Reverse, collections::BinaryHeap};
+use std::{cmp::Reverse, collections::BinaryHeap, hash::Hash};
 
 type MaxHeap<T> = BinaryHeap<T>;
 type MinHeap<T> = BinaryHeap<Reverse<T>>;
 
-pub trait Knn {
-    fn update(&mut self, user_ratings: &Ratings, maped_ratings: MapedRatings);
-    fn into_vec(self: Box<Self>) -> Vec<MapedDistance>;
+pub trait Knn<UserId, ItemId> {
+    fn update(&mut self, user_ratings: &Ratings<ItemId>, maped_ratings: MapedRatings<UserId, ItemId>);
+    fn into_vec(self: Box<Self>) -> Vec<MapedDistance<UserId, ItemId>>;
 }
 
-pub struct MaxHeapKnn {
+pub struct MaxHeapKnn<UserId, ItemId> {
     k: usize,
     method: Method,
-    max_heap: MaxHeap<MapedDistance>,
+    max_heap: MaxHeap<MapedDistance<UserId, ItemId>>,
 }
 
-impl MaxHeapKnn {
+impl<UserId, ItemId> MaxHeapKnn<UserId, ItemId> {
     pub fn new(k: usize, method: Method) -> Self {
         Self {
             k,
@@ -29,8 +29,12 @@ impl MaxHeapKnn {
     }
 }
 
-impl Knn for MaxHeapKnn {
-    fn update(&mut self, user_ratings: &Ratings, maped_ratings: MapedRatings) {
+impl<UserId, ItemId> Knn<UserId, ItemId> for MaxHeapKnn<UserId, ItemId> 
+where
+    UserId: Hash + Eq,
+    ItemId: Hash + Eq
+{
+    fn update(&mut self, user_ratings: &Ratings<ItemId>, maped_ratings: MapedRatings<UserId, ItemId>) {
         for (user_id, ratings) in maped_ratings {
             let distance = distances::users::distance(user_ratings, &ratings, self.method);
 
@@ -51,18 +55,18 @@ impl Knn for MaxHeapKnn {
         }
     }
 
-    fn into_vec(self: Box<Self>) -> Vec<MapedDistance> {
+    fn into_vec(self: Box<Self>) -> Vec<MapedDistance<UserId, ItemId>> {
         self.max_heap.into_sorted_vec()
     }
 }
 
-pub struct MinHeapKnn {
+pub struct MinHeapKnn<UserId, ItemId> {
     k: usize,
     method: Method,
-    min_heap: MinHeap<MapedDistance>,
+    min_heap: MinHeap<MapedDistance<UserId, ItemId>>,
 }
 
-impl MinHeapKnn {
+impl<UserId, ItemId> MinHeapKnn<UserId, ItemId> {
     pub fn new(k: usize, method: Method) -> Self {
         Self {
             k,
@@ -72,8 +76,12 @@ impl MinHeapKnn {
     }
 }
 
-impl Knn for MinHeapKnn {
-    fn update(&mut self, user_ratings: &Ratings, maped_ratings: MapedRatings) {
+impl<UserId, ItemId> Knn<UserId, ItemId> for MinHeapKnn<UserId, ItemId> 
+where
+    UserId: Hash + Eq,
+    ItemId: Hash + Eq
+{
+    fn update(&mut self, user_ratings: &Ratings<ItemId>, maped_ratings: MapedRatings<UserId, ItemId>) {
         for (user_id, ratings) in maped_ratings {
             let distance = distances::users::distance(user_ratings, &ratings, self.method);
 
@@ -94,7 +102,7 @@ impl Knn for MinHeapKnn {
         }
     }
 
-    fn into_vec(self: Box<Self>) -> Vec<MapedDistance> {
+    fn into_vec(self: Box<Self>) -> Vec<MapedDistance<UserId, ItemId>> {
         self.min_heap
             .into_sorted_vec()
             .into_iter()

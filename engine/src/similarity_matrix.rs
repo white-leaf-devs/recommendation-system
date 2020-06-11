@@ -1,10 +1,12 @@
 use crate::distances::items::{adjusted_cosine_means, fast_adjusted_cosine};
 use controller::{Controller, Entity, ItemsUsers, LazyItemChunks};
-use std::collections::{HashMap, HashSet};
+use std::{hash::Hash, collections::{HashMap, HashSet}};
 
-pub struct SimilarityMatrix<'a, C, U, I>
+pub struct SimilarityMatrix<'a, C, User, UserId, Item, ItemId>
 where
-    C: Controller<U, I>,
+    User: Entity<Id = UserId>,
+    Item: Entity<Id = ItemId>,
+    C: Controller<User, UserId, Item, ItemId>,
 {
     controller: &'a C,
 
@@ -12,13 +14,15 @@ where
     hor_chunk_size: usize,
     threshold: usize,
 
-    ver_iter: LazyItemChunks<'a, U, I>,
-    hor_iter: LazyItemChunks<'a, U, I>,
+    ver_iter: LazyItemChunks<'a, User, UserId, Item, ItemId>,
+    hor_iter: LazyItemChunks<'a, User, UserId, Item, ItemId>,
 }
 
-impl<'a, C, U, I> SimilarityMatrix<'a, C, U, I>
+impl<'a, C, User, UserId, Item, ItemId> SimilarityMatrix<'a, C, User, UserId, Item, ItemId>
 where
-    C: Controller<U, I>,
+    User: Entity<Id = UserId>,
+    Item: Entity<Id = ItemId>,
+    C: Controller<User, UserId, Item, ItemId>,
 {
     pub fn new(controller: &'a C, m: usize, n: usize, threshold: usize) -> Self {
         Self {
@@ -45,14 +49,15 @@ where
         }
     }
 
-    pub fn get_chunk(&mut self, i: usize, j: usize) -> Option<HashMap<String, HashMap<String, f64>>>
+    pub fn get_chunk(&mut self, i: usize, j: usize) -> Option<HashMap<ItemId, HashMap<ItemId, f64>>>
     where
-        I: Entity,
+        UserId: Hash + Eq + Clone,
+        ItemId: Hash + Eq + Clone,
     {
         let ver_items = self.ver_iter.nth(i)?;
         let hor_items = self.hor_iter.nth(j)?;
 
-        let ver_items_users: ItemsUsers = self
+        let ver_items_users: ItemsUsers<ItemId, UserId> = self
             .controller
             .users_who_rated(&ver_items)
             .ok()?
@@ -60,7 +65,7 @@ where
             .filter(|(_, set)| !set.is_empty())
             .collect();
 
-        let hor_items_users: ItemsUsers = self
+        let hor_items_users: ItemsUsers<ItemId, UserId> = self
             .controller
             .users_who_rated(&hor_items)
             .ok()?

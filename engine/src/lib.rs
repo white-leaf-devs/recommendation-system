@@ -26,13 +26,13 @@ use crate::maped_distance::MapedDistance;
 use controller::{Controller, Entity};
 use knn::{Knn, MaxHeapKnn, MinHeapKnn};
 use similarity_matrix::SimilarityMatrix;
-use std::marker::PhantomData;
+use std::{hash::Hash, marker::PhantomData};
 
-pub struct Engine<'a, C, User, Item>
+pub struct Engine<'a, C, User, UserId, Item, ItemId>
 where
-    User: Entity,
-    Item: Entity,
-    C: Controller<User, Item>,
+    User: Entity<Id = UserId>,
+    Item: Entity<Id = ItemId>,
+    C: Controller<User, UserId, Item, ItemId>,
 {
     controller: &'a C,
 
@@ -40,11 +40,13 @@ where
     item_type: PhantomData<Item>,
 }
 
-impl<'a, C, User, Item> Engine<'a, C, User, Item>
+impl<'a, C, User, UserId, Item, ItemId> Engine<'a, C, User, UserId, Item, ItemId>
 where
-    User: Entity,
-    Item: Entity,
-    C: Controller<User, Item>,
+    User: Entity<Id = UserId>,
+    Item: Entity<Id = ItemId>,
+    UserId: Hash + Eq,
+    ItemId: Hash + Eq,
+    C: Controller<User, UserId, Item, ItemId>,
 {
     pub fn with_controller(controller: &'a C) -> Self {
         Self {
@@ -72,13 +74,13 @@ where
         user: &User,
         method: Method,
         chunk_size: Option<usize>,
-    ) -> Option<Vec<(String, f64)>> {
+    ) -> Option<Vec<(UserId, f64)>> {
         if k == 0 {
             return None;
         }
 
         let user_ratings = self.controller.ratings_by(user).ok()?;
-        let mut knn: Box<dyn Knn> = if method.is_similarity() {
+        let mut knn: Box<dyn Knn<UserId, ItemId>> = if method.is_similarity() {
             Box::new(MinHeapKnn::new(k, method))
         } else {
             Box::new(MaxHeapKnn::new(k, method))
@@ -113,7 +115,7 @@ where
     ) -> Option<f64> {
         let item_id = item.get_id();
         let user_ratings = self.controller.ratings_by(user).ok()?;
-        let mut knn: Box<dyn Knn> = if method.is_similarity() {
+        let mut knn: Box<dyn Knn<UserId, ItemId>> = if method.is_similarity() {
             Box::new(MinHeapKnn::new(k, method))
         } else {
             Box::new(MaxHeapKnn::new(k, method))
@@ -148,7 +150,7 @@ where
             .into_vec()
             .into_iter()
             .filter_map(
-                |MapedDistance(id, _, ratings)| -> Option<(MapedDistance, f64)> {
+                |MapedDistance(id, _, ratings)| -> Option<(MapedDistance<UserId, ItemId>, f64)> {
                     let nn_ratings = ratings?;
 
                     if !nn_ratings.contains_key(&item_id) {
@@ -183,7 +185,7 @@ where
         m: usize,
         n: usize,
         threshold: usize,
-    ) -> SimilarityMatrix<'a, C, User, Item> {
+    ) -> SimilarityMatrix<'a, C, User, UserId, Item, ItemId> {
         SimilarityMatrix::new(&self.controller, m, n, threshold)
     }
 }
@@ -316,7 +318,7 @@ mod tests {
         let mut sim_matrix = engine.similarity_matrix(100, 100, 100);
 
         let now = Instant::now();
-        let matrix = sim_matrix.get_chunk(0, 0);
+        let _matrix = sim_matrix.get_chunk(0, 0);
         println!("Elapsed: {}", now.elapsed().as_secs_f64());
         //println!("{:#?}", matrix);
 
