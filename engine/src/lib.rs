@@ -22,7 +22,8 @@ pub mod similarity_matrix;
 pub mod utils;
 
 use crate::{distances::users::Method as UserMethod, maped_distance::MapedDistance};
-use controller::{Controller, Entity};
+use controller::{Controller, Entity, ItemsUsers};
+use distances::items::normalize_user_ratings;
 use knn::{Knn, MaxHeapKnn, MinHeapKnn};
 use std::{hash::Hash, marker::PhantomData};
 
@@ -43,7 +44,7 @@ where
     User: Entity<Id = UserId>,
     Item: Entity<Id = ItemId>,
     UserId: Hash + Eq,
-    ItemId: Hash + Eq,
+    ItemId: Hash + Eq + Clone,
     C: Controller<User, UserId, Item, ItemId>,
 {
     pub fn with_controller(controller: &'a C) -> Self {
@@ -171,6 +172,30 @@ where
         }
 
         prediction
+    }
+
+    pub fn item_based_prediction(
+        &self,
+        user: &User,
+        item: &Item,
+        chunk_size: usize,
+    ) -> Option<f64> {
+        let all_items_it = self.controller.items_by_chunks(chunk_size);
+
+        let user_ratings = self.controller.ratings_by(user).ok()?;
+        let normalized_ratings = normalize_user_ratings(&user_ratings, 1.0, 5.0).ok()?;
+
+        for item_chunk in all_items_it {
+            let users_who_rated: ItemsUsers<ItemId, UserId> = self
+                .controller
+                .users_who_rated(&item_chunk)
+                .ok()?
+                .into_iter()
+                .filter(|(_, set)| set.contains(&user.get_id()))
+                .collect();
+        }
+
+        Some(1.0)
     }
 }
 
