@@ -339,8 +339,8 @@ mod tests {
     }
 
     #[test]
-    fn distance_statement() {
-        let parsed = parse_statement("distance(id('32a'), id('32b'), euclidean)");
+    fn user_distance_statement() {
+        let parsed = parse_statement("user_distance(id('32a'), id('32b'), euclidean)");
         let expected = (
             "",
             Statement::UserDistance(
@@ -354,8 +354,23 @@ mod tests {
     }
 
     #[test]
-    fn knn_statement() {
-        let parsed = parse_statement("knn(4, id('324x'), minkowski(3))");
+    fn item_distance_statement() {
+        let parsed = parse_statement("item_distance(id('32a'), id('32b'), adj_cosine)");
+        let expected = (
+            "",
+            Statement::ItemDistance(
+                SearchBy::id("32a"),
+                SearchBy::id("32b"),
+                ItemMethod::AdjCosine,
+            ),
+        );
+
+        assert_eq!(parsed, Ok(expected));
+    }
+
+    #[test]
+    fn user_knn_statement() {
+        let parsed = parse_statement("user_knn(4, id('324x'), minkowski(3))");
         let expected = (
             "",
             Statement::UserKnn(4, SearchBy::id("324x"), UserMethod::Minkowski(3), None),
@@ -363,7 +378,7 @@ mod tests {
 
         assert_eq!(parsed, Ok(expected));
 
-        let parsed = parse_statement("knn(4, id('324x'), minkowski(3), 10)");
+        let parsed = parse_statement("user_knn(4, id('324x'), minkowski(3), 10)");
         let expected = (
             "",
             Statement::UserKnn(4, SearchBy::id("324x"), UserMethod::Minkowski(3), Some(10)),
@@ -373,8 +388,9 @@ mod tests {
     }
 
     #[test]
-    fn predict_statement() {
-        let parsed = parse_statement("predict(4, id('324x'), name('Alien'), minkowski(3))");
+    fn user_predict_statement() {
+        let parsed =
+            parse_statement("user_based_predict(4, id('324x'), name('Alien'), minkowski(3))");
         let expected = (
             "",
             Statement::UserPredict(
@@ -388,7 +404,8 @@ mod tests {
 
         assert_eq!(parsed, Ok(expected));
 
-        let parsed = parse_statement("predict(4, id('324x'), name('Alien'), minkowski(3), 100)");
+        let parsed =
+            parse_statement("user_based_predict(4, id('324x'), name('Alien'), minkowski(3), 100)");
         let expected = (
             "",
             Statement::UserPredict(
@@ -404,6 +421,36 @@ mod tests {
     }
 
     #[test]
+    fn item_predict_statement() {
+        let parsed = parse_statement("item_based_predict(id('324x'), name('Alien'), adj_cosine)");
+        let expected = (
+            "",
+            Statement::ItemPredict(
+                SearchBy::id("324x"),
+                SearchBy::name("Alien"),
+                ItemMethod::AdjCosine,
+                None,
+            ),
+        );
+
+        assert_eq!(parsed, Ok(expected));
+
+        let parsed =
+            parse_statement("item_based_predict(id('324x'), name('Alien'), adj_cosine, 100)");
+        let expected = (
+            "",
+            Statement::ItemPredict(
+                SearchBy::id("324x"),
+                SearchBy::name("Alien"),
+                ItemMethod::AdjCosine,
+                Some(100),
+            ),
+        );
+
+        assert_eq!(parsed, Ok(expected));
+    }
+
+    #[test]
     fn parse_invalid_line() {
         let parsed = parse_line("query_user(id())xx");
         assert!(parsed.is_none());
@@ -411,7 +458,7 @@ mod tests {
 
     #[test]
     fn parse_valid_line() {
-        let parsed = parse_line("knn(5, name('Patrick C'), cosine)");
+        let parsed = parse_line("user_knn(5, name('Patrick C'), cosine)");
         assert_eq!(
             parsed,
             Some(Statement::UserKnn(
