@@ -21,8 +21,7 @@ pub mod maped_distance;
 pub mod similarity_matrix;
 pub mod utils;
 
-use crate::distances::users::Method;
-use crate::maped_distance::MapedDistance;
+use crate::{distances::users::Method as UserMethod, maped_distance::MapedDistance};
 use controller::{Controller, Entity};
 use knn::{Knn, MaxHeapKnn, MinHeapKnn};
 use similarity_matrix::SimilarityMatrix;
@@ -56,12 +55,7 @@ where
         }
     }
 
-    pub fn user_distance(
-        &self,
-        user_a: &User,
-        user_b: &User,
-        method: distances::users::Method,
-    ) -> Option<f64> {
+    pub fn user_distance(&self, user_a: &User, user_b: &User, method: UserMethod) -> Option<f64> {
         let rating_a = self.controller.ratings_by(user_a).ok()?;
         let rating_b = self.controller.ratings_by(user_b).ok()?;
 
@@ -72,7 +66,7 @@ where
         &self,
         k: usize,
         user: &User,
-        method: Method,
+        method: UserMethod,
         chunk_size: Option<usize>,
     ) -> Option<Vec<(UserId, f64)>> {
         if k == 0 {
@@ -110,7 +104,7 @@ where
         k: usize,
         user: &User,
         item: &Item,
-        method: Method,
+        method: UserMethod,
         chunk_size: Option<usize>,
     ) -> Option<f64> {
         let item_id = item.get_id();
@@ -160,7 +154,7 @@ where
                     let coef = distances::users::distance(
                         &user_ratings,
                         &nn_ratings,
-                        Method::PearsonApproximation,
+                        UserMethod::PearsonApproximation,
                     )?;
 
                     Some((MapedDistance(id, coef, None), *nn_ratings.get(&item_id)?))
