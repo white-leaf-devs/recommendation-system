@@ -42,7 +42,11 @@ pub enum Statement {
     UserKnn(usize, SearchBy, UserMethod, Option<usize>),
     UserPredict(usize, SearchBy, SearchBy, UserMethod, Option<usize>),
     ItemPredict(SearchBy, SearchBy, ItemMethod, Option<usize>),
-    SimilarityMatrix(usize, usize, usize, ItemMethod),
+
+    // Specific for similarity matrix
+    EnterSimilarityMatrix(usize, usize, usize, ItemMethod),
+    SimMatrixGet(usize, usize),
+    SimMatrixMoveTo(usize, usize),
 }
 
 fn parse_user_method(input: &str) -> IResult<&str, UserMethod> {
