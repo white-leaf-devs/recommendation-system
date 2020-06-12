@@ -28,9 +28,9 @@ pub enum Statement {
     QueryUser(SearchBy),
     QueryItem(SearchBy),
     QueryRatings(SearchBy),
-    Distance(SearchBy, SearchBy, Method),
-    KNN(usize, SearchBy, Method, Option<usize>),
-    Predict(usize, SearchBy, SearchBy, Method, Option<usize>),
+    UserDistance(SearchBy, SearchBy, Method),
+    UserKnn(usize, SearchBy, Method, Option<usize>),
+    KnnPredict(usize, SearchBy, SearchBy, Method, Option<usize>),
 }
 
 fn parse_ident(input: &str) -> IResult<&str, &str> {
@@ -153,7 +153,7 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
                 char!(')')
             )?;
 
-            (input, Statement::Distance(index_a, index_b, method))
+            (input, Statement::UserDistance(index_a, index_b, method))
         }
 
         "knn" => {
@@ -174,7 +174,7 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
             match chunks_opt {
                 Some((_, chunk_size)) => (
                     input,
-                    Statement::KNN(
+                    Statement::UserKnn(
                         k.parse().unwrap(),
                         index,
                         method,
@@ -183,7 +183,7 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
                 ),
                 None => (
                     input,
-                    Statement::KNN(k.parse().unwrap(), index, method, None),
+                    Statement::UserKnn(k.parse().unwrap(), index, method, None),
                 ),
             }
         }
@@ -208,7 +208,7 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
             match chunks_opt {
                 Some((_, chunk_size)) => (
                     input,
-                    Statement::Predict(
+                    Statement::KnnPredict(
                         k.parse().unwrap(),
                         index_user,
                         index_item,
@@ -218,7 +218,7 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
                 ),
                 None => (
                     input,
-                    Statement::Predict(k.parse().unwrap(), index_user, index_item, method, None),
+                    Statement::KnnPredict(k.parse().unwrap(), index_user, index_item, method, None),
                 ),
             }
         }
@@ -312,7 +312,7 @@ mod tests {
         let parsed = parse_statement("distance(id('32a'), id('32b'), euclidean)");
         let expected = (
             "",
-            Statement::Distance(SearchBy::id("32a"), SearchBy::id("32b"), Method::Euclidean),
+            Statement::UserDistance(SearchBy::id("32a"), SearchBy::id("32b"), Method::Euclidean),
         );
 
         assert_eq!(parsed, Ok(expected));
@@ -323,7 +323,7 @@ mod tests {
         let parsed = parse_statement("knn(4, id('324x'), minkowski(3))");
         let expected = (
             "",
-            Statement::KNN(4, SearchBy::id("324x"), Method::Minkowski(3), None),
+            Statement::UserKnn(4, SearchBy::id("324x"), Method::Minkowski(3), None),
         );
 
         assert_eq!(parsed, Ok(expected));
@@ -331,7 +331,7 @@ mod tests {
         let parsed = parse_statement("knn(4, id('324x'), minkowski(3), 10)");
         let expected = (
             "",
-            Statement::KNN(4, SearchBy::id("324x"), Method::Minkowski(3), Some(10)),
+            Statement::UserKnn(4, SearchBy::id("324x"), Method::Minkowski(3), Some(10)),
         );
 
         assert_eq!(parsed, Ok(expected));
@@ -342,7 +342,7 @@ mod tests {
         let parsed = parse_statement("predict(4, id('324x'), name('Alien'), minkowski(3))");
         let expected = (
             "",
-            Statement::Predict(
+            Statement::KnnPredict(
                 4,
                 SearchBy::id("324x"),
                 SearchBy::name("Alien"),
@@ -356,7 +356,7 @@ mod tests {
         let parsed = parse_statement("predict(4, id('324x'), name('Alien'), minkowski(3), 100)");
         let expected = (
             "",
-            Statement::Predict(
+            Statement::KnnPredict(
                 4,
                 SearchBy::id("324x"),
                 SearchBy::name("Alien"),
@@ -379,7 +379,7 @@ mod tests {
         let parsed = parse_line("knn(5, name('Patrick C'), cosine)");
         assert_eq!(
             parsed,
-            Some(Statement::KNN(
+            Some(Statement::UserKnn(
                 5,
                 SearchBy::name("Patrick C"),
                 Method::CosineSimilarity,
