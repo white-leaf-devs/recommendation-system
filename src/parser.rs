@@ -1,11 +1,18 @@
+pub mod basics;
+
+use crate::parser::basics::{parse_ident, parse_number, parse_separator, parse_string};
 use controller::SearchBy;
 use engine::distances::items::Method as ItemMethod;
 use engine::distances::users::Method as UserMethod;
-use nom::{alt, char, delimited, opt, tag, take_till1, take_while, take_while1, tuple, IResult};
+use nom::combinator::opt;
+use nom::sequence::{delimited, tuple};
+use nom::{branch::alt, character::complete::char};
+use nom::{bytes::complete::tag, IResult};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Database {
     Books,
+    Shelves,
     SimpleMovie,
     MovieLens,
     MovieLensSmall,
@@ -15,6 +22,7 @@ impl From<&str> for Database {
     fn from(s: &str) -> Self {
         match s {
             "books" => Self::Books,
+            "shelves" => Self::Shelves,
             "simple-movie" => Self::SimpleMovie,
             "movie-lens" => Self::MovieLens,
             "movie-lens-small" => Self::MovieLensSmall,
@@ -32,48 +40,22 @@ pub enum Statement {
     UserDistance(SearchBy, SearchBy, UserMethod),
     ItemDistance(SearchBy, SearchBy, ItemMethod),
     UserKnn(usize, SearchBy, UserMethod, Option<usize>),
-    KnnPredict(usize, SearchBy, SearchBy, UserMethod, Option<usize>),
-    AdjPredict(SearchBy, SearchBy, Option<usize>),
+    UserPredict(usize, SearchBy, SearchBy, UserMethod, Option<usize>),
+    ItemPredict(SearchBy, SearchBy, ItemMethod, Option<usize>),
+    SimilarityMatrix(usize, usize, usize, ItemMethod),
 }
 
-fn parse_ident(input: &str) -> IResult<&str, &str> {
-    take_while1!(input, |c: char| c.is_alphanumeric() || c == '_' || c == '-')
-}
-
-fn parse_string(input: &str) -> IResult<&str, &str> {
-    delimited!(
-        input,
-        char!('\''),
-        take_till1!(|c: char| c == '\''),
-        char!('\'')
-    )
-}
-
-fn parse_number(input: &str) -> IResult<&str, &str> {
-    take_while1!(input, |c: char| c.is_ascii_digit())
-}
-
-fn parse_separator(input: &str) -> IResult<&str, &str> {
-    delimited!(
-        input,
-        take_while!(|c: char| c == ' '),
-        tag!(","),
-        take_while!(|c: char| c == ' ')
-    )
-}
-
-fn parse_method(input: &str) -> IResult<&str, UserMethod> {
-    let (input, method) = alt! {
-        input,
-        tag!("cosine")        |
-        tag!("pearson_c")     |
-        tag!("pearson_a")     |
-        tag!("euclidean")     |
-        tag!("manhattan")     |
-        tag!("minkowski")     |
-        tag!("jacc_index")    |
-        tag!("jacc_distance")
-    }?;
+fn parse_user_method(input: &str) -> IResult<&str, UserMethod> {
+    let (input, method) = alt((
+        tag("cosine"),
+        tag("pearson_c"),
+        tag("pearson_a"),
+        tag("euclidean"),
+        tag("manhattan"),
+        tag("minkowski"),
+        tag("jacc_index"),
+        tag("jacc_distance"),
+    ))(input)?;
 
     let (input, method) = match method {
         "cosine" => (input, UserMethod::CosineSimilarity),
@@ -81,15 +63,24 @@ fn parse_method(input: &str) -> IResult<&str, UserMethod> {
         "pearson_a" => (input, UserMethod::PearsonApproximation),
         "euclidean" => (input, UserMethod::Euclidean),
         "manhattan" => (input, UserMethod::Manhattan),
+        "minkowski" => {
+            let (input, number) = delimited(char('('), parse_number, char(')'))(input)?;
+            (input, UserMethod::Minkowski(number as usize))
+        }
         "jacc_index" => (input, UserMethod::JaccardIndex),
         "jacc_distance" => (input, UserMethod::JaccardDistance),
-        "minkowski" => {
-            let (input, number) = delimited!(input, char!('('), parse_number, char!(')'))?;
-            (
-                input,
-                UserMethod::Minkowski(number.parse().expect("Parsing a number should not fail")),
-            )
-        }
+        _ => unreachable!(),
+    };
+
+    Ok((input, method))
+}
+
+fn parse_item_method(input: &str) -> IResult<&str, ItemMethod> {
+    let (input, method) = alt((tag("slope_one"), tag("adj_cosine")))(input)?;
+
+    let (input, method) = match method {
+        "slope_one" => (input, ItemMethod::SlopeOne),
+        "adj_cosine" => (input, ItemMethod::AdjCosine),
         _ => unreachable!(),
     };
 
@@ -98,7 +89,7 @@ fn parse_method(input: &str) -> IResult<&str, UserMethod> {
 
 fn parse_searchby(input: &str) -> IResult<&str, SearchBy> {
     let (input, ident) = parse_ident(input)?;
-    let (input, value) = delimited!(input, char!('('), parse_string, char!(')'))?;
+    let (input, value) = delimited(char('('), parse_string, char(')'))(input)?;
 
     let index = match ident {
         "id" => SearchBy::id(value),
@@ -110,120 +101,157 @@ fn parse_searchby(input: &str) -> IResult<&str, SearchBy> {
 }
 
 fn parse_statement(input: &str) -> IResult<&str, Statement> {
-    let (input, statement_type) = alt! {
-        input,
-        tag!("knn")        |
-        tag!("connect")    |
-        tag!("predict")    |
-        tag!("distance")   |
-        tag!("query_user") |
-        tag!("query_item") |
-        tag!("query_ratings")
-    }?;
+    let (input, statement_type) = alt((
+        tag("connect"),
+        tag("user_knn"),
+        tag("query_user"),
+        tag("query_item"),
+        tag("query_ratings"),
+        tag("user_distance"),
+        tag("item_distance"),
+        tag("user_based_predict"),
+        tag("item_based_predict"),
+    ))(input)?;
 
     let (input, statement) = match statement_type {
         "connect" => {
-            let (input, database) = delimited!(input, char!('('), parse_ident, char!(')'))?;
+            let (input, database) = delimited(char('('), parse_ident, char(')'))(input)?;
             (input, Statement::Connect(database.into()))
         }
 
         "query_user" => {
-            let (input, index) = delimited!(input, char!('('), parse_searchby, char!(')'))?;
-            (input, Statement::QueryUser(index))
+            let (input, user_searchby) = delimited(char('('), parse_searchby, char(')'))(input)?;
+            (input, Statement::QueryUser(user_searchby))
         }
 
         "query_item" => {
-            let (input, index) = delimited!(input, char!('('), parse_searchby, char!(')'))?;
-            (input, Statement::QueryItem(index))
+            let (input, item_searchby) = delimited(char('('), parse_searchby, char(')'))(input)?;
+            (input, Statement::QueryItem(item_searchby))
         }
 
         "query_ratings" => {
-            let (input, index) = delimited!(input, char!('('), parse_searchby, char!(')'))?;
-            (input, Statement::QueryRatings(index))
+            let (input, user_searchby) = delimited(char('('), parse_searchby, char(')'))(input)?;
+            (input, Statement::QueryRatings(user_searchby))
         }
 
-        "distance" => {
-            let (input, (index_a, _, index_b, _, method)) = delimited!(
-                input,
-                char!('('),
-                tuple!(
-                    parse_searchby,
-                    parse_separator,
-                    parse_searchby,
-                    parse_separator,
-                    parse_method
-                ),
-                char!(')')
-            )?;
+        "user_distance" => {
+            let (input, (user_a_searchby, _, user_b_searchby, _, user_method)) =
+                delimited(
+                    char('('),
+                    tuple((
+                        parse_searchby,
+                        parse_separator,
+                        parse_searchby,
+                        parse_separator,
+                        parse_user_method,
+                    )),
+                    char(')'),
+                )(input)?;
 
-            (input, Statement::UserDistance(index_a, index_b, method))
+            (
+                input,
+                Statement::UserDistance(user_a_searchby, user_b_searchby, user_method),
+            )
         }
 
-        "knn" => {
-            let (input, (k, _, index, _, method, chunks_opt)) = delimited!(
+        "item_distance" => {
+            let (input, (item_a_searchby, _, item_b_searchby, _, item_method)) =
+                delimited(
+                    char('('),
+                    tuple((
+                        parse_searchby,
+                        parse_separator,
+                        parse_searchby,
+                        parse_separator,
+                        parse_item_method,
+                    )),
+                    char(')'),
+                )(input)?;
+
+            (
                 input,
-                char!('('),
-                tuple!(
+                Statement::ItemDistance(item_a_searchby, item_b_searchby, item_method),
+            )
+        }
+
+        "user_knn" => {
+            let (input, (k, _, user_searchby, _, user_method, chunks_opt)) = delimited(
+                char('('),
+                tuple((
                     parse_number,
                     parse_separator,
                     parse_searchby,
                     parse_separator,
-                    parse_method,
-                    opt!(tuple!(parse_separator, parse_number))
-                ),
-                char!(')')
-            )?;
+                    parse_user_method,
+                    opt(tuple((parse_separator, parse_number))),
+                )),
+                char(')'),
+            )(input)?;
 
-            match chunks_opt {
-                Some((_, chunk_size)) => (
-                    input,
-                    Statement::UserKnn(
-                        k.parse().unwrap(),
-                        index,
-                        method,
-                        Some(chunk_size.parse().unwrap()),
-                    ),
+            (
+                input,
+                Statement::UserKnn(
+                    k as usize,
+                    user_searchby,
+                    user_method,
+                    chunks_opt.map(|(_, chunk_size)| chunk_size as usize),
                 ),
-                None => (
-                    input,
-                    Statement::UserKnn(k.parse().unwrap(), index, method, None),
-                ),
-            }
+            )
         }
 
-        "predict" => {
-            let (input, (k, _, index_user, _, index_item, _, method, chunks_opt)) = delimited!(
-                input,
-                char!('('),
-                tuple!(
-                    parse_number,
-                    parse_separator,
-                    parse_searchby,
-                    parse_separator,
-                    parse_searchby,
-                    parse_separator,
-                    parse_method,
-                    opt!(tuple!(parse_separator, parse_number))
-                ),
-                char!(')')
-            )?;
+        "user_based_predict" => {
+            let (input, (k, _, user_searchby, _, item_searchby, _, user_method, chunks_opt)) =
+                delimited(
+                    char('('),
+                    tuple((
+                        parse_number,
+                        parse_separator,
+                        parse_searchby,
+                        parse_separator,
+                        parse_searchby,
+                        parse_separator,
+                        parse_user_method,
+                        opt(tuple((parse_separator, parse_number))),
+                    )),
+                    char(')'),
+                )(input)?;
 
-            match chunks_opt {
-                Some((_, chunk_size)) => (
-                    input,
-                    Statement::KnnPredict(
-                        k.parse().unwrap(),
-                        index_user,
-                        index_item,
-                        method,
-                        Some(chunk_size.parse().unwrap()),
-                    ),
+            (
+                input,
+                Statement::UserPredict(
+                    k as usize,
+                    user_searchby,
+                    item_searchby,
+                    user_method,
+                    chunks_opt.map(|(_, chunk_size)| chunk_size as usize),
                 ),
-                None => (
-                    input,
-                    Statement::KnnPredict(k.parse().unwrap(), index_user, index_item, method, None),
+            )
+        }
+
+        "item_based_predict" => {
+            let (input, (user_searchby, _, item_searchby, _, item_method, chunks_opt)) =
+                delimited(
+                    char('('),
+                    tuple((
+                        parse_searchby,
+                        parse_separator,
+                        parse_searchby,
+                        parse_separator,
+                        parse_item_method,
+                        opt(tuple((parse_separator, parse_number))),
+                    )),
+                    char(')'),
+                )(input)?;
+
+            (
+                input,
+                Statement::ItemPredict(
+                    user_searchby,
+                    item_searchby,
+                    item_method,
+                    chunks_opt.map(|(_, chunk_size)| chunk_size as usize),
                 ),
-            }
+            )
         }
 
         function => unimplemented!("Unimplemented parser for {}", function),
@@ -349,7 +377,7 @@ mod tests {
         let parsed = parse_statement("predict(4, id('324x'), name('Alien'), minkowski(3))");
         let expected = (
             "",
-            Statement::KnnPredict(
+            Statement::UserPredict(
                 4,
                 SearchBy::id("324x"),
                 SearchBy::name("Alien"),
@@ -363,7 +391,7 @@ mod tests {
         let parsed = parse_statement("predict(4, id('324x'), name('Alien'), minkowski(3), 100)");
         let expected = (
             "",
-            Statement::KnnPredict(
+            Statement::UserPredict(
                 4,
                 SearchBy::id("324x"),
                 SearchBy::name("Alien"),
