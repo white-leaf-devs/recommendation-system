@@ -3,10 +3,11 @@ pub mod parser;
 use anyhow::Error;
 use books::BooksController;
 use controller::{Controller, Entity, ToTable};
-use engine::Engine;
+use engine::{similarity_matrix::SimilarityMatrix, Engine};
 use movie_lens::MovieLensController;
 use movie_lens_small::MovieLensSmallController;
 use parser::{Database, Statement};
+use rustyline::Editor;
 use shelves::ShelvesController;
 use simple_movie::SimpleMovieController;
 use std::{fmt::Display, hash::Hash, time::Instant};
@@ -50,29 +51,109 @@ macro_rules! prompt {
     }};
 }
 
-fn database_connected_prompt<C, User, UserId, Item, ItemId>(
-    controller: C,
+fn sim_matrix_prompt<C, User, UserId, Item, ItemId>(
+    controller: &C,
     name: &str,
+    m: usize,
+    n: usize,
+    threshold: usize,
+    rl: &mut Editor<()>,
 ) -> Result<(), Error>
 where
     C: Controller<User, UserId, Item, ItemId>,
     User: Entity<Id = UserId> + ToTable,
     Item: Entity<Id = ItemId> + ToTable,
-    UserId: Hash + Eq + Display,
-    ItemId: Hash + Eq + Display,
+    UserId: Hash + Eq + Display + Clone,
+    ItemId: Hash + Eq + Display + Clone,
+{
+    let mut sim_matrix = SimilarityMatrix::new(controller, m, n, threshold);
+    let mut curr_i = 0;
+    let mut curr_j = 0;
+    let mut maybe_chunk = sim_matrix.get_chunk(curr_i, curr_j);
+
+    loop {
+        let formatted = format!("{}:sim_matrix({}, {})", name, curr_i, curr_j);
+        let opt: String = prompt!(rl, formatted)?;
+
+        match opt.trim() {
+            "e" | "exit" => {
+                println!("Exiting the matrix");
+                break;
+            }
+
+            "v" | "version" => {
+                println!("version: {}", VERSION);
+            }
+
+            line => match parser::parse_line(line) {
+                Some(stmt) => match stmt {
+                    Statement::SimMatrixGet(searchby_a, searchby_b) => {
+                        let item_id_a = match controller.items_by(&searchby_a) {
+                            Ok(items) => items[0].get_id(),
+                            Err(e) => {
+                                println!("{}", e);
+                                continue;
+                            }
+                        };
+
+                        let item_id_b = match controller.items_by(&searchby_b) {
+                            Ok(items) => items[0].get_id(),
+                            Err(e) => {
+                                println!("{}", e);
+                                continue;
+                            }
+                        };
+
+                        if let Some(chunk) = &maybe_chunk {
+                            let val = chunk.get(&item_id_a).and_then(|row| row.get(&item_id_b));
+
+                            if let Some(val) = val {
+                                println!("Value for ({}, {}) is {}", item_id_a, item_id_b, val);
+                            } else {
+                                println!("No value found for ({}, {})", item_id_a, item_id_b);
+                            }
+                        } else {
+                            println!("Failed to use current chunk (maybe out-of-bounds)");
+                        }
+                    }
+
+                    Statement::SimMatrixMoveTo(i, j) => {
+                        curr_i = i;
+                        curr_j = j;
+                        maybe_chunk = sim_matrix.get_chunk(curr_i, curr_j);
+                    }
+
+                    _ => {
+                        println!("Invalid statement in this context.");
+                        println!("Exit the matrix first!");
+                    }
+                },
+                None => println!("Invalid syntax!"),
+            },
+        }
+    }
+
+    Ok(())
+}
+
+fn database_connected_prompt<C, User, UserId, Item, ItemId>(
+    controller: C,
+    name: &str,
+    rl: &mut Editor<()>,
+) -> Result<(), Error>
+where
+    C: Controller<User, UserId, Item, ItemId>,
+    User: Entity<Id = UserId> + ToTable,
+    Item: Entity<Id = ItemId> + ToTable,
+    UserId: Hash + Eq + Display + Clone,
+    ItemId: Hash + Eq + Display + Clone,
 {
     let engine = Engine::with_controller(&controller);
-    let mut rl = rustyline::Editor::<()>::new();
 
     loop {
         let opt: String = prompt!(rl, name)?;
 
         match opt.trim() {
-            "q" | "quit" => {
-                println!("Bye!");
-                break;
-            }
-
             "d" | "disconnect" => {
                 println!("Disconnecting from database {}", name);
                 break;
@@ -87,6 +168,11 @@ where
                     Statement::Connect(_) => {
                         println!("Invalid statement in this context.");
                         println!("Disconnect from current database first!");
+                    }
+
+                    Statement::SimMatrixGet(_, _) | Statement::SimMatrixMoveTo(_, _) => {
+                        println!("Invalid statement in this context.");
+                        println!("Enter the matrix first!");
                     }
 
                     Statement::QueryUser(searchby) => match controller.users_by(&searchby) {
@@ -221,7 +307,11 @@ where
                         println!("Operation took {:.4} seconds", now.elapsed().as_secs_f64());
                     }
 
-                    _ => unimplemented!(),
+                    Statement::EnterSimMatrix(m, n, threshold, _method) => {
+                        sim_matrix_prompt(&controller, name, m, n, threshold, rl)?;
+                    }
+
+                    _ => println!("Unimplemented statement"),
                 },
 
                 None => println!("Invalid syntax!"),
@@ -258,25 +348,34 @@ fn main() -> Result<(), Error> {
                 Some(stmt) => {
                     if let Statement::Connect(db) = stmt {
                         match db {
-                            Database::Books => {
-                                database_connected_prompt(BooksController::new()?, "books")?
-                            }
+                            Database::Books => database_connected_prompt(
+                                BooksController::new()?,
+                                "books",
+                                &mut rl,
+                            )?,
 
-                            Database::Shelves => {
-                                database_connected_prompt(ShelvesController::new()?, "shelves")?
-                            }
+                            Database::Shelves => database_connected_prompt(
+                                ShelvesController::new()?,
+                                "shelves",
+                                &mut rl,
+                            )?,
 
                             Database::SimpleMovie => database_connected_prompt(
                                 SimpleMovieController::new()?,
                                 "simple-movie",
+                                &mut rl,
                             )?,
+
                             Database::MovieLens => database_connected_prompt(
                                 MovieLensController::new()?,
                                 "movie-lens",
+                                &mut rl,
                             )?,
+
                             Database::MovieLensSmall => database_connected_prompt(
                                 MovieLensSmallController::new()?,
                                 "movie-lens-small",
+                                &mut rl,
                             )?,
                         }
                     } else {
