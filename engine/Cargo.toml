@@ -9,6 +9,7 @@ workspace = ".."
 
 [dependencies]
 anyhow = "1"
+thiserror = "1.0.19"
 controller = { version = "*", path = "../controller" }
 num-traits = "0.2.11"
 
