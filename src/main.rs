@@ -223,6 +223,8 @@ where
 
                         println!("Operation took {:.4} seconds", now.elapsed().as_secs_f64());
                     }
+
+                    _ => unimplemented!(),
                 },
 
                 None => println!("Invalid syntax!"),
