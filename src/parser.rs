@@ -1,5 +1,6 @@
 use controller::SearchBy;
-use engine::distances::users::Method;
+use engine::distances::items::Method as ItemMethod;
+use engine::distances::users::Method as UserMethod;
 use nom::{alt, char, delimited, opt, tag, take_till1, take_while, take_while1, tuple, IResult};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -28,9 +29,11 @@ pub enum Statement {
     QueryUser(SearchBy),
     QueryItem(SearchBy),
     QueryRatings(SearchBy),
-    UserDistance(SearchBy, SearchBy, Method),
-    UserKnn(usize, SearchBy, Method, Option<usize>),
-    KnnPredict(usize, SearchBy, SearchBy, Method, Option<usize>),
+    UserDistance(SearchBy, SearchBy, UserMethod),
+    ItemDistance(SearchBy, SearchBy, ItemMethod),
+    UserKnn(usize, SearchBy, UserMethod, Option<usize>),
+    KnnPredict(usize, SearchBy, SearchBy, UserMethod, Option<usize>),
+    AdjPredict(SearchBy, SearchBy, Option<usize>),
 }
 
 fn parse_ident(input: &str) -> IResult<&str, &str> {
@@ -59,7 +62,7 @@ fn parse_separator(input: &str) -> IResult<&str, &str> {
     )
 }
 
-fn parse_method(input: &str) -> IResult<&str, Method> {
+fn parse_method(input: &str) -> IResult<&str, UserMethod> {
     let (input, method) = alt! {
         input,
         tag!("cosine")        |
@@ -73,18 +76,18 @@ fn parse_method(input: &str) -> IResult<&str, Method> {
     }?;
 
     let (input, method) = match method {
-        "cosine" => (input, Method::CosineSimilarity),
-        "pearson_c" => (input, Method::PearsonCorrelation),
-        "pearson_a" => (input, Method::PearsonApproximation),
-        "euclidean" => (input, Method::Euclidean),
-        "manhattan" => (input, Method::Manhattan),
-        "jacc_index" => (input, Method::JaccardIndex),
-        "jacc_distance" => (input, Method::JaccardDistance),
+        "cosine" => (input, UserMethod::CosineSimilarity),
+        "pearson_c" => (input, UserMethod::PearsonCorrelation),
+        "pearson_a" => (input, UserMethod::PearsonApproximation),
+        "euclidean" => (input, UserMethod::Euclidean),
+        "manhattan" => (input, UserMethod::Manhattan),
+        "jacc_index" => (input, UserMethod::JaccardIndex),
+        "jacc_distance" => (input, UserMethod::JaccardDistance),
         "minkowski" => {
             let (input, number) = delimited!(input, char!('('), parse_number, char!(')'))?;
             (
                 input,
-                Method::Minkowski(number.parse().expect("Parsing a number should not fail")),
+                UserMethod::Minkowski(number.parse().expect("Parsing a number should not fail")),
             )
         }
         _ => unreachable!(),
@@ -312,7 +315,11 @@ mod tests {
         let parsed = parse_statement("distance(id('32a'), id('32b'), euclidean)");
         let expected = (
             "",
-            Statement::UserDistance(SearchBy::id("32a"), SearchBy::id("32b"), Method::Euclidean),
+            Statement::UserDistance(
+                SearchBy::id("32a"),
+                SearchBy::id("32b"),
+                UserMethod::Euclidean,
+            ),
         );
 
         assert_eq!(parsed, Ok(expected));
@@ -323,7 +330,7 @@ mod tests {
         let parsed = parse_statement("knn(4, id('324x'), minkowski(3))");
         let expected = (
             "",
-            Statement::UserKnn(4, SearchBy::id("324x"), Method::Minkowski(3), None),
+            Statement::UserKnn(4, SearchBy::id("324x"), UserMethod::Minkowski(3), None),
         );
 
         assert_eq!(parsed, Ok(expected));
@@ -331,7 +338,7 @@ mod tests {
         let parsed = parse_statement("knn(4, id('324x'), minkowski(3), 10)");
         let expected = (
             "",
-            Statement::UserKnn(4, SearchBy::id("324x"), Method::Minkowski(3), Some(10)),
+            Statement::UserKnn(4, SearchBy::id("324x"), UserMethod::Minkowski(3), Some(10)),
         );
 
         assert_eq!(parsed, Ok(expected));
@@ -346,7 +353,7 @@ mod tests {
                 4,
                 SearchBy::id("324x"),
                 SearchBy::name("Alien"),
-                Method::Minkowski(3),
+                UserMethod::Minkowski(3),
                 None,
             ),
         );
@@ -360,7 +367,7 @@ mod tests {
                 4,
                 SearchBy::id("324x"),
                 SearchBy::name("Alien"),
-                Method::Minkowski(3),
+                UserMethod::Minkowski(3),
                 Some(100),
             ),
         );
@@ -382,7 +389,7 @@ mod tests {
             Some(Statement::UserKnn(
                 5,
                 SearchBy::name("Patrick C"),
-                Method::CosineSimilarity,
+                UserMethod::CosineSimilarity,
                 None
             ))
         );
