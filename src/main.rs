@@ -7,6 +7,7 @@ use engine::Engine;
 use movie_lens::MovieLensController;
 use movie_lens_small::MovieLensSmallController;
 use parser::{Database, Statement};
+use shelves::ShelvesController;
 use simple_movie::SimpleMovieController;
 use std::{fmt::Display, hash::Hash, time::Instant};
 
@@ -47,10 +48,6 @@ macro_rules! prompt {
             Err(e) => Err(e),
         }
     }};
-}
-
-fn similarity_matrix_shell() {
-    todo!()
 }
 
 fn database_connected_prompt<C, User, UserId, Item, ItemId>(
@@ -187,7 +184,7 @@ where
                         println!("Operation took {:.4} seconds", elapsed);
                     }
 
-                    Statement::KnnPredict(k, searchby_user, searchby_item, method, chunks_opt) => {
+                    Statement::UserPredict(k, searchby_user, searchby_item, method, chunks_opt) => {
                         let users = match controller.users_by(&searchby_user) {
                             Ok(users) => users,
                             Err(e) => {
@@ -206,7 +203,7 @@ where
 
                         let now = Instant::now();
                         let prediction =
-                            engine.knn_predict(k, &users[0], &items[0], method, chunks_opt);
+                            engine.user_predict(k, &users[0], &items[0], method, chunks_opt);
                         match prediction {
                             Some(predicted) => println!(
                                 "Predicted score for item with id({}) is {}",
@@ -264,6 +261,11 @@ fn main() -> Result<(), Error> {
                             Database::Books => {
                                 database_connected_prompt(BooksController::new()?, "books")?
                             }
+
+                            Database::Shelves => {
+                                database_connected_prompt(ShelvesController::new()?, "shelves")?
+                            }
+
                             Database::SimpleMovie => database_connected_prompt(
                                 SimpleMovieController::new()?,
                                 "simple-movie",
