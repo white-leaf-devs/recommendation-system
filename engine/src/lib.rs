@@ -99,7 +99,7 @@ where
         )
     }
 
-    pub fn knn_predict(
+    pub fn user_predict(
         &self,
         k: usize,
         user: &User,
