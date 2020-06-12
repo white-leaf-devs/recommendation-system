@@ -49,6 +49,10 @@ macro_rules! prompt {
     }};
 }
 
+fn similarity_matrix_shell() {
+    todo!()
+}
+
 fn database_connected_prompt<C, User, UserId, Item, ItemId>(
     controller: C,
     name: &str,
@@ -124,7 +128,7 @@ where
                         Err(e) => println!("{}", e),
                     },
 
-                    Statement::Distance(searchby_a, searchby_b, method) => {
+                    Statement::UserDistance(searchby_a, searchby_b, method) => {
                         let users_a = match controller.users_by(&searchby_a) {
                             Ok(users) => users,
                             Err(e) => {
@@ -142,7 +146,7 @@ where
                         };
 
                         let now = Instant::now();
-                        let dist = engine.distance(&users_a[0], &users_b[0], method);
+                        let dist = engine.user_distance(&users_a[0], &users_b[0], method);
                         match dist {
                             Some(dist) => println!("Distance is {}", dist),
                             None => println!("Distance couldn't be calculated or gave NaN/∞/-∞"),
@@ -151,11 +155,11 @@ where
                         println!("Operation took {:.4} seconds", now.elapsed().as_secs_f64());
                     }
 
-                    Statement::KNN(k, searchby, method, chunks_opt) => {
+                    Statement::UserKnn(k, searchby, method, chunks_opt) => {
                         let users = controller.users_by(&searchby);
                         let now = Instant::now();
                         let knn = match users {
-                            Ok(users) => engine.knn(k, &users[0], method, chunks_opt),
+                            Ok(users) => engine.user_knn(k, &users[0], method, chunks_opt),
                             Err(e) => {
                                 println!("{}", e);
                                 continue;
@@ -183,7 +187,7 @@ where
                         println!("Operation took {:.4} seconds", elapsed);
                     }
 
-                    Statement::Predict(k, searchby_user, searchby_item, method, chunks_opt) => {
+                    Statement::KnnPredict(k, searchby_user, searchby_item, method, chunks_opt) => {
                         let users = match controller.users_by(&searchby_user) {
                             Ok(users) => users,
                             Err(e) => {
@@ -202,7 +206,7 @@ where
 
                         let now = Instant::now();
                         let prediction =
-                            engine.predict(k, &users[0], &items[0], method, chunks_opt);
+                            engine.knn_predict(k, &users[0], &items[0], method, chunks_opt);
                         match prediction {
                             Some(predicted) => println!(
                                 "Predicted score for item with id({}) is {}",
@@ -219,6 +223,8 @@ where
 
                         println!("Operation took {:.4} seconds", now.elapsed().as_secs_f64());
                     }
+
+                    _ => unimplemented!(),
                 },
 
                 None => println!("Invalid syntax!"),
