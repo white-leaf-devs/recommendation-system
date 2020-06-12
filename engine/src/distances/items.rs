@@ -5,7 +5,7 @@ use std::{
     ops::{AddAssign, Mul, Sub},
 };
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Method {
     AdjCosine,
     SlopeOne,
