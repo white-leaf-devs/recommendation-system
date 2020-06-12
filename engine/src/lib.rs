@@ -56,7 +56,7 @@ where
         }
     }
 
-    pub fn distance(
+    pub fn user_distance(
         &self,
         user_a: &User,
         user_b: &User,
@@ -68,7 +68,7 @@ where
         distances::users::distance(&rating_a, &rating_b, method)
     }
 
-    pub fn knn(
+    pub fn user_knn(
         &self,
         k: usize,
         user: &User,
@@ -105,7 +105,7 @@ where
         )
     }
 
-    pub fn predict(
+    pub fn knn_predict(
         &self,
         k: usize,
         user: &User,
