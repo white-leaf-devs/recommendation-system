@@ -106,9 +106,9 @@ pub fn normalize_user_ratings<ItemId: Clone>(
     ratings: &Ratings<ItemId>,
     min_rating: f64,
     max_rating: f64,
-) -> Result<Ratings<ItemId>, Error> {
+) -> Result<Ratings<ItemId>, ErrorKind> {
     if max_rating - min_rating == 0.0 {
-        return Err(ErrorKind::DivisionByZero.into());
+        return Err(ErrorKind::DivisionByZero);
     }
 
     let mut normalized_ratings = ratings.clone();
