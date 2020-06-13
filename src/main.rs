@@ -69,7 +69,10 @@ where
     let mut sim_matrix = SimilarityMatrix::new(controller, m, n, threshold);
     let mut curr_i = 0;
     let mut curr_j = 0;
+
+    let now = Instant::now();
     let mut maybe_chunk = sim_matrix.get_chunk(curr_i, curr_j);
+    println!("Operation took {:.4} seconds", now.elapsed().as_secs_f64());
 
     loop {
         let formatted = format!("{}:sim_matrix({}, {})", name, curr_i, curr_j);
@@ -120,7 +123,10 @@ where
                     Statement::SimMatrixMoveTo(i, j) => {
                         curr_i = i;
                         curr_j = j;
+
+                        let now = Instant::now();
                         maybe_chunk = sim_matrix.get_chunk(curr_i, curr_j);
+                        println!("Operation took {:.4} seconds", now.elapsed().as_secs_f64());
                     }
 
                     _ => {
