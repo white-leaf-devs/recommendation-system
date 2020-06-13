@@ -2,6 +2,7 @@
 
 use crate::error::ErrorKind;
 use crate::utils::common_keys_iter;
+use controller::Ratings;
 use num_traits::float::Float;
 use std::{
     collections::{HashMap, HashSet},
@@ -41,10 +42,14 @@ impl Method {
     }
 }
 
-pub fn distance<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>, method: Method) -> Result<V, ErrorKind>
+pub fn distance<ItemId, Value>(
+    a: &Ratings<ItemId, Value>,
+    b: &Ratings<ItemId, Value>,
+    method: Method,
+) -> Result<Value, ErrorKind>
 where
-    K: Hash + Eq,
-    V: Float + AddAssign + Sub + Mul + MulAssign,
+    ItemId: Hash + Eq,
+    Value: Float + AddAssign + Sub + Mul + MulAssign,
 {
     match method {
         Method::Manhattan => manhattan_distance(a, b),
@@ -58,40 +63,46 @@ where
     }
 }
 
-pub fn manhattan_distance<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Result<V, ErrorKind>
+pub fn manhattan_distance<ItemId, Value>(
+    a: &Ratings<ItemId, Value>,
+    b: &Ratings<ItemId, Value>,
+) -> Result<Value, ErrorKind>
 where
-    K: Hash + Eq,
-    V: Float + AddAssign + Sub,
+    ItemId: Hash + Eq,
+    Value: Float + AddAssign + Sub,
 {
     let mut dist = None;
     for (x, y) in common_keys_iter(a, b) {
-        *dist.get_or_insert_with(V::zero) += (*y - *x).abs();
+        *dist.get_or_insert_with(Value::zero) += (*y - *x).abs();
     }
 
     dist.ok_or(ErrorKind::NoMatchingRatings)
 }
 
-pub fn euclidean_distance<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Result<V, ErrorKind>
+pub fn euclidean_distance<ItemId, Value>(
+    a: &Ratings<ItemId, Value>,
+    b: &Ratings<ItemId, Value>,
+) -> Result<Value, ErrorKind>
 where
-    K: Hash + Eq,
-    V: Float + AddAssign + Sub,
+    ItemId: Hash + Eq,
+    Value: Float + AddAssign + Sub,
 {
     let mut dist = None;
     for (x, y) in common_keys_iter(a, b) {
-        *dist.get_or_insert_with(V::zero) += (*y - *x).powi(2);
+        *dist.get_or_insert_with(Value::zero) += (*y - *x).powi(2);
     }
 
-    dist.map(V::sqrt).ok_or(ErrorKind::NoMatchingRatings)
+    dist.map(Value::sqrt).ok_or(ErrorKind::NoMatchingRatings)
 }
 
-pub fn minkowski_distance<K, V>(
-    a: &HashMap<K, V>,
-    b: &HashMap<K, V>,
+pub fn minkowski_distance<ItemId, Value>(
+    a: &Ratings<ItemId, Value>,
+    b: &Ratings<ItemId, Value>,
     p: usize,
-) -> Result<V, ErrorKind>
+) -> Result<Value, ErrorKind>
 where
-    K: Hash + Eq,
-    V: Float + AddAssign + Sub,
+    ItemId: Hash + Eq,
+    Value: Float + AddAssign + Sub,
 {
     if p == 0 {
         panic!("Received p = 0 for minkowski distance!");
@@ -99,25 +110,28 @@ where
 
     let mut dist = None;
     for (x, y) in common_keys_iter(a, b) {
-        *dist.get_or_insert_with(V::zero) += (*y - *x).abs().powi(p as i32);
+        *dist.get_or_insert_with(Value::zero) += (*y - *x).abs().powi(p as i32);
     }
 
-    let exp = V::one() / V::from(p).ok_or(ErrorKind::ConvertType)?;
+    let exp = Value::one() / Value::from(p).ok_or(ErrorKind::ConvertType)?;
     dist.map(|dist| dist.powf(exp))
         .ok_or(ErrorKind::NoMatchingRatings)
 }
 
-pub fn jaccard_index<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Result<V, ErrorKind>
+pub fn jaccard_index<ItemId, Value>(
+    a: &Ratings<ItemId, Value>,
+    b: &Ratings<ItemId, Value>,
+) -> Result<Value, ErrorKind>
 where
-    K: Hash + Eq,
-    V: Float + AddAssign + Sub,
+    ItemId: Hash + Eq,
+    Value: Float + AddAssign + Sub,
 {
     match (a.is_empty(), b.is_empty()) {
         // Both are empty, cannot compute the index
         (true, true) => Err(ErrorKind::EmptyRatings),
 
         // One of them is empty, the result is zero
-        (true, _) | (_, true) => Ok(V::zero()),
+        (true, _) | (_, true) => Ok(Value::zero()),
 
         // Both have at least one element, proceed
         _ => {
@@ -127,35 +141,41 @@ where
             let union = a_keys.union(&b_keys).count();
             let inter = a_keys.intersection(&b_keys).count();
 
-            let inter = V::from(inter).ok_or(ErrorKind::ConvertType)?;
-            let union = V::from(union).ok_or(ErrorKind::ConvertType)?;
+            let inter = Value::from(inter).ok_or(ErrorKind::ConvertType)?;
+            let union = Value::from(union).ok_or(ErrorKind::ConvertType)?;
 
             Ok(inter / union)
         }
     }
 }
 
-pub fn jaccard_distance<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Result<V, ErrorKind>
+pub fn jaccard_distance<ItemId, Value>(
+    a: &Ratings<ItemId, Value>,
+    b: &Ratings<ItemId, Value>,
+) -> Result<Value, ErrorKind>
 where
-    K: Hash + Eq,
-    V: Float + AddAssign + Sub,
+    ItemId: Hash + Eq,
+    Value: Float + AddAssign + Sub,
 {
-    Ok(V::one() - jaccard_index(a, b)?)
+    Ok(Value::one() - jaccard_index(a, b)?)
 }
 
-pub fn cosine_similarity<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Result<V, ErrorKind>
+pub fn cosine_similarity<ItemId, Value>(
+    a: &Ratings<ItemId, Value>,
+    b: &Ratings<ItemId, Value>,
+) -> Result<Value, ErrorKind>
 where
-    K: Hash + Eq,
-    V: Float + AddAssign + Sub + Mul,
+    ItemId: Hash + Eq,
+    Value: Float + AddAssign + Sub + Mul,
 {
     let mut a_norm = None;
     let mut b_norm = None;
     let mut dot_prod = None;
 
     for (x, y) in common_keys_iter(a, b) {
-        *a_norm.get_or_insert_with(V::zero) += x.powi(2);
-        *b_norm.get_or_insert_with(V::zero) += y.powi(2);
-        *dot_prod.get_or_insert_with(V::zero) += (*x) * (*y);
+        *a_norm.get_or_insert_with(Value::zero) += x.powi(2);
+        *b_norm.get_or_insert_with(Value::zero) += y.powi(2);
+        *dot_prod.get_or_insert_with(Value::zero) += (*x) * (*y);
     }
 
     let dot_prod = dot_prod.ok_or_else(|| ErrorKind::NoMatchingRatings)?;
@@ -172,22 +192,25 @@ where
     }
 }
 
-pub fn pearson_correlation<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Result<V, ErrorKind>
+pub fn pearson_correlation<ItemId, Value>(
+    a: &Ratings<ItemId, Value>,
+    b: &Ratings<ItemId, Value>,
+) -> Result<Value, ErrorKind>
 where
-    K: Hash + Eq,
-    V: Float + AddAssign + Sub + Mul,
+    ItemId: Hash + Eq,
+    Value: Float + AddAssign + Sub + Mul,
 {
     let mut mean_x = None;
     let mut mean_y = None;
     let mut n = 0;
 
     for (x, y) in common_keys_iter(a, b) {
-        *mean_x.get_or_insert_with(V::zero) += *x;
-        *mean_y.get_or_insert_with(V::zero) += *y;
+        *mean_x.get_or_insert_with(Value::zero) += *x;
+        *mean_y.get_or_insert_with(Value::zero) += *y;
         n += 1;
     }
 
-    let n = V::from(n).ok_or_else(|| ErrorKind::ConvertType)?;
+    let n = Value::from(n).ok_or_else(|| ErrorKind::ConvertType)?;
     let mean_x = mean_x.ok_or_else(|| ErrorKind::NoMatchingRatings)? / n;
     let mean_y = mean_y.ok_or_else(|| ErrorKind::NoMatchingRatings)? / n;
 
@@ -196,9 +219,9 @@ where
     let mut std_dev_b = None;
 
     for (x, y) in common_keys_iter(a, b) {
-        *cov.get_or_insert_with(V::zero) += (*x - mean_x) * (*y - mean_y);
-        *std_dev_a.get_or_insert_with(V::zero) += (*x - mean_x).powi(2);
-        *std_dev_b.get_or_insert_with(V::zero) += (*y - mean_y).powi(2);
+        *cov.get_or_insert_with(Value::zero) += (*x - mean_x) * (*y - mean_y);
+        *std_dev_a.get_or_insert_with(Value::zero) += (*x - mean_x).powi(2);
+        *std_dev_b.get_or_insert_with(Value::zero) += (*y - mean_y).powi(2);
     }
 
     let cov = cov.ok_or_else(|| ErrorKind::NoMatchingRatings)?;
@@ -216,10 +239,13 @@ where
     }
 }
 
-pub fn pearson_approximation<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Result<V, ErrorKind>
+pub fn pearson_approximation<ItemId, Value>(
+    a: &Ratings<ItemId, Value>,
+    b: &Ratings<ItemId, Value>,
+) -> Result<Value, ErrorKind>
 where
-    K: Hash + Eq,
-    V: Float + AddAssign + Sub + Mul,
+    ItemId: Hash + Eq,
+    Value: Float + AddAssign + Sub + Mul,
 {
     let mut sum_x = None;
     let mut sum_y = None;
@@ -229,15 +255,15 @@ where
     let mut n = 0;
 
     for (x, y) in common_keys_iter(a, b) {
-        *sum_x.get_or_insert_with(V::zero) += *x;
-        *sum_y.get_or_insert_with(V::zero) += *y;
-        *sum_x_sq.get_or_insert_with(V::zero) += x.powi(2);
-        *sum_y_sq.get_or_insert_with(V::zero) += y.powi(2);
-        *dot_prod.get_or_insert_with(V::zero) += (*x) * (*y);
+        *sum_x.get_or_insert_with(Value::zero) += *x;
+        *sum_y.get_or_insert_with(Value::zero) += *y;
+        *sum_x_sq.get_or_insert_with(Value::zero) += x.powi(2);
+        *sum_y_sq.get_or_insert_with(Value::zero) += y.powi(2);
+        *dot_prod.get_or_insert_with(Value::zero) += (*x) * (*y);
         n += 1;
     }
 
-    let n = V::from(n).ok_or_else(|| ErrorKind::ConvertType)?;
+    let n = Value::from(n).ok_or_else(|| ErrorKind::ConvertType)?;
     let dot_prod = dot_prod.ok_or_else(|| ErrorKind::NoMatchingRatings)?;
     let sum_x = sum_x.ok_or_else(|| ErrorKind::NoMatchingRatings)?;
     let sum_y = sum_y.ok_or_else(|| ErrorKind::NoMatchingRatings)?;

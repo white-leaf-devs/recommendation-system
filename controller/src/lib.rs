@@ -78,9 +78,9 @@ where
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
-pub type Ratings<ItemId> = HashMap<ItemId, f64>;
-pub type MapedRatings<UserId, ItemId> = HashMap<UserId, Ratings<ItemId>>;
 pub type ItemsUsers<ItemId, UserId> = HashMap<ItemId, HashSet<UserId>>;
+pub type Ratings<ItemId, Value = f64> = HashMap<ItemId, Value>;
+pub type MapedRatings<UserId, ItemId, Value = f64> = HashMap<UserId, Ratings<ItemId, Value>>;
 
 pub struct LazyUserChunks<'a, User, UserId, Item, ItemId> {
     curr_offset: usize,
