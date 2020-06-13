@@ -1,12 +1,10 @@
 use anyhow::Error;
-use controller::{Controller, SearchBy};
 use diesel::pg::PgConnection;
 use diesel::{insert_into, prelude::*};
 use indicatif::ProgressIterator;
 use shelves::establish_connection;
 use shelves::models::{books::NewBook, ratings::NewRating, users::NewUser};
 use shelves::schema::{books, ratings, users};
-use shelves::ShelvesController;
 
 fn insert_users(conn: &PgConnection) -> Result<(), Error> {
     let mut csv = csv::ReaderBuilder::new()

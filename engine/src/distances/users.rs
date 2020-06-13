@@ -5,7 +5,7 @@ use crate::utils::common_keys_iter;
 use controller::Ratings;
 use num_traits::float::Float;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     hash::Hash,
     ops::{AddAssign, Mul, MulAssign, Sub},
 };
