@@ -41,7 +41,7 @@ pub enum Statement {
     ItemDistance(SearchBy, SearchBy, ItemMethod),
     UserKnn(usize, SearchBy, UserMethod, Option<usize>),
     UserBasedPredict(usize, SearchBy, SearchBy, UserMethod, Option<usize>),
-    ItemBasedPredict(SearchBy, SearchBy, ItemMethod, Option<usize>),
+    ItemBasedPredict(SearchBy, SearchBy, ItemMethod, usize),
 
     // Specific for similarity matrix
     EnterSimMatrix(usize, usize, usize, ItemMethod),
@@ -280,7 +280,7 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
         }
 
         "item_based_predict" => {
-            let (input, (user_searchby, _, item_searchby, _, item_method, chunks_opt)) =
+            let (input, (user_searchby, _, item_searchby, _, item_method, _, chunk_size)) =
                 delimited(
                     char('('),
                     tuple((
@@ -289,7 +289,8 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
                         parse_searchby,
                         parse_separator,
                         parse_item_method,
-                        opt(tuple((parse_separator, parse_number))),
+                        parse_separator,
+                        parse_number,
                     )),
                     char(')'),
                 )(input)?;
@@ -300,7 +301,7 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
                     user_searchby,
                     item_searchby,
                     item_method,
-                    chunks_opt.map(|(_, chunk_size)| chunk_size as usize),
+                    chunk_size as usize,
                 ),
             )
         }
@@ -473,19 +474,6 @@ mod tests {
 
     #[test]
     fn item_predict_statement() {
-        let parsed = parse_statement("item_based_predict(id('324x'), name('Alien'), adj_cosine)");
-        let expected = (
-            "",
-            Statement::ItemBasedPredict(
-                SearchBy::id("324x"),
-                SearchBy::name("Alien"),
-                ItemMethod::AdjCosine,
-                None,
-            ),
-        );
-
-        assert_eq!(parsed, Ok(expected));
-
         let parsed =
             parse_statement("item_based_predict(id('324x'), name('Alien'), adj_cosine, 100)");
         let expected = (
@@ -494,7 +482,7 @@ mod tests {
                 SearchBy::id("324x"),
                 SearchBy::name("Alien"),
                 ItemMethod::AdjCosine,
-                Some(100),
+                100,
             ),
         );
 

@@ -211,6 +211,42 @@ where
                         Err(e) => println!("{}", e),
                     },
 
+                    Statement::ItemDistance(searchby_a, searchby_b, method) => {
+                        let item_a = match controller
+                            .items_by(&searchby_a)
+                            .map(|mut items| items.drain(..1).next().unwrap())
+                        {
+                            Ok(item) => item,
+                            Err(e) => {
+                                println!("{}", e);
+                                continue;
+                            }
+                        };
+
+                        let item_b = match controller
+                            .items_by(&searchby_b)
+                            .map(|mut items| items.drain(..1).next().unwrap())
+                        {
+                            Ok(item) => item,
+                            Err(e) => {
+                                println!("{}", e);
+                                continue;
+                            }
+                        };
+
+                        let now = Instant::now();
+                        let dist = engine.item_distance(item_a, item_b, method);
+                        match dist {
+                            Ok(dist) => println!("Distance is {}", dist),
+                            Err(e) => {
+                                println!("Distance couldn't be calculated");
+                                println!("Reason: {}", e);
+                            }
+                        }
+
+                        println!("Operation took {:.4} seconds", now.elapsed().as_secs_f64());
+                    }
+
                     Statement::UserDistance(searchby_a, searchby_b, method) => {
                         let user_a = match controller
                             .users_by(&searchby_a)
@@ -330,11 +366,57 @@ where
                         println!("Operation took {:.4} seconds", now.elapsed().as_secs_f64());
                     }
 
+                    Statement::ItemBasedPredict(
+                        searchby_user,
+                        searchby_item,
+                        _method,
+                        chunk_size,
+                    ) => {
+                        let user = match controller
+                            .users_by(&searchby_user)
+                            .map(|mut users| users.drain(..1).next().unwrap())
+                        {
+                            Ok(user) => user,
+                            Err(e) => {
+                                println!("{}", e);
+                                continue;
+                            }
+                        };
+
+                        let item = match controller
+                            .items_by(&searchby_item)
+                            .map(|mut items| items.drain(..1).next().unwrap())
+                        {
+                            Ok(item) => item,
+                            Err(e) => {
+                                println!("{}", e);
+                                continue;
+                            }
+                        };
+
+                        let item_id = item.get_id();
+
+                        let now = Instant::now();
+                        let prediction = engine.item_based_predict(user, item, chunk_size);
+
+                        match prediction {
+                            Ok(predicted) => println!(
+                                "Predicted score for item with id({}) is {}",
+                                item_id, predicted
+                            ),
+
+                            Err(e) => {
+                                println!("Failed to predict the score");
+                                println!("Reason: {}", e);
+                            }
+                        }
+
+                        println!("Operation took {:.4} seconds", now.elapsed().as_secs_f64());
+                    }
+
                     Statement::EnterSimMatrix(m, n, threshold, _method) => {
                         sim_matrix_prompt(&controller, name, m, n, threshold, rl)?;
                     }
-
-                    _ => println!("Unimplemented statement"),
                 },
 
                 None => println!("Invalid syntax!"),
