@@ -1,6 +1,6 @@
 #![allow(clippy::implicit_hasher)]
 
-use super::error::ErrorKind;
+use crate::error::ErrorKind;
 use crate::utils::common_keys_iter;
 use num_traits::float::Float;
 use std::{

@@ -1,5 +1,4 @@
-use super::error::ErrorKind;
-use anyhow::Error;
+use crate::error::ErrorKind;
 use controller::Ratings;
 use num_traits::float::Float;
 use std::{

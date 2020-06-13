@@ -16,6 +16,7 @@
 // along with recommend.  If not, see <http://www.gnu.org/licenses/>.
 
 pub mod distances;
+pub mod error;
 pub mod knn;
 pub mod maped_distance;
 pub mod similarity_matrix;
@@ -24,13 +25,10 @@ pub mod utils;
 use crate::{distances::users::Method as UserMethod, maped_distance::MapedDistance};
 use anyhow::Error;
 use controller::{Controller, Entity, ItemsUsers};
-use distances::{
-    error::ErrorKind,
-    items::{
-        adjusted_cosine_means, denormalize_user_rating, fast_adjusted_cosine,
-        normalize_user_ratings,
-    },
+use distances::items::{
+    adjusted_cosine_means, denormalize_user_rating, fast_adjusted_cosine, normalize_user_ratings,
 };
+use error::ErrorKind;
 use knn::{Knn, MaxHeapKnn, MinHeapKnn};
 use std::{collections::HashSet, hash::Hash, marker::PhantomData};
 
