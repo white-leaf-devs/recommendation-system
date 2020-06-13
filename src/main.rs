@@ -144,7 +144,7 @@ fn database_connected_prompt<C, User, UserId, Item, ItemId>(
 where
     C: Controller<User, UserId, Item, ItemId>,
     User: Entity<Id = UserId> + ToTable,
-    Item: Entity<Id = ItemId> + ToTable,
+    Item: Entity<Id = ItemId> + ToTable + Clone,
     UserId: Hash + Eq + Display + Clone,
     ItemId: Hash + Eq + Display + Clone,
 {
@@ -270,7 +270,13 @@ where
                         println!("Operation took {:.4} seconds", elapsed);
                     }
 
-                    Statement::UserPredict(k, searchby_user, searchby_item, method, chunks_opt) => {
+                    Statement::UserBasedPredict(
+                        k,
+                        searchby_user,
+                        searchby_item,
+                        method,
+                        chunks_opt,
+                    ) => {
                         let users = match controller.users_by(&searchby_user) {
                             Ok(users) => users,
                             Err(e) => {
@@ -289,7 +295,7 @@ where
 
                         let now = Instant::now();
                         let prediction =
-                            engine.user_predict(k, &users[0], &items[0], method, chunks_opt);
+                            engine.user_based_predict(k, &users[0], &items[0], method, chunks_opt);
                         match prediction {
                             Ok(predicted) => println!(
                                 "Predicted score for item with id({}) is {}",
