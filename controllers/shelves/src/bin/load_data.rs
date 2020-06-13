@@ -29,7 +29,7 @@ fn insert_users(conn: &PgConnection) -> Result<(), Error> {
         }
     }
 
-    println!("Pushing ratings by chunks");
+    println!("Pushing users by chunks");
     for chunk in users.chunks(10_000).progress() {
         insert_into(users::table).values(chunk).execute(conn)?;
     }
@@ -44,7 +44,7 @@ fn insert_books(conn: &PgConnection) -> Result<(), Error> {
         .from_path("data/book_id_map.csv")?;
 
     let mut books = Vec::new();
-    println!("Collecting records for movies...");
+    println!("Collecting records for books...");
     let records: Vec<_> = csv.records().collect();
 
     for record in records.iter().progress() {
@@ -58,7 +58,7 @@ fn insert_books(conn: &PgConnection) -> Result<(), Error> {
         }
     }
 
-    println!("Pushing ratings by chunks");
+    println!("Pushing books by chunks");
     for chunk in books.chunks(10_000).progress() {
         insert_into(books::table).values(chunk).execute(conn)?;
     }
