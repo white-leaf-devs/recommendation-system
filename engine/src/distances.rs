@@ -24,6 +24,7 @@ pub mod error {
 
         #[error("Empty k nearest neighbors")]
         EmptyKNearestNeighbors,
+
     }
 }
 

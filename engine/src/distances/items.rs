@@ -1,4 +1,6 @@
 use super::error::ErrorKind;
+use anyhow::Error;
+use controller::Ratings;
 use num_traits::float::Float;
 use std::{
     collections::{HashMap, HashSet},
@@ -102,4 +104,26 @@ where
 {
     let means = adjusted_cosine_means(vecs);
     fast_adjusted_cosine(&means, vecs, users_a, users_b, a, b)
+}
+
+pub fn normalize_user_ratings<ItemId: Clone>(
+    ratings: &Ratings<ItemId>,
+    min_rating: f64,
+    max_rating: f64,
+) -> Result<Ratings<ItemId>, ErrorKind> {
+    if max_rating - min_rating == 0.0 {
+        return Err(ErrorKind::DivisionByZero);
+    }
+
+    let mut normalized_ratings = ratings.clone();
+
+    for (_, rating) in normalized_ratings.iter_mut() {
+        *rating = (2.0 * *rating - min_rating - max_rating) / (max_rating - min_rating);
+    }
+
+    Ok(normalized_ratings)
+}
+
+pub fn denormalize_user_rating(normalized_rating: f64, min_rating: f64, max_rating: f64) -> f64 {
+    (1.0 / 2.0) * ((normalized_rating + 1.0) * (max_rating - min_rating)) + min_rating
 }
