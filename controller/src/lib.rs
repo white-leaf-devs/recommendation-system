@@ -209,7 +209,6 @@ where
 }
 
 pub mod error {
-    use std::fmt::Debug;
     use thiserror::Error as DError;
 
     #[derive(Debug, Clone, DError)]
