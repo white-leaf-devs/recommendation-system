@@ -30,6 +30,7 @@ use distances::items::{
 };
 use error::ErrorKind;
 use knn::{Knn, MaxHeapKnn, MinHeapKnn};
+use num_traits::Zero;
 use std::{collections::HashSet, hash::Hash, marker::PhantomData};
 
 pub struct Engine<'a, C, User, UserId, Item, ItemId>
@@ -47,7 +48,7 @@ where
 impl<'a, C, User, UserId, Item, ItemId> Engine<'a, C, User, UserId, Item, ItemId>
 where
     User: Entity<Id = UserId>,
-    Item: Entity<Id = ItemId> + Clone,
+    Item: Entity<Id = ItemId>,
     UserId: Hash + Eq + Clone,
     ItemId: Hash + Eq + Clone,
     C: Controller<User, UserId, Item, ItemId>,
@@ -62,12 +63,12 @@ where
 
     pub fn user_distance(
         &self,
-        user_a: &User,
-        user_b: &User,
+        user_a: User,
+        user_b: User,
         method: UserMethod,
     ) -> Result<f64, Error> {
-        let rating_a = self.controller.ratings_by(user_a)?;
-        let rating_b = self.controller.ratings_by(user_b)?;
+        let rating_a = self.controller.ratings_by(&user_a)?;
+        let rating_b = self.controller.ratings_by(&user_b)?;
 
         distances::users::distance(&rating_a, &rating_b, method).map_err(Into::into)
     }
@@ -75,7 +76,7 @@ where
     pub fn user_knn(
         &self,
         k: usize,
-        user: &User,
+        user: User,
         method: UserMethod,
         chunk_size: Option<usize>,
     ) -> Result<Vec<(UserId, f64)>, Error> {
@@ -83,7 +84,7 @@ where
             return Err(ErrorKind::EmptyKNearestNeighbors.into());
         }
 
-        let user_ratings = self.controller.ratings_by(user)?;
+        let user_ratings = self.controller.ratings_by(&user)?;
         let mut knn: Box<dyn Knn<UserId, ItemId>> = if method.is_similarity() {
             Box::new(MinHeapKnn::new(k, method))
         } else {
@@ -97,7 +98,7 @@ where
                 knn.update(&user_ratings, maped_ratings);
             }
         } else {
-            let maped_ratings = self.controller.maped_ratings_except(user)?;
+            let maped_ratings = self.controller.maped_ratings_except(&user)?;
             knn.update(&user_ratings, maped_ratings);
         }
 
@@ -117,13 +118,14 @@ where
     pub fn user_based_predict(
         &self,
         k: usize,
-        user: &User,
-        item: &Item,
+        user: User,
+        item: Item,
         method: UserMethod,
         chunk_size: Option<usize>,
     ) -> Result<f64, Error> {
         let item_id = item.get_id();
-        let user_ratings = self.controller.ratings_by(user)?;
+        let user_ratings = self.controller.ratings_by(&user)?;
+
         let mut knn: Box<dyn Knn<UserId, ItemId>> = if method.is_similarity() {
             Box::new(MinHeapKnn::new(k, method))
         } else {
@@ -145,7 +147,7 @@ where
         } else {
             let maped_ratings = self
                 .controller
-                .maped_ratings_except(user)?
+                .maped_ratings_except(&user)?
                 .into_iter()
                 .filter(|(_id, ratings)| ratings.contains_key(&item_id))
                 .collect();
@@ -190,32 +192,30 @@ where
 
     pub fn item_based_predict(
         &self,
-        user: &User,
-        item: &Item,
+        user: User,
+        item: Item,
         chunk_size: usize,
     ) -> Result<f64, Error> {
         let item_id = item.get_id();
 
-        let all_items_it = self.controller.items_by_chunks(chunk_size);
-
-        let user_ratings = self.controller.ratings_by(user)?;
+        let user_ratings = self.controller.ratings_by(&user)?;
         let normalized_ratings = normalize_user_ratings(&user_ratings, 1.0, 5.0)?;
 
-        //let target_item_users = &self.controller.users_who_rated(&[item.clone()])?[&item_id];
+        let target_items_users = self.controller.users_who_rated(&[item])?;
 
-        let mut numerator = 0.0;
-        let mut denominator = 0.0;
+        let mut num = 0.0;
+        let mut dem = 0.0;
 
-        for mut item_chunk in all_items_it {
-            item_chunk.push(item.clone());
-            let users_who_rated: ItemsUsers<ItemId, UserId> = self
+        let items_chunks = self.controller.items_by_chunks(chunk_size);
+        for item_chunk in items_chunks {
+            let mut users_who_rated: ItemsUsers<ItemId, UserId> = self
                 .controller
                 .users_who_rated(&item_chunk)?
                 .into_iter()
-                .filter(|(other_item_id, set)| {
-                    set.contains(&user.get_id()) || item_id == *other_item_id
-                })
+                .filter(|(_, set)| set.contains(&user.get_id()))
                 .collect();
+
+            users_who_rated.insert(item_id.clone(), target_items_users[&item_id].clone());
 
             let all_users: Vec<UserId> = users_who_rated
                 .values()
@@ -244,16 +244,17 @@ where
                     &item_id,
                     &other_item_id,
                 ) {
-                    numerator += similarity * normalized_ratings[&other_item_id];
-                    denominator += similarity.abs();
+                    num += similarity * normalized_ratings[&other_item_id];
+                    dem += similarity.abs();
                 }
             }
         }
 
-        if denominator == 0.0 {
+        if dem.is_zero() {
             return Err(ErrorKind::DivisionByZero.into());
         }
-        Ok(denormalize_user_rating(numerator / denominator, 1.0, 5.0))
+
+        Ok(denormalize_user_rating(num / dem, 1.0, 5.0)?)
     }
 }
 
@@ -272,8 +273,17 @@ mod tests {
         let controller = SimpleMovieController::new()?;
         let engine = Engine::with_controller(&controller);
 
-        let user_a = &controller.users_by(&SearchBy::id("52"))?[0];
-        let user_b = &controller.users_by(&SearchBy::id("53"))?[0];
+        let user_a = controller
+            .users_by(&SearchBy::id("52"))?
+            .drain(..1)
+            .next()
+            .unwrap();
+
+        let user_b = controller
+            .users_by(&SearchBy::id("53"))?
+            .drain(..1)
+            .next()
+            .unwrap();
 
         println!(
             "euclidean(52, 53): {:?}",
@@ -288,8 +298,17 @@ mod tests {
         let controller = SimpleMovieController::new()?;
         let engine = Engine::with_controller(&controller);
 
-        let user_a = &controller.users_by(&SearchBy::id("52"))?[0];
-        let user_b = &controller.users_by(&SearchBy::id("53"))?[0];
+        let user_a = controller
+            .users_by(&SearchBy::id("52"))?
+            .drain(..1)
+            .next()
+            .unwrap();
+
+        let user_b = controller
+            .users_by(&SearchBy::id("53"))?
+            .drain(..1)
+            .next()
+            .unwrap();
 
         println!(
             "manhattan(52, 53): {:?}",
@@ -304,8 +323,17 @@ mod tests {
         let controller = SimpleMovieController::new()?;
         let engine = Engine::with_controller(&controller);
 
-        let user_a = &controller.users_by(&SearchBy::id("52"))?[0];
-        let user_b = &controller.users_by(&SearchBy::id("53"))?[0];
+        let user_a = controller
+            .users_by(&SearchBy::id("52"))?
+            .drain(..1)
+            .next()
+            .unwrap();
+
+        let user_b = controller
+            .users_by(&SearchBy::id("53"))?
+            .drain(..1)
+            .next()
+            .unwrap();
 
         println!(
             "cosine(52, 53): {:?}",
@@ -320,7 +348,11 @@ mod tests {
         let controller = SimpleMovieController::new()?;
         let engine = Engine::with_controller(&controller);
 
-        let user = &controller.users_by(&SearchBy::id("52"))?[0];
+        let user = controller
+            .users_by(&SearchBy::id("52"))?
+            .drain(..1)
+            .next()
+            .unwrap();
 
         println!(
             "kNN(52, manhattan): {:?}",
@@ -335,7 +367,11 @@ mod tests {
         let controller = SimpleMovieController::new()?;
         let engine = Engine::with_controller(&controller);
 
-        let user = &controller.users_by(&SearchBy::id("52"))?[0];
+        let user = controller
+            .users_by(&SearchBy::id("52"))?
+            .drain(..1)
+            .next()
+            .unwrap();
 
         println!(
             "kNN(52, 3, euclidean): {:?}",
@@ -350,7 +386,11 @@ mod tests {
         let controller = SimpleMovieController::new()?;
         let engine = Engine::with_controller(&controller);
 
-        let user = &controller.users_by(&SearchBy::id("52"))?[0];
+        let user = controller
+            .users_by(&SearchBy::id("52"))?
+            .drain(..1)
+            .next()
+            .unwrap();
 
         println!(
             "kNN(52, 3, cosine): {:?}",
@@ -365,7 +405,11 @@ mod tests {
         let controller = BooksController::new()?;
         let engine = Engine::with_controller(&controller);
 
-        let user = &controller.users_by(&SearchBy::id("242"))?[0];
+        let user = controller
+            .users_by(&SearchBy::id("242"))?
+            .drain(..1)
+            .next()
+            .unwrap();
 
         println!(
             "kNN(242, 5, manhattan): {:?}",
@@ -396,12 +440,21 @@ mod tests {
         let controller = SimpleMovieController::new()?;
         let engine = Engine::with_controller(&controller);
 
-        let user = &controller.users_by(&SearchBy::name("Patrick C"))?[0];
-        let item = &controller.items_by(&SearchBy::name("Alien"))?[0];
+        let user = controller
+            .users_by(&SearchBy::name("Patrick C"))?
+            .drain(..1)
+            .next()
+            .unwrap();
+
+        let item = controller
+            .items_by(&SearchBy::name("Alien"))?
+            .drain(..1)
+            .next()
+            .unwrap();
 
         println!(
             "Item based prediction (Patrick C, Alien, 100): {:?}",
-            engine.item_based_predict(&user, &item, 100)?
+            engine.item_based_predict(user, item, 100)?
         );
 
         Ok(())
