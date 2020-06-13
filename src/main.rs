@@ -231,8 +231,11 @@ where
                         let now = Instant::now();
                         let dist = engine.user_distance(&users_a[0], &users_b[0], method);
                         match dist {
-                            Some(dist) => println!("Distance is {}", dist),
-                            None => println!("Distance couldn't be calculated or gave NaN/∞/-∞"),
+                            Ok(dist) => println!("Distance is {}", dist),
+                            Err(e) => {
+                                println!("Distance couldn't be calculated");
+                                println!("Reason: {}", e);
+                            }
                         }
 
                         println!("Operation took {:.4} seconds", now.elapsed().as_secs_f64());
@@ -252,19 +255,16 @@ where
                         let elapsed = now.elapsed().as_secs_f64();
 
                         match knn {
-                            Some(knn) => {
-                                if knn.is_empty() {
-                                    println!("Couldn't found the {} nearest neighbours", k);
-                                    println!("Try using a different metric");
-                                    continue;
-                                }
-
+                            Ok(knn) => {
                                 for (nn_id, dist) in knn {
                                     println!("Distance with user with id({}) is {}", nn_id, dist);
                                 }
                             }
 
-                            None => println!("Failed to calculate the {} nearest neighbors", k),
+                            Err(e) => {
+                                println!("Failed to find the {} nearest neighbors", k);
+                                println!("Reason: {}", e);
+                            }
                         }
 
                         println!("Operation took {:.4} seconds", elapsed);
@@ -291,16 +291,15 @@ where
                         let prediction =
                             engine.user_predict(k, &users[0], &items[0], method, chunks_opt);
                         match prediction {
-                            Some(predicted) => println!(
+                            Ok(predicted) => println!(
                                 "Predicted score for item with id({}) is {}",
                                 items[0].get_id(),
                                 predicted
                             ),
-                            None => {
+
+                            Err(e) => {
                                 println!("Failed to predict the score");
-                                println!(
-                                    "Try increasing 'k' or using a different metric for inner knn"
-                                );
+                                println!("Reason: {}", e);
                             }
                         }
 

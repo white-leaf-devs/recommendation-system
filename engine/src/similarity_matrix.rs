@@ -94,7 +94,7 @@ where
         let mut matrix = HashMap::new();
         for (i, (item_a, users_a)) in ver_items_users.into_iter().enumerate() {
             for (item_b, users_b) in hor_items_users.iter().skip(i + 1) {
-                if let Some(similarity) = fast_adjusted_cosine(
+                if let Ok(similarity) = fast_adjusted_cosine(
                     &means,
                     &maped_ratings,
                     &users_a,
