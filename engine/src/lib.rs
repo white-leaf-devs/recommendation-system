@@ -208,6 +208,7 @@ where
         item: Item,
         chunk_size: usize,
     ) -> Result<f64, Error> {
+        /*
         let item_id = item.get_id();
 
         let user_ratings = self.controller.ratings_by(&user)?;
@@ -276,6 +277,8 @@ where
         }
 
         Ok(denormalize_user_rating(num / dem, 1.0, 5.0)?)
+        */
+        todo!()
     }
 }
 
