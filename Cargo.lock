@@ -361,6 +361,7 @@ dependencies = [
  "common_macros",
  "controller",
  "criterion",
+ "movie-lens",
  "movie-lens-small",
  "num-traits",
  "rand",

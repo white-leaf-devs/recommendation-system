@@ -21,6 +21,7 @@ criterion = "0.3"
 rand = "0.7"
 simple-movie = { version = "*", path = "../controllers/simple-movie" }
 movie-lens-small = { version = "*", path = "../controllers/movie-lens-small" }
+movie-lens= { version = "*", path = "../controllers/movie-lens" }
 thiserror = "1.0.19"
 
 [features]

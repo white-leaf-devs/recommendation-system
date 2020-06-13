@@ -437,24 +437,26 @@ mod tests {
 
     #[test]
     fn item_based_pred() -> Result<(), Error> {
-        let controller = SimpleMovieController::new()?;
+        use movie_lens_small::MovieLensSmallController;
+
+        let controller = MovieLensSmallController::new()?;
         let engine = Engine::with_controller(&controller);
 
         let user = controller
-            .users_by(&SearchBy::name("Patrick C"))?
+            .users_by(&SearchBy::id("1"))?
             .drain(..1)
             .next()
             .unwrap();
 
         let item = controller
-            .items_by(&SearchBy::name("Alien"))?
+            .items_by(&SearchBy::name("Father of the Bride Part II (1995)"))?
             .drain(..1)
             .next()
             .unwrap();
 
         println!(
-            "Item based prediction (Patrick C, Alien, 100): {:?}",
-            engine.item_based_predict(user, item, 100)?
+            "Item based prediction (UserId 1, Father of the Bride Part II (1995), 10000): {:?}",
+            engine.item_based_predict(user, item, 10000)?
         );
 
         Ok(())
