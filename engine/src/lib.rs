@@ -22,10 +22,17 @@ pub mod similarity_matrix;
 pub mod utils;
 
 use crate::{distances::users::Method as UserMethod, maped_distance::MapedDistance};
+use anyhow::Error;
 use controller::{Controller, Entity, ItemsUsers};
-use distances::items::normalize_user_ratings;
+use distances::{
+    error::ErrorKind,
+    items::{
+        adjusted_cosine_means, denormalize_user_rating, fast_adjusted_cosine,
+        normalize_user_ratings,
+    },
+};
 use knn::{Knn, MaxHeapKnn, MinHeapKnn};
-use std::{hash::Hash, marker::PhantomData};
+use std::{collections::HashSet, hash::Hash, marker::PhantomData};
 
 pub struct Engine<'a, C, User, UserId, Item, ItemId>
 where
@@ -42,8 +49,8 @@ where
 impl<'a, C, User, UserId, Item, ItemId> Engine<'a, C, User, UserId, Item, ItemId>
 where
     User: Entity<Id = UserId>,
-    Item: Entity<Id = ItemId>,
-    UserId: Hash + Eq,
+    Item: Entity<Id = ItemId> + Clone,
+    UserId: Hash + Eq + Clone,
     ItemId: Hash + Eq + Clone,
     C: Controller<User, UserId, Item, ItemId>,
 {
@@ -179,23 +186,68 @@ where
         user: &User,
         item: &Item,
         chunk_size: usize,
-    ) -> Option<f64> {
+    ) -> Result<f64, Error> {
+        let item_id = item.get_id();
+
         let all_items_it = self.controller.items_by_chunks(chunk_size);
 
-        let user_ratings = self.controller.ratings_by(user).ok()?;
-        let normalized_ratings = normalize_user_ratings(&user_ratings, 1.0, 5.0).ok()?;
+        let user_ratings = self.controller.ratings_by(user)?;
+        let normalized_ratings = normalize_user_ratings(&user_ratings, 1.0, 5.0)?;
 
-        for item_chunk in all_items_it {
+        //let target_item_users = &self.controller.users_who_rated(&[item.clone()])?[&item_id];
+
+        let mut numerator = 0.0;
+        let mut denominator = 0.0;
+
+        for mut item_chunk in all_items_it {
+            item_chunk.push(item.clone());
             let users_who_rated: ItemsUsers<ItemId, UserId> = self
                 .controller
-                .users_who_rated(&item_chunk)
-                .ok()?
+                .users_who_rated(&item_chunk)?
                 .into_iter()
-                .filter(|(_, set)| set.contains(&user.get_id()))
+                .filter(|(other_item_id, set)| {
+                    set.contains(&user.get_id()) || item_id == *other_item_id
+                })
                 .collect();
+
+            let all_users: Vec<UserId> = users_who_rated
+                .values()
+                .into_iter()
+                .fold(HashSet::new(), |acc, other_set| {
+                    acc.union(other_set).cloned().collect()
+                })
+                .into_iter()
+                .collect();
+
+            let all_partial_users = self.controller.create_partial_users(&all_users)?;
+
+            let maped_ratings = self.controller.maped_ratings_by(&all_partial_users)?;
+            let means = adjusted_cosine_means(&maped_ratings);
+
+            for other_item in &item_chunk {
+                let other_item_id = other_item.get_id();
+                if !normalized_ratings.contains_key(&other_item_id) || item_id == other_item_id {
+                    continue;
+                }
+
+                if let Some(similarity) = fast_adjusted_cosine(
+                    &means,
+                    &maped_ratings,
+                    &users_who_rated[&item_id],
+                    &users_who_rated[&other_item_id],
+                    &item_id,
+                    &other_item_id,
+                ) {
+                    numerator += similarity * normalized_ratings[&other_item_id];
+                    denominator += similarity.abs();
+                }
+            }
         }
 
-        Some(1.0)
+        if denominator == 0.0 {
+            return Err(ErrorKind::DivisionByZero.into());
+        }
+        Ok(denormalize_user_rating(numerator / denominator, 1.0, 5.0))
     }
 }
 
@@ -208,7 +260,7 @@ mod tests {
     use books::BooksController;
     use controller::SearchBy;
     use simple_movie::SimpleMovieController;
-
+    /*
     #[test]
     fn euclidean_distance() -> Result<(), Error> {
         let controller = SimpleMovieController::new()?;
@@ -328,6 +380,22 @@ mod tests {
         let now = Instant::now();
         let _matrix = sim_matrix.get_chunk(0, 0);
         println!("Elapsed: {}", now.elapsed().as_secs_f64());
+
+        Ok(())
+    }*/
+
+    #[test]
+    fn item_based_pred() -> Result<(), Error> {
+        let controller = SimpleMovieController::new()?;
+        let engine = Engine::with_controller(&controller);
+
+        let user = &controller.users_by(&SearchBy::name("Patrick C"))?[0];
+        let item = &controller.items_by(&SearchBy::name("Alien"))?[0];
+
+        println!(
+            "Item based prediction (Patrick C, Alien, 100): {:?}",
+            engine.item_based_prediction(&user, &item, 100)?
+        );
 
         Ok(())
     }
