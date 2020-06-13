@@ -62,11 +62,16 @@ where
         }
     }
 
-    pub fn user_distance(&self, user_a: &User, user_b: &User, method: UserMethod) -> Option<f64> {
-        let rating_a = self.controller.ratings_by(user_a).ok()?;
-        let rating_b = self.controller.ratings_by(user_b).ok()?;
+    pub fn user_distance(
+        &self,
+        user_a: &User,
+        user_b: &User,
+        method: UserMethod,
+    ) -> Result<f64, Error> {
+        let rating_a = self.controller.ratings_by(user_a)?;
+        let rating_b = self.controller.ratings_by(user_b)?;
 
-        distances::users::distance(&rating_a, &rating_b, method)
+        distances::users::distance(&rating_a, &rating_b, method).map_err(Into::into)
     }
 
     pub fn user_knn(
@@ -75,12 +80,12 @@ where
         user: &User,
         method: UserMethod,
         chunk_size: Option<usize>,
-    ) -> Option<Vec<(UserId, f64)>> {
+    ) -> Result<Vec<(UserId, f64)>, Error> {
         if k == 0 {
-            return None;
+            return Err(ErrorKind::EmptyKNearestNeighbors.into());
         }
 
-        let user_ratings = self.controller.ratings_by(user).ok()?;
+        let user_ratings = self.controller.ratings_by(user)?;
         let mut knn: Box<dyn Knn<UserId, ItemId>> = if method.is_similarity() {
             Box::new(MinHeapKnn::new(k, method))
         } else {
@@ -90,20 +95,25 @@ where
         if let Some(chunk_size) = chunk_size {
             let users_chunks = self.controller.users_by_chunks(chunk_size);
             for users in users_chunks {
-                let maped_ratings = self.controller.maped_ratings_by(&users).ok()?;
+                let maped_ratings = self.controller.maped_ratings_by(&users)?;
                 knn.update(&user_ratings, maped_ratings);
             }
         } else {
-            let maped_ratings = self.controller.maped_ratings_except(user).ok()?;
+            let maped_ratings = self.controller.maped_ratings_except(user)?;
             knn.update(&user_ratings, maped_ratings);
         }
 
-        Some(
-            knn.into_vec()
-                .into_iter()
-                .map(|MapedDistance(id, dist, _)| (id, dist))
-                .collect(),
-        )
+        let knn: Vec<_> = knn
+            .into_vec()
+            .into_iter()
+            .map(|MapedDistance(id, dist, _)| (id, dist))
+            .collect();
+
+        if knn.is_empty() {
+            Err(ErrorKind::EmptyKNearestNeighbors.into())
+        } else {
+            Ok(knn)
+        }
     }
 
     pub fn user_predict(
@@ -113,9 +123,9 @@ where
         item: &Item,
         method: UserMethod,
         chunk_size: Option<usize>,
-    ) -> Option<f64> {
+    ) -> Result<f64, Error> {
         let item_id = item.get_id();
-        let user_ratings = self.controller.ratings_by(user).ok()?;
+        let user_ratings = self.controller.ratings_by(user)?;
         let mut knn: Box<dyn Knn<UserId, ItemId>> = if method.is_similarity() {
             Box::new(MinHeapKnn::new(k, method))
         } else {
@@ -127,8 +137,7 @@ where
             for users in users_chunks {
                 let maped_ratings = self
                     .controller
-                    .maped_ratings_by(&users)
-                    .ok()?
+                    .maped_ratings_by(&users)?
                     .into_iter()
                     .filter(|(_, ratings)| ratings.contains_key(&item_id))
                     .collect();
@@ -138,8 +147,7 @@ where
         } else {
             let maped_ratings = self
                 .controller
-                .maped_ratings_except(user)
-                .ok()?
+                .maped_ratings_except(user)?
                 .into_iter()
                 .filter(|(_id, ratings)| ratings.contains_key(&item_id))
                 .collect();
@@ -162,7 +170,8 @@ where
                         &user_ratings,
                         &nn_ratings,
                         UserMethod::PearsonApproximation,
-                    )?;
+                    )
+                    .ok()?;
 
                     Some((MapedDistance(id, coef, None), *nn_ratings.get(&item_id)?))
                 },
@@ -178,7 +187,7 @@ where
             *prediction.get_or_insert(0.0) += nn_rating * (maped_distance.dist() / total);
         }
 
-        prediction
+        prediction.ok_or_else(|| ErrorKind::EmptyKNearestNeighbors.into())
     }
 
     pub fn item_based_prediction(

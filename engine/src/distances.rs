@@ -9,6 +9,22 @@ pub mod error {
     pub enum ErrorKind {
         #[error("Tried to divide by zero")]
         DivisionByZero,
+
+        #[error("Indeterminate form 0/0")]
+        IndeterminateForm,
+
+        #[error("Empty ratings")]
+        EmptyRatings,
+
+        #[error("Couldn't get distance, no matching ratings")]
+        NoMatchingRatings,
+
+        #[error("Couldn't convert types")]
+        ConvertType,
+
+        #[error("Empty k nearest neighbors")]
+        EmptyKNearestNeighbors,
+
     }
 }
 
@@ -32,14 +48,14 @@ mod tests {
             6 => 2.,
         };
 
-        assert!(manhattan_distance(&a, &b).is_none());
-        assert!(euclidean_distance(&a, &b).is_none());
-        assert!(minkowski_distance(&a, &b, 1).is_none());
-        assert!(minkowski_distance(&a, &b, 2).is_none());
-        assert!(minkowski_distance(&a, &b, 3).is_none());
-        assert!(cosine_similarity(&a, &b).is_none());
-        assert!(pearson_correlation(&a, &b).is_none());
-        assert!(pearson_approximation(&a, &b).is_none());
+        assert!(manhattan_distance(&a, &b).is_err());
+        assert!(euclidean_distance(&a, &b).is_err());
+        assert!(minkowski_distance(&a, &b, 1).is_err());
+        assert!(minkowski_distance(&a, &b, 2).is_err());
+        assert!(minkowski_distance(&a, &b, 3).is_err());
+        assert!(cosine_similarity(&a, &b).is_err());
+        assert!(pearson_correlation(&a, &b).is_err());
+        assert!(pearson_approximation(&a, &b).is_err());
     }
 
     #[test]
@@ -121,6 +137,6 @@ mod tests {
             3 => 1.,
         };
 
-        assert!(cosine_similarity(&a, &b).is_none());
+        assert!(cosine_similarity(&a, &b).is_err());
     }
 }

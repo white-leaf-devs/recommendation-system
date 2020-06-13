@@ -1,5 +1,6 @@
 #![allow(clippy::implicit_hasher)]
 
+use super::error::ErrorKind;
 use crate::utils::common_keys_iter;
 use num_traits::float::Float;
 use std::{
@@ -40,7 +41,7 @@ impl Method {
     }
 }
 
-pub fn distance<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>, method: Method) -> Option<V>
+pub fn distance<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>, method: Method) -> Result<V, ErrorKind>
 where
     K: Hash + Eq,
     V: Float + AddAssign + Sub + Mul + MulAssign,
@@ -57,7 +58,7 @@ where
     }
 }
 
-pub fn manhattan_distance<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Option<V>
+pub fn manhattan_distance<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Result<V, ErrorKind>
 where
     K: Hash + Eq,
     V: Float + AddAssign + Sub,
@@ -67,10 +68,10 @@ where
         *dist.get_or_insert_with(V::zero) += (*y - *x).abs();
     }
 
-    dist
+    dist.ok_or(ErrorKind::NoMatchingRatings)
 }
 
-pub fn euclidean_distance<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Option<V>
+pub fn euclidean_distance<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Result<V, ErrorKind>
 where
     K: Hash + Eq,
     V: Float + AddAssign + Sub,
@@ -80,10 +81,14 @@ where
         *dist.get_or_insert_with(V::zero) += (*y - *x).powi(2);
     }
 
-    dist.map(V::sqrt)
+    dist.map(V::sqrt).ok_or(ErrorKind::NoMatchingRatings)
 }
 
-pub fn minkowski_distance<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>, p: usize) -> Option<V>
+pub fn minkowski_distance<K, V>(
+    a: &HashMap<K, V>,
+    b: &HashMap<K, V>,
+    p: usize,
+) -> Result<V, ErrorKind>
 where
     K: Hash + Eq,
     V: Float + AddAssign + Sub,
@@ -97,21 +102,22 @@ where
         *dist.get_or_insert_with(V::zero) += (*y - *x).abs().powi(p as i32);
     }
 
-    let exp = V::one() / V::from(p)?;
+    let exp = V::one() / V::from(p).ok_or(ErrorKind::ConvertType)?;
     dist.map(|dist| dist.powf(exp))
+        .ok_or(ErrorKind::NoMatchingRatings)
 }
 
-pub fn jaccard_index<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Option<V>
+pub fn jaccard_index<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Result<V, ErrorKind>
 where
     K: Hash + Eq,
     V: Float + AddAssign + Sub,
 {
     match (a.is_empty(), b.is_empty()) {
         // Both are empty, cannot compute the index
-        (true, true) => None,
+        (true, true) => Err(ErrorKind::EmptyRatings),
 
         // One of them is empty, the result is zero
-        (true, _) | (_, true) => Some(V::zero()),
+        (true, _) | (_, true) => Ok(V::zero()),
 
         // Both have at least one element, proceed
         _ => {
@@ -121,20 +127,23 @@ where
             let union = a_keys.union(&b_keys).count();
             let inter = a_keys.intersection(&b_keys).count();
 
-            Some(V::from(inter)? / V::from(union)?)
+            let inter = V::from(inter).ok_or(ErrorKind::ConvertType)?;
+            let union = V::from(union).ok_or(ErrorKind::ConvertType)?;
+
+            Ok(inter / union)
         }
     }
 }
 
-pub fn jaccard_distance<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Option<V>
+pub fn jaccard_distance<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Result<V, ErrorKind>
 where
     K: Hash + Eq,
     V: Float + AddAssign + Sub,
 {
-    Some(V::one() - jaccard_index(a, b)?)
+    Ok(V::one() - jaccard_index(a, b)?)
 }
 
-pub fn cosine_similarity<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Option<V>
+pub fn cosine_similarity<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Result<V, ErrorKind>
 where
     K: Hash + Eq,
     V: Float + AddAssign + Sub + Mul,
@@ -149,19 +158,21 @@ where
         *dot_prod.get_or_insert_with(V::zero) += (*x) * (*y);
     }
 
-    let dot_prod = dot_prod?;
-    let a_norm = a_norm?;
-    let b_norm = b_norm?;
+    let dot_prod = dot_prod.ok_or_else(|| ErrorKind::NoMatchingRatings)?;
+    let a_norm = a_norm.ok_or_else(|| ErrorKind::NoMatchingRatings)?;
+    let b_norm = b_norm.ok_or_else(|| ErrorKind::NoMatchingRatings)?;
 
     let cos_sim = dot_prod / (a_norm.sqrt() * b_norm.sqrt());
-    if cos_sim.is_nan() || cos_sim.is_infinite() {
-        None
+    if cos_sim.is_nan() {
+        Err(ErrorKind::IndeterminateForm)
+    } else if cos_sim.is_infinite() {
+        Err(ErrorKind::DivisionByZero)
     } else {
-        Some(cos_sim)
+        Ok(cos_sim)
     }
 }
 
-pub fn pearson_correlation<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Option<V>
+pub fn pearson_correlation<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Result<V, ErrorKind>
 where
     K: Hash + Eq,
     V: Float + AddAssign + Sub + Mul,
@@ -176,9 +187,9 @@ where
         n += 1;
     }
 
-    let n = V::from(n)?;
-    let mean_x = mean_x? / n;
-    let mean_y = mean_y? / n;
+    let n = V::from(n).ok_or_else(|| ErrorKind::ConvertType)?;
+    let mean_x = mean_x.ok_or_else(|| ErrorKind::NoMatchingRatings)? / n;
+    let mean_y = mean_y.ok_or_else(|| ErrorKind::NoMatchingRatings)? / n;
 
     let mut cov = None;
     let mut std_dev_a = None;
@@ -190,18 +201,22 @@ where
         *std_dev_b.get_or_insert_with(V::zero) += (*y - mean_y).powi(2);
     }
 
-    let cov = cov?;
-    let std_dev = std_dev_a?.sqrt() * std_dev_b?.sqrt();
+    let cov = cov.ok_or_else(|| ErrorKind::NoMatchingRatings)?;
+    let std_dev_a = std_dev_a.ok_or_else(|| ErrorKind::NoMatchingRatings)?;
+    let std_dev_b = std_dev_b.ok_or_else(|| ErrorKind::NoMatchingRatings)?;
+    let std_dev = std_dev_a.sqrt() * std_dev_b.sqrt();
 
     let pearson = cov / std_dev;
-    if pearson.is_nan() || pearson.is_infinite() {
-        None
+    if pearson.is_nan() {
+        Err(ErrorKind::IndeterminateForm)
+    } else if pearson.is_infinite() {
+        Err(ErrorKind::DivisionByZero)
     } else {
-        Some(pearson)
+        Ok(pearson)
     }
 }
 
-pub fn pearson_approximation<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Option<V>
+pub fn pearson_approximation<K, V>(a: &HashMap<K, V>, b: &HashMap<K, V>) -> Result<V, ErrorKind>
 where
     K: Hash + Eq,
     V: Float + AddAssign + Sub + Mul,
@@ -222,17 +237,24 @@ where
         n += 1;
     }
 
-    let n = V::from(n)?;
-    let num = dot_prod? - (sum_x? * sum_y?) / n;
+    let n = V::from(n).ok_or_else(|| ErrorKind::ConvertType)?;
+    let dot_prod = dot_prod.ok_or_else(|| ErrorKind::NoMatchingRatings)?;
+    let sum_x = sum_x.ok_or_else(|| ErrorKind::NoMatchingRatings)?;
+    let sum_y = sum_y.ok_or_else(|| ErrorKind::NoMatchingRatings)?;
+    let num = dot_prod - (sum_x * sum_y) / n;
 
-    let dem_x = sum_x_sq? - sum_x?.powi(2) / n;
-    let dem_y = sum_y_sq? - sum_y?.powi(2) / n;
+    let sum_x_sq = sum_x_sq.ok_or_else(|| ErrorKind::NoMatchingRatings)?;
+    let sum_y_sq = sum_y_sq.ok_or_else(|| ErrorKind::NoMatchingRatings)?;
+    let dem_x = sum_x_sq - sum_x.powi(2) / n;
+    let dem_y = sum_y_sq - sum_y.powi(2) / n;
     let dem = dem_x.sqrt() * dem_y.sqrt();
 
     let pearson = num / dem;
-    if pearson.is_nan() || pearson.is_infinite() {
-        None
+    if pearson.is_nan() {
+        Err(ErrorKind::IndeterminateForm)
+    } else if pearson.is_infinite() {
+        Err(ErrorKind::DivisionByZero)
     } else {
-        Some(pearson)
+        Ok(pearson)
     }
 }

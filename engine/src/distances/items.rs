@@ -46,7 +46,7 @@ pub fn fast_adjusted_cosine<U, K, V>(
     users_b: &HashSet<U>,
     a: &K,
     b: &K,
-) -> Option<V>
+) -> Result<V, ErrorKind>
 where
     U: Hash + Eq,
     K: Hash + Eq,
@@ -75,14 +75,18 @@ where
         }
     }
 
-    let num = cov?;
-    let dem = dev_a?.sqrt() * dev_b?.sqrt();
+    let num = cov.ok_or_else(|| ErrorKind::NoMatchingRatings)?;
+    let dev_a = dev_a.ok_or_else(|| ErrorKind::NoMatchingRatings)?;
+    let dev_b = dev_b.ok_or_else(|| ErrorKind::NoMatchingRatings)?;
+    let dem = dev_a.sqrt() * dev_b.sqrt();
 
     let res = num / dem;
-    if res.is_nan() || res.is_infinite() {
-        None
+    if res.is_nan() {
+        Err(ErrorKind::IndeterminateForm)
+    } else if res.is_infinite() {
+        Err(ErrorKind::DivisionByZero)
     } else {
-        Some(res)
+        Ok(res)
     }
 }
 
@@ -92,7 +96,7 @@ pub fn slow_adjusted_cosine<U, K, V>(
     users_b: &HashSet<U>,
     a: &K,
     b: &K,
-) -> Option<V>
+) -> Result<V, ErrorKind>
 where
     U: Hash + Eq + Clone,
     K: Hash + Eq,

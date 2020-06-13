@@ -46,7 +46,7 @@ where
         for (user_id, ratings) in maped_ratings {
             let distance = distances::users::distance(user_ratings, &ratings, self.method);
 
-            if let Some(distance) = distance {
+            if let Ok(distance) = distance {
                 if self.max_heap.len() < self.k {
                     let maped_distance = MapedDistance(user_id, distance, Some(ratings));
                     self.max_heap.push(maped_distance);
@@ -97,7 +97,7 @@ where
         for (user_id, ratings) in maped_ratings {
             let distance = distances::users::distance(user_ratings, &ratings, self.method);
 
-            if let Some(distance) = distance {
+            if let Ok(distance) = distance {
                 if self.min_heap.len() < self.k {
                     let maped_distance = MapedDistance(user_id, distance, Some(ratings));
                     self.min_heap.push(Reverse(maped_distance));
