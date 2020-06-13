@@ -170,6 +170,10 @@ impl Controller<User, i32, Book, i32> for ShelvesController {
 
         Ok(maped_ratings)
     }
+
+    fn get_range(&self) -> (f64, f64) {
+        (0., 5.)
+    }
 }
 
 #[cfg(feature = "test-controller")]

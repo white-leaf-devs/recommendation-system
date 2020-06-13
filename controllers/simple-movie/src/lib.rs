@@ -201,6 +201,10 @@ impl Controller<User, i32, Movie, i32> for SimpleMovieController {
 
         Ok(maped_ratings)
     }
+
+    fn get_range(&self) -> (f64, f64) {
+        (1., 5.)
+    }
 }
 
 #[cfg(feature = "test-controller")]

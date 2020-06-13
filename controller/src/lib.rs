@@ -206,6 +206,8 @@ where
     fn maped_ratings(&self) -> Result<MapedRatings<UserId, ItemId>>;
     fn maped_ratings_by(&self, users: &[User]) -> Result<MapedRatings<UserId, ItemId>>;
     fn maped_ratings_except(&self, user: &User) -> Result<MapedRatings<UserId, ItemId>>;
+
+    fn get_range(&self) -> (f64, f64);
 }
 
 pub mod error {

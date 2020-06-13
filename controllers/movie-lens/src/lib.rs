@@ -182,6 +182,10 @@ impl Controller<User, i32, Movie, i32> for MovieLensController {
 
         Ok(maped_ratings)
     }
+
+    fn get_range(&self) -> (f64, f64) {
+        (0.5, 5.)
+    }
 }
 
 #[cfg(feature = "test-controller")]
