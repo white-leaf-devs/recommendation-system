@@ -106,15 +106,15 @@ impl Controller<User, i32, Book, String> for BooksController {
         Ok(items)
     }
 
-    fn users_who_rated(&self, items: &[Book]) -> Result<ItemsUsers<String, i32>, Error> {
+    fn users_who_rated(&self, items: &[Book]) -> Result<MapedRatings<String, i32>, Error> {
         let ratings = Rating::belonging_to(items).load::<Rating>(&self.pg_conn)?;
 
         let mut items_users = HashMap::new();
         for rating in ratings {
             items_users
                 .entry(rating.book_id.to_string())
-                .or_insert_with(HashSet::new)
-                .insert(rating.user_id);
+                .or_insert_with(HashMap::new)
+                .insert(rating.user_id, rating.score);
         }
 
         Ok(items_users)
