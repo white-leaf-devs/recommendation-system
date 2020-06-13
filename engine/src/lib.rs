@@ -377,6 +377,7 @@ mod tests {
 
     #[test]
     fn similarity_matrix() -> Result<(), Error> {
+        use super::similarity_matrix::SimilarityMatrix;
         use movie_lens_small::MovieLensSmallController;
         use std::time::Instant;
 
