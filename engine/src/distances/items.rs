@@ -119,3 +119,7 @@ pub fn normalize_user_ratings<ItemId: Clone>(
 
     Ok(normalized_ratings)
 }
+
+pub fn denormalize_user_rating(normalized_rating: f64, min_rating: f64, max_rating: f64) -> f64 {
+    (1.0 / 2.0) * ((normalized_rating + 1.0) * (max_rating - min_rating)) + min_rating
+}
