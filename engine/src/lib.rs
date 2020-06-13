@@ -207,7 +207,23 @@ where
         let mut dem = 0.0;
 
         let items_chunks = self.controller.items_by_chunks(chunk_size);
-        for item_chunk in items_chunks {
+        for item_chunk_base in items_chunks {
+            let mut item_chunk = Vec::new();
+
+            println!("{}", item_chunk_base.len());
+
+            for other_item in item_chunk_base {
+                if user_ratings.contains_key(&other_item.get_id()) {
+                    item_chunk.push(other_item);
+                }
+            }
+
+            println!("{}", item_chunk.len());
+
+            if item_chunk.is_empty() {
+                continue;
+            }
+
             let mut users_who_rated: ItemsUsers<ItemId, UserId> = self
                 .controller
                 .users_who_rated(&item_chunk)?
@@ -226,6 +242,8 @@ where
                 .collect();
 
             let all_partial_users = self.controller.create_partial_users(&all_users)?;
+
+            println!("All partial users size:\t{}", all_partial_users.len());
 
             let maped_ratings = self.controller.maped_ratings_by(&all_partial_users)?;
             let means = adjusted_cosine_means(&maped_ratings);
@@ -437,9 +455,10 @@ mod tests {
 
     #[test]
     fn item_based_pred() -> Result<(), Error> {
-        use movie_lens_small::MovieLensSmallController;
+        use movie_lens::MovieLensController;
+        use std::time::Instant;
 
-        let controller = MovieLensSmallController::new()?;
+        let controller = MovieLensController::new()?;
         let engine = Engine::with_controller(&controller);
 
         let user = controller
@@ -454,10 +473,12 @@ mod tests {
             .next()
             .unwrap();
 
+        let now = Instant::now();
         println!(
-            "Item based prediction (UserId 1, Father of the Bride Part II (1995), 10000): {:?}",
-            engine.item_based_predict(user, item, 10000)?
+            "Item based prediction (UserId 1, Father of the Bride Part II (1995), 2500): {:?}",
+            engine.item_based_predict(user, item, 2500)?
         );
+        println!("Elapsed: {}", now.elapsed().as_secs_f64());
 
         Ok(())
     }
