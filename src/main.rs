@@ -212,16 +212,22 @@ where
                     },
 
                     Statement::UserDistance(searchby_a, searchby_b, method) => {
-                        let users_a = match controller.users_by(&searchby_a) {
-                            Ok(users) => users,
+                        let user_a = match controller
+                            .users_by(&searchby_a)
+                            .map(|mut users| users.drain(..1).next().unwrap())
+                        {
+                            Ok(user) => user,
                             Err(e) => {
                                 println!("{}", e);
                                 continue;
                             }
                         };
 
-                        let users_b = match controller.users_by(&searchby_b) {
-                            Ok(users) => users,
+                        let user_b = match controller
+                            .users_by(&searchby_b)
+                            .map(|mut users| users.drain(..1).next().unwrap())
+                        {
+                            Ok(user) => user,
                             Err(e) => {
                                 println!("{}", e);
                                 continue;
@@ -229,7 +235,7 @@ where
                         };
 
                         let now = Instant::now();
-                        let dist = engine.user_distance(&users_a[0], &users_b[0], method);
+                        let dist = engine.user_distance(user_a, user_b, method);
                         match dist {
                             Ok(dist) => println!("Distance is {}", dist),
                             Err(e) => {
@@ -242,15 +248,19 @@ where
                     }
 
                     Statement::UserKnn(k, searchby, method, chunks_opt) => {
-                        let users = controller.users_by(&searchby);
-                        let now = Instant::now();
-                        let knn = match users {
-                            Ok(users) => engine.user_knn(k, &users[0], method, chunks_opt),
+                        let user = match controller
+                            .users_by(&searchby)
+                            .map(|mut users| users.drain(..1).next().unwrap())
+                        {
+                            Ok(user) => user,
                             Err(e) => {
                                 println!("{}", e);
                                 continue;
                             }
                         };
+
+                        let now = Instant::now();
+                        let knn = engine.user_knn(k, user, method, chunks_opt);
 
                         let elapsed = now.elapsed().as_secs_f64();
 
@@ -277,30 +287,38 @@ where
                         method,
                         chunks_opt,
                     ) => {
-                        let users = match controller.users_by(&searchby_user) {
-                            Ok(users) => users,
+                        let user = match controller
+                            .users_by(&searchby_user)
+                            .map(|mut users| users.drain(..1).next().unwrap())
+                        {
+                            Ok(user) => user,
                             Err(e) => {
                                 println!("{}", e);
                                 continue;
                             }
                         };
 
-                        let items = match controller.items_by(&searchby_item) {
-                            Ok(items) => items,
+                        let item = match controller
+                            .items_by(&searchby_item)
+                            .map(|mut items| items.drain(..1).next().unwrap())
+                        {
+                            Ok(item) => item,
                             Err(e) => {
                                 println!("{}", e);
                                 continue;
                             }
                         };
+
+                        let item_id = item.get_id();
 
                         let now = Instant::now();
                         let prediction =
-                            engine.user_based_predict(k, &users[0], &items[0], method, chunks_opt);
+                            engine.user_based_predict(k, user, item, method, chunks_opt);
+
                         match prediction {
                             Ok(predicted) => println!(
                                 "Predicted score for item with id({}) is {}",
-                                items[0].get_id(),
-                                predicted
+                                item_id, predicted
                             ),
 
                             Err(e) => {
