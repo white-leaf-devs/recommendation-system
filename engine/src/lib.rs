@@ -114,7 +114,7 @@ where
         }
     }
 
-    pub fn user_predict(
+    pub fn user_based_predict(
         &self,
         k: usize,
         user: &User,
@@ -188,7 +188,7 @@ where
         prediction.ok_or_else(|| ErrorKind::EmptyKNearestNeighbors.into())
     }
 
-    pub fn item_based_prediction(
+    pub fn item_based_predict(
         &self,
         user: &User,
         item: &Item,
@@ -219,7 +219,6 @@ where
 
             let all_users: Vec<UserId> = users_who_rated
                 .values()
-                .into_iter()
                 .fold(HashSet::new(), |acc, other_set| {
                     acc.union(other_set).cloned().collect()
                 })
@@ -237,7 +236,7 @@ where
                     continue;
                 }
 
-                if let Some(similarity) = fast_adjusted_cosine(
+                if let Ok(similarity) = fast_adjusted_cosine(
                     &means,
                     &maped_ratings,
                     &users_who_rated[&item_id],
@@ -267,7 +266,7 @@ mod tests {
     use books::BooksController;
     use controller::SearchBy;
     use simple_movie::SimpleMovieController;
-    /*
+
     #[test]
     fn euclidean_distance() -> Result<(), Error> {
         let controller = SimpleMovieController::new()?;
@@ -278,7 +277,7 @@ mod tests {
 
         println!(
             "euclidean(52, 53): {:?}",
-            engine.distance(user_a, user_b, Method::Euclidean)
+            engine.user_distance(user_a, user_b, Method::Euclidean)
         );
 
         Ok(())
@@ -294,7 +293,7 @@ mod tests {
 
         println!(
             "manhattan(52, 53): {:?}",
-            engine.distance(user_a, user_b, Method::Manhattan)
+            engine.user_distance(user_a, user_b, Method::Manhattan)
         );
 
         Ok(())
@@ -310,7 +309,7 @@ mod tests {
 
         println!(
             "cosine(52, 53): {:?}",
-            engine.distance(user_a, user_b, Method::CosineSimilarity)
+            engine.user_distance(user_a, user_b, Method::CosineSimilarity)
         );
 
         Ok(())
@@ -325,7 +324,7 @@ mod tests {
 
         println!(
             "kNN(52, manhattan): {:?}",
-            engine.knn(4, user, Method::Manhattan, None)
+            engine.user_knn(4, user, Method::Manhattan, None)
         );
 
         Ok(())
@@ -340,7 +339,7 @@ mod tests {
 
         println!(
             "kNN(52, 3, euclidean): {:?}",
-            engine.knn(3, user, Method::Euclidean, None)
+            engine.user_knn(3, user, Method::Euclidean, None)
         );
 
         Ok(())
@@ -355,7 +354,7 @@ mod tests {
 
         println!(
             "kNN(52, 3, cosine): {:?}",
-            engine.knn(3, user, Method::CosineSimilarity, None)
+            engine.user_knn(3, user, Method::CosineSimilarity, None)
         );
 
         Ok(())
@@ -370,7 +369,7 @@ mod tests {
 
         println!(
             "kNN(242, 5, manhattan): {:?}",
-            engine.knn(5, user, Method::JaccardDistance, None)
+            engine.user_knn(5, user, Method::JaccardDistance, None)
         );
 
         Ok(())
@@ -389,7 +388,7 @@ mod tests {
         println!("Elapsed: {}", now.elapsed().as_secs_f64());
 
         Ok(())
-    }*/
+    }
 
     #[test]
     fn item_based_pred() -> Result<(), Error> {
@@ -401,7 +400,7 @@ mod tests {
 
         println!(
             "Item based prediction (Patrick C, Alien, 100): {:?}",
-            engine.item_based_prediction(&user, &item, 100)?
+            engine.item_based_predict(&user, &item, 100)?
         );
 
         Ok(())
