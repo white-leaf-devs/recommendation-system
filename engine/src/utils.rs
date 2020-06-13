@@ -50,14 +50,14 @@ impl<'a, K, V> Iterator for CommonKeyIterator<'a, K, V>
 where
     K: Hash + Eq,
 {
-    type Item = (&'a V, &'a V);
+    type Item = (&'a K, (&'a V, &'a V));
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut a_val = self.shortest.next()?;
 
         loop {
             if let Some(b_val) = self.longest.get(a_val.0) {
-                break Some((a_val.1, b_val));
+                break Some((a_val.0, (a_val.1, b_val)));
             } else {
                 a_val = self.shortest.next()?;
             }
@@ -88,9 +88,9 @@ mod tests {
 
         let mut iter = common_keys_iter(&a, &b);
 
-        assert_eq!(iter.next(), Some((&0., &2.)));
-        assert_eq!(iter.next(), Some((&0., &2.)));
-        assert_eq!(iter.next(), Some((&0., &2.)));
+        assert_eq!(iter.next(), Some((&0, (&0., &2.))));
+        assert_eq!(iter.next(), Some((&2, (&0., &2.))));
+        assert_eq!(iter.next(), Some((&5, (&0., &2.))));
         assert_eq!(iter.next(), None);
     }
 }
