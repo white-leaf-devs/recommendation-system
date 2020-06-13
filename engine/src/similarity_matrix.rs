@@ -1,7 +1,8 @@
-use crate::distances::items::{adjusted_cosine_means, fast_adjusted_cosine};
-use controller::{Controller, Entity, ItemsUsers, LazyItemChunks};
+use crate::distances::items::{adjusted_cosine_means, fast_adjusted_cosine, AdjCosine};
+use controller::{Controller, Entity, ItemsUsers, LazyItemChunks, MapedRatings};
 use std::{
     collections::{HashMap, HashSet},
+    fmt::Debug,
     hash::Hash,
 };
 
@@ -54,54 +55,52 @@ where
 
     pub fn get_chunk(&mut self, i: usize, j: usize) -> Option<HashMap<ItemId, HashMap<ItemId, f64>>>
     where
-        UserId: Hash + Eq + Clone,
+        UserId: Hash + Eq + Clone + Default,
         ItemId: Hash + Eq + Clone,
     {
         let ver_items = self.ver_iter.nth(i)?;
         let hor_items = self.hor_iter.nth(j)?;
 
-        let ver_items_users: ItemsUsers<ItemId, UserId> = self
+        let ver_items_users: MapedRatings<ItemId, UserId> = self
             .controller
             .users_who_rated(&ver_items)
             .ok()?
             .into_iter()
-            .filter(|(_, set)| !set.is_empty())
+            .filter(|(_, ratings)| !ratings.is_empty())
             .collect();
 
-        let hor_items_users: ItemsUsers<ItemId, UserId> = self
+        let hor_items_users: MapedRatings<ItemId, UserId> = self
             .controller
             .users_who_rated(&hor_items)
             .ok()?
             .into_iter()
-            .filter(|(_, set)| !set.is_empty())
+            .filter(|(_, ratings)| !ratings.is_empty())
             .collect();
 
         let all_users_iter = ver_items_users.values().chain(hor_items_users.values());
         let mut all_users = HashSet::new();
 
         for users in all_users_iter {
-            for user in users {
+            for user in users.keys() {
                 all_users.insert(user.clone());
             }
         }
 
         let all_users: Vec<_> = all_users.into_iter().collect();
         let all_partial_users = self.controller.create_partial_users(&all_users).ok()?;
-
         let maped_ratings = self.controller.maped_ratings_by(&all_partial_users).ok()?;
-        let means = adjusted_cosine_means(&maped_ratings);
+
+        let mut adj_cosine = AdjCosine::new();
+        adj_cosine.update_means(&maped_ratings);
 
         let mut matrix = HashMap::new();
-        for (i, (item_a, users_a)) in ver_items_users.into_iter().enumerate() {
-            for (item_b, users_b) in hor_items_users.iter().skip(i + 1) {
-                if let Ok(similarity) = fast_adjusted_cosine(
-                    &means,
-                    &maped_ratings,
-                    &users_a,
-                    &users_b,
-                    &item_a,
-                    item_b,
-                ) {
+        for (item_a, users_a) in ver_items_users.into_iter() {
+            for (item_b, users_b) in hor_items_users.iter() {
+                if matrix.contains_key(item_b) {
+                    continue;
+                }
+
+                if let Ok(similarity) = adj_cosine.calculate(&users_a, users_b) {
                     matrix
                         .entry(item_a.clone())
                         .or_insert_with(HashMap::new)

@@ -10,7 +10,11 @@ use parser::{Database, Statement};
 use rustyline::Editor;
 use shelves::ShelvesController;
 use simple_movie::SimpleMovieController;
-use std::{fmt::Display, hash::Hash, time::Instant};
+use std::{
+    fmt::{Debug, Display},
+    hash::Hash,
+    time::Instant,
+};
 
 macro_rules! prompt {
     ($ed:ident) => {{
@@ -63,13 +67,16 @@ where
     C: Controller<User, UserId, Item, ItemId>,
     User: Entity<Id = UserId> + ToTable,
     Item: Entity<Id = ItemId> + ToTable,
-    UserId: Hash + Eq + Display + Clone,
+    UserId: Hash + Eq + Display + Clone + Default,
     ItemId: Hash + Eq + Display + Clone,
 {
     let mut sim_matrix = SimilarityMatrix::new(controller, m, n, threshold);
     let mut curr_i = 0;
     let mut curr_j = 0;
+
+    let now = Instant::now();
     let mut maybe_chunk = sim_matrix.get_chunk(curr_i, curr_j);
+    println!("Operation took {:.4} seconds", now.elapsed().as_secs_f64());
 
     loop {
         let formatted = format!("{}:sim_matrix({}, {})", name, curr_i, curr_j);
@@ -120,7 +127,10 @@ where
                     Statement::SimMatrixMoveTo(i, j) => {
                         curr_i = i;
                         curr_j = j;
+
+                        let now = Instant::now();
                         maybe_chunk = sim_matrix.get_chunk(curr_i, curr_j);
+                        println!("Operation took {:.4} seconds", now.elapsed().as_secs_f64());
                     }
 
                     _ => {
@@ -145,7 +155,7 @@ where
     C: Controller<User, UserId, Item, ItemId>,
     User: Entity<Id = UserId> + ToTable,
     Item: Entity<Id = ItemId> + ToTable + Clone,
-    UserId: Hash + Eq + Display + Clone,
+    UserId: Hash + Eq + Display + Clone + Default,
     ItemId: Hash + Eq + Display + Clone,
 {
     let engine = Engine::with_controller(&controller);
