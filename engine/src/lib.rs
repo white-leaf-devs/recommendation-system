@@ -22,7 +22,10 @@ pub mod maped_distance;
 pub mod similarity_matrix;
 pub mod utils;
 
-use crate::{distances::users::Method as UserMethod, maped_distance::MapedDistance};
+use crate::{
+    distances::items::Method as ItemMethod, distances::users::Method as UserMethod,
+    maped_distance::MapedDistance,
+};
 use anyhow::Error;
 use controller::{Controller, Entity, ItemsUsers};
 use distances::items::{
@@ -71,6 +74,15 @@ where
         let rating_b = self.controller.ratings_by(&user_b)?;
 
         distances::users::distance(&rating_a, &rating_b, method).map_err(Into::into)
+    }
+
+    pub fn item_distance(
+        &self,
+        item_a: Item,
+        item_b: Item,
+        method: ItemMethod,
+    ) -> Result<f64, Error> {
+        todo!()
     }
 
     pub fn user_knn(
@@ -208,17 +220,10 @@ where
 
         let items_chunks = self.controller.items_by_chunks(chunk_size);
         for item_chunk_base in items_chunks {
-            let mut item_chunk = Vec::new();
-
-            println!("{}", item_chunk_base.len());
-
-            for other_item in item_chunk_base {
-                if user_ratings.contains_key(&other_item.get_id()) {
-                    item_chunk.push(other_item);
-                }
-            }
-
-            println!("{}", item_chunk.len());
+            let item_chunk: Vec<_> = item_chunk_base
+                .into_iter()
+                .filter(|other_item| user_ratings.contains_key(&other_item.get_id()))
+                .collect();
 
             if item_chunk.is_empty() {
                 continue;
@@ -242,8 +247,6 @@ where
                 .collect();
 
             let all_partial_users = self.controller.create_partial_users(&all_users)?;
-
-            println!("All partial users size:\t{}", all_partial_users.len());
 
             let maped_ratings = self.controller.maped_ratings_by(&all_partial_users)?;
             let means = adjusted_cosine_means(&maped_ratings);
