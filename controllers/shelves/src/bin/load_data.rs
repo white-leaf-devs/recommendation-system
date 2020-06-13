@@ -10,7 +10,7 @@ use shelves::ShelvesController;
 
 fn insert_users(conn: &PgConnection) -> Result<(), Error> {
     let mut csv = csv::ReaderBuilder::new()
-        .has_headers(false)
+        .has_headers(true)
         .delimiter(b',')
         .from_path("data/user_id_map.csv")?;
 
@@ -68,7 +68,7 @@ fn insert_books(conn: &PgConnection) -> Result<(), Error> {
 
 fn insert_ratings(conn: &PgConnection) -> Result<(), Error> {
     let mut csv = csv::ReaderBuilder::new()
-        .has_headers(false)
+        .has_headers(true)
         .delimiter(b',')
         .from_path("data/goodreads_interactions.csv")?;
 
