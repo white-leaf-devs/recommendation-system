@@ -27,9 +27,10 @@ use crate::{
     maped_distance::MapedDistance,
 };
 use anyhow::Error;
-use controller::{Controller, Entity, ItemsUsers};
+use controller::{Controller, Entity, ItemsUsers, MapedRatings};
 use distances::items::{
     adjusted_cosine_means, denormalize_user_rating, fast_adjusted_cosine, normalize_user_ratings,
+    AdjCosine,
 };
 use error::ErrorKind;
 use knn::{Knn, MaxHeapKnn, MinHeapKnn};
@@ -207,17 +208,22 @@ where
         user: User,
         item: Item,
         chunk_size: usize,
-    ) -> Result<f64, Error> {
-        /*
+    ) -> Result<f64, Error>
+    where
+        UserId: Default,
+    {
         let item_id = item.get_id();
 
         let user_ratings = self.controller.ratings_by(&user)?;
-        let normalized_ratings = normalize_user_ratings(&user_ratings, 1.0, 5.0)?;
+        let (min_rating, max_rating) = self.controller.get_range();
+        let normalized_ratings = normalize_user_ratings(&user_ratings, min_rating, max_rating)?;
 
         let target_items_users = self.controller.users_who_rated(&[item])?;
 
         let mut num = 0.0;
         let mut dem = 0.0;
+
+        let mut adj_cosine = AdjCosine::new();
 
         let items_chunks = self.controller.items_by_chunks(chunk_size);
         for item_chunk_base in items_chunks {
@@ -230,27 +236,41 @@ where
                 continue;
             }
 
-            let mut users_who_rated: ItemsUsers<ItemId, UserId> = self
+            let mut users_who_rated: MapedRatings<ItemId, UserId> = self
                 .controller
                 .users_who_rated(&item_chunk)?
                 .into_iter()
-                .filter(|(_, set)| set.contains(&user.get_id()))
+                .filter(|(_, ratings)| ratings.contains_key(&user.get_id()))
                 .collect();
 
             users_who_rated.insert(item_id.clone(), target_items_users[&item_id].clone());
 
-            let all_users: Vec<UserId> = users_who_rated
-                .values()
-                .fold(HashSet::new(), |acc, other_set| {
-                    acc.union(other_set).cloned().collect()
-                })
-                .into_iter()
-                .collect();
+            let all_users_iter = users_who_rated.values();
+            let mut all_users = HashSet::new();
 
+            for users in all_users_iter {
+                for user in users.keys() {
+                    all_users.insert(user.clone());
+                }
+            }
+
+            // Shrink some means by their usage frequency
+            adj_cosine.shrink_means();
+
+            // Collect all the users that doesn't have a calculated mean
+            let all_users: Vec<_> = all_users
+                .into_iter()
+                .filter(|user_id| !adj_cosine.has_mean_for(user_id))
+                .collect();
             let all_partial_users = self.controller.create_partial_users(&all_users)?;
 
+            println!("Gathering ratings for {}", all_partial_users.len());
+
+            // Query all the user ratings that doesn't have a mean calculated
             let maped_ratings = self.controller.maped_ratings_by(&all_partial_users)?;
-            let means = adjusted_cosine_means(&maped_ratings);
+
+            // Update means for these new ratings
+            adj_cosine.update_means(&maped_ratings);
 
             for other_item in &item_chunk {
                 let other_item_id = other_item.get_id();
@@ -258,14 +278,9 @@ where
                     continue;
                 }
 
-                if let Ok(similarity) = fast_adjusted_cosine(
-                    &means,
-                    &maped_ratings,
-                    &users_who_rated[&item_id],
-                    &users_who_rated[&other_item_id],
-                    &item_id,
-                    &other_item_id,
-                ) {
+                if let Ok(similarity) = adj_cosine
+                    .calculate(&users_who_rated[&item_id], &users_who_rated[&other_item_id])
+                {
                     num += similarity * normalized_ratings[&other_item_id];
                     dem += similarity.abs();
                 }
@@ -277,8 +292,6 @@ where
         }
 
         Ok(denormalize_user_rating(num / dem, 1.0, 5.0)?)
-        */
-        todo!()
     }
 }
 
