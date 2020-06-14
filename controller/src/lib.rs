@@ -78,7 +78,6 @@ where
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
-pub type ItemsUsers<ItemId, UserId> = HashMap<ItemId, HashSet<UserId>>;
 pub type Ratings<ItemId, Value = f64> = HashMap<ItemId, Value>;
 pub type MapedRatings<UserId, ItemId, Value = f64> = HashMap<UserId, Ratings<ItemId, Value>>;
 
@@ -199,9 +198,9 @@ where
         Err(error::ErrorKind::NotImplemented.into())
     }
 
-    fn users_who_rated(&self, items: &[Item]) -> Result<ItemsUsers<ItemId, UserId>>;
     fn create_partial_users(&self, user_ids: &[UserId]) -> Result<Vec<User>>;
 
+    fn users_who_rated(&self, items: &[Item]) -> Result<MapedRatings<ItemId, UserId>>;
     fn ratings_by(&self, user: &User) -> Result<Ratings<ItemId>>;
     fn maped_ratings(&self) -> Result<MapedRatings<UserId, ItemId>>;
     fn maped_ratings_by(&self, users: &[User]) -> Result<MapedRatings<UserId, ItemId>>;

@@ -72,7 +72,7 @@ where
     Value: Float + AddAssign + Sub,
 {
     let mut dist = None;
-    for (x, y) in common_keys_iter(a, b) {
+    for (_, (x, y)) in common_keys_iter(a, b) {
         *dist.get_or_insert_with(Value::zero) += (*y - *x).abs();
     }
 
@@ -88,7 +88,7 @@ where
     Value: Float + AddAssign + Sub,
 {
     let mut dist = None;
-    for (x, y) in common_keys_iter(a, b) {
+    for (_, (x, y)) in common_keys_iter(a, b) {
         *dist.get_or_insert_with(Value::zero) += (*y - *x).powi(2);
     }
 
@@ -109,7 +109,7 @@ where
     }
 
     let mut dist = None;
-    for (x, y) in common_keys_iter(a, b) {
+    for (_, (x, y)) in common_keys_iter(a, b) {
         *dist.get_or_insert_with(Value::zero) += (*y - *x).abs().powi(p as i32);
     }
 
@@ -172,7 +172,7 @@ where
     let mut b_norm = None;
     let mut dot_prod = None;
 
-    for (x, y) in common_keys_iter(a, b) {
+    for (_, (x, y)) in common_keys_iter(a, b) {
         *a_norm.get_or_insert_with(Value::zero) += x.powi(2);
         *b_norm.get_or_insert_with(Value::zero) += y.powi(2);
         *dot_prod.get_or_insert_with(Value::zero) += (*x) * (*y);
@@ -204,7 +204,7 @@ where
     let mut mean_y = None;
     let mut n = 0;
 
-    for (x, y) in common_keys_iter(a, b) {
+    for (_, (x, y)) in common_keys_iter(a, b) {
         *mean_x.get_or_insert_with(Value::zero) += *x;
         *mean_y.get_or_insert_with(Value::zero) += *y;
         n += 1;
@@ -218,7 +218,7 @@ where
     let mut std_dev_a = None;
     let mut std_dev_b = None;
 
-    for (x, y) in common_keys_iter(a, b) {
+    for (_, (x, y)) in common_keys_iter(a, b) {
         *cov.get_or_insert_with(Value::zero) += (*x - mean_x) * (*y - mean_y);
         *std_dev_a.get_or_insert_with(Value::zero) += (*x - mean_x).powi(2);
         *std_dev_b.get_or_insert_with(Value::zero) += (*y - mean_y).powi(2);
@@ -254,7 +254,7 @@ where
     let mut dot_prod = None;
     let mut n = 0;
 
-    for (x, y) in common_keys_iter(a, b) {
+    for (_, (x, y)) in common_keys_iter(a, b) {
         *sum_x.get_or_insert_with(Value::zero) += *x;
         *sum_y.get_or_insert_with(Value::zero) += *y;
         *sum_x_sq.get_or_insert_with(Value::zero) += x.powi(2);

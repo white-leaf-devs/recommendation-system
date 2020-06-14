@@ -27,10 +27,8 @@ use crate::{
     maped_distance::MapedDistance,
 };
 use anyhow::Error;
-use controller::{Controller, Entity, ItemsUsers};
-use distances::items::{
-    adjusted_cosine_means, denormalize_user_rating, fast_adjusted_cosine, normalize_user_ratings,
-};
+use controller::{Controller, Entity, MapedRatings};
+use distances::items::{denormalize_user_rating, normalize_user_ratings, AdjCosine};
 use error::ErrorKind;
 use knn::{Knn, MaxHeapKnn, MinHeapKnn};
 use num_traits::Zero;
@@ -81,8 +79,40 @@ where
         item_a: Item,
         item_b: Item,
         method: ItemMethod,
-    ) -> Result<f64, Error> {
-        todo!()
+    ) -> Result<f64, Error>
+    where
+        UserId: Default,
+    {
+        match method {
+            ItemMethod::AdjCosine => {
+                let item_a_id = item_a.get_id();
+                let item_b_id = item_b.get_id();
+
+                let users_who_rated = self.controller.users_who_rated(&[item_a, item_b])?;
+
+                let all_users_iter = users_who_rated.values();
+                let mut all_users = HashSet::new();
+
+                for users in all_users_iter {
+                    for user in users.keys() {
+                        all_users.insert(user.clone());
+                    }
+                }
+
+                let all_users: Vec<_> = all_users.into_iter().collect();
+                let all_users = self.controller.create_partial_users(&all_users)?;
+                let maped_ratings = self.controller.maped_ratings_by(&all_users)?;
+
+                let mut adj_cosine = AdjCosine::new();
+                adj_cosine.update_means(&maped_ratings);
+
+                let sim = adj_cosine
+                    .calculate(&users_who_rated[&item_a_id], &users_who_rated[&item_b_id])?;
+
+                Ok(sim)
+            }
+            _ => Err(ErrorKind::NotImplemented.into()),
+        }
     }
 
     pub fn user_knn(
@@ -207,16 +237,22 @@ where
         user: User,
         item: Item,
         chunk_size: usize,
-    ) -> Result<f64, Error> {
+    ) -> Result<f64, Error>
+    where
+        UserId: Default,
+    {
         let item_id = item.get_id();
 
         let user_ratings = self.controller.ratings_by(&user)?;
-        let normalized_ratings = normalize_user_ratings(&user_ratings, 1.0, 5.0)?;
+        let (min_rating, max_rating) = self.controller.get_range();
+        let normalized_ratings = normalize_user_ratings(&user_ratings, min_rating, max_rating)?;
 
         let target_items_users = self.controller.users_who_rated(&[item])?;
 
         let mut num = 0.0;
         let mut dem = 0.0;
+
+        let mut adj_cosine = AdjCosine::new();
 
         let items_chunks = self.controller.items_by_chunks(chunk_size);
         for item_chunk_base in items_chunks {
@@ -229,27 +265,41 @@ where
                 continue;
             }
 
-            let mut users_who_rated: ItemsUsers<ItemId, UserId> = self
+            let mut users_who_rated: MapedRatings<ItemId, UserId> = self
                 .controller
                 .users_who_rated(&item_chunk)?
                 .into_iter()
-                .filter(|(_, set)| set.contains(&user.get_id()))
+                .filter(|(_, ratings)| ratings.contains_key(&user.get_id()))
                 .collect();
 
             users_who_rated.insert(item_id.clone(), target_items_users[&item_id].clone());
 
-            let all_users: Vec<UserId> = users_who_rated
-                .values()
-                .fold(HashSet::new(), |acc, other_set| {
-                    acc.union(other_set).cloned().collect()
-                })
-                .into_iter()
-                .collect();
+            let all_users_iter = users_who_rated.values();
+            let mut all_users = HashSet::new();
 
+            for users in all_users_iter {
+                for user in users.keys() {
+                    all_users.insert(user.clone());
+                }
+            }
+
+            // Shrink some means by their usage frequency
+            adj_cosine.shrink_means();
+
+            // Collect all the users that doesn't have a calculated mean
+            let all_users: Vec<_> = all_users
+                .into_iter()
+                .filter(|user_id| !adj_cosine.has_mean_for(user_id))
+                .collect();
             let all_partial_users = self.controller.create_partial_users(&all_users)?;
 
+            println!("Gathering ratings for {}", all_partial_users.len());
+
+            // Query all the user ratings that doesn't have a mean calculated
             let maped_ratings = self.controller.maped_ratings_by(&all_partial_users)?;
-            let means = adjusted_cosine_means(&maped_ratings);
+
+            // Update means for these new ratings
+            adj_cosine.update_means(&maped_ratings);
 
             for other_item in &item_chunk {
                 let other_item_id = other_item.get_id();
@@ -257,14 +307,9 @@ where
                     continue;
                 }
 
-                if let Ok(similarity) = fast_adjusted_cosine(
-                    &means,
-                    &maped_ratings,
-                    &users_who_rated[&item_id],
-                    &users_who_rated[&other_item_id],
-                    &item_id,
-                    &other_item_id,
-                ) {
+                if let Ok(similarity) = adj_cosine
+                    .calculate(&users_who_rated[&item_id], &users_who_rated[&other_item_id])
+                {
                     num += similarity * normalized_ratings[&other_item_id];
                     dem += similarity.abs();
                 }

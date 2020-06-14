@@ -10,7 +10,11 @@ use parser::{Database, Statement};
 use rustyline::Editor;
 use shelves::ShelvesController;
 use simple_movie::SimpleMovieController;
-use std::{fmt::Display, hash::Hash, time::Instant};
+use std::{
+    fmt::{Debug, Display},
+    hash::Hash,
+    time::Instant,
+};
 
 macro_rules! prompt {
     ($ed:ident) => {{
@@ -63,7 +67,7 @@ where
     C: Controller<User, UserId, Item, ItemId>,
     User: Entity<Id = UserId> + ToTable,
     Item: Entity<Id = ItemId> + ToTable,
-    UserId: Hash + Eq + Display + Clone,
+    UserId: Hash + Eq + Display + Clone + Default,
     ItemId: Hash + Eq + Display + Clone,
 {
     let mut sim_matrix = SimilarityMatrix::new(controller, m, n, threshold);
@@ -151,7 +155,7 @@ where
     C: Controller<User, UserId, Item, ItemId>,
     User: Entity<Id = UserId> + ToTable,
     Item: Entity<Id = ItemId> + ToTable + Clone,
-    UserId: Hash + Eq + Display + Clone,
+    UserId: Hash + Eq + Display + Clone + Default,
     ItemId: Hash + Eq + Display + Clone,
 {
     let engine = Engine::with_controller(&controller);
