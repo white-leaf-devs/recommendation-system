@@ -19,17 +19,21 @@ type Means<UserId, Value> = HashMap<UserId, Value>;
 type MinHeap<T> = BinaryHeap<Reverse<T>>;
 
 #[derive(Debug, Clone, Default)]
-pub struct MeanUsage<UserId>(UserId, u32);
+pub struct MeanUsage<UserId>(UserId, u32, usize);
 
 impl<UserId> MeanUsage<UserId> {
     pub fn freq(&self) -> u32 {
         self.1
     }
+
+    pub fn size(&self) -> usize {
+        self.2
+    }
 }
 
 impl<UserId> PartialEq for MeanUsage<UserId> {
     fn eq(&self, other: &Self) -> bool {
-        self.freq().eq(&other.freq())
+        self.freq().eq(&other.freq()) && self.size().eq(&other.size())
     }
 }
 
@@ -37,13 +41,22 @@ impl<UserId> Eq for MeanUsage<UserId> {}
 
 impl<UserId> PartialOrd for MeanUsage<UserId> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.freq().partial_cmp(&other.freq())
+        self.freq()
+            .partial_cmp(&other.freq())
+            .and_then(|ord| match ord {
+                Ordering::Equal => self.size().partial_cmp(&other.size()),
+                _ => Some(ord),
+            })
     }
 }
 
 impl<UserId> Ord for MeanUsage<UserId> {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.freq().cmp(&other.freq())
+        let ord = self.freq().cmp(&other.freq());
+        match ord {
+            Ordering::Equal => self.size().cmp(&other.size()),
+            _ => ord,
+        }
     }
 }
 
@@ -52,7 +65,8 @@ pub struct AdjCosine<UserId, Value>
 where
     UserId: Hash + Eq,
 {
-    means_freq: MinHeap<MeanUsage<UserId>>,
+    // The value is a tuple of (usage, size)
+    mfreq: HashMap<UserId, (u32, usize)>,
     means: HashMap<UserId, Value>,
 }
 
@@ -60,7 +74,7 @@ impl<UserId, Value> AdjCosine<UserId, Value>
 where
     UserId: Hash + Eq,
 {
-    const THRESHOLD: usize = 1024;
+    const THRESHOLD: usize = 1048576;
 
     pub fn new() -> Self
     where
@@ -74,10 +88,24 @@ where
         self.means.contains_key(user_id)
     }
 
-    pub fn shrink_means(&mut self) {
+    pub fn shrink_means(&mut self)
+    where
+        UserId: Clone,
+    {
+        if self.means.len() < Self::THRESHOLD {
+            return;
+        }
+
+        let mut min_heap: MinHeap<_> = self
+            .mfreq
+            .iter()
+            .map(|(user_id, (usage, size))| Reverse(MeanUsage(user_id.to_owned(), *usage, *size)))
+            .collect();
+
         while self.means.len() > Self::THRESHOLD {
-            let Reverse(MeanUsage(uid, _)) = self.means_freq.pop().unwrap();
+            let Reverse(MeanUsage(uid, _, _)) = min_heap.pop().unwrap();
             self.means.remove(&uid);
+            self.mfreq.remove(&uid);
         }
     }
 
@@ -98,13 +126,13 @@ where
             if let Some(mean) = mean {
                 let mean = mean / Value::from(n).unwrap();
                 self.means.insert(id.to_owned(), mean);
-                self.means_freq.push(Reverse(MeanUsage(id.to_owned(), 0)));
+                self.mfreq.insert(id.to_owned(), (0, ratings.len()));
             }
         }
     }
 
     pub fn calculate(
-        &self,
+        &mut self,
         item_a_ratings: &Ratings<UserId, Value>,
         item_b_ratings: &Ratings<UserId, Value>,
     ) -> Result<Value, ErrorKind>
@@ -117,6 +145,12 @@ where
 
         for (user_id, (val_a, val_b)) in common_keys_iter(item_a_ratings, item_b_ratings) {
             let mean = if let Some(mean) = self.means.get(user_id) {
+                let (freq, _) = self
+                    .mfreq
+                    .get_mut(user_id)
+                    .expect("Broken invariant: mfreq doesn't contain an already stored mean");
+
+                *freq += 1;
                 *mean
             } else {
                 continue;
