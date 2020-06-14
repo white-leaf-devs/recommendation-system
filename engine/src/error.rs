@@ -19,4 +19,7 @@ pub enum ErrorKind {
 
     #[error("Empty k nearest neighbors")]
     EmptyKNearestNeighbors,
+
+    #[error("This feature is not implemented yet")]
+    NotImplemented,
 }

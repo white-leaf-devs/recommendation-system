@@ -82,8 +82,40 @@ where
         item_a: Item,
         item_b: Item,
         method: ItemMethod,
-    ) -> Result<f64, Error> {
-        todo!()
+    ) -> Result<f64, Error>
+    where
+        UserId: Default,
+    {
+        match method {
+            ItemMethod::AdjCosine => {
+                let item_a_id = item_a.get_id();
+                let item_b_id = item_b.get_id();
+
+                let users_who_rated = self.controller.users_who_rated(&[item_a, item_b])?;
+
+                let all_users_iter = users_who_rated.values();
+                let mut all_users = HashSet::new();
+
+                for users in all_users_iter {
+                    for user in users.keys() {
+                        all_users.insert(user.clone());
+                    }
+                }
+
+                let all_users: Vec<_> = all_users.into_iter().collect();
+                let all_users = self.controller.create_partial_users(&all_users)?;
+                let maped_ratings = self.controller.maped_ratings_by(&all_users)?;
+
+                let mut adj_cosine = AdjCosine::new();
+                adj_cosine.update_means(&maped_ratings);
+
+                let sim = adj_cosine
+                    .calculate(&users_who_rated[&item_a_id], &users_who_rated[&item_b_id])?;
+
+                Ok(sim)
+            }
+            _ => Err(ErrorKind::NotImplemented.into()),
+        }
     }
 
     pub fn user_knn(
