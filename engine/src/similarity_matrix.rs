@@ -1,8 +1,7 @@
-use crate::distances::items::{adjusted_cosine_means, fast_adjusted_cosine, AdjCosine};
-use controller::{Controller, Entity, ItemsUsers, LazyItemChunks, MapedRatings};
+use crate::distances::items::AdjCosine;
+use controller::{Controller, Entity, LazyItemChunks, MapedRatings};
 use std::{
     collections::{HashMap, HashSet},
-    fmt::Debug,
     hash::Hash,
 };
 

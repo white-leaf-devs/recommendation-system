@@ -27,11 +27,8 @@ use crate::{
     maped_distance::MapedDistance,
 };
 use anyhow::Error;
-use controller::{Controller, Entity, ItemsUsers, MapedRatings};
-use distances::items::{
-    adjusted_cosine_means, denormalize_user_rating, fast_adjusted_cosine, normalize_user_ratings,
-    AdjCosine,
-};
+use controller::{Controller, Entity, MapedRatings};
+use distances::items::{denormalize_user_rating, normalize_user_ratings, AdjCosine};
 use error::ErrorKind;
 use knn::{Knn, MaxHeapKnn, MinHeapKnn};
 use num_traits::Zero;
