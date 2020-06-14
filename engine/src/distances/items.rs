@@ -4,7 +4,7 @@ use controller::{MapedRatings, Ratings};
 use num_traits::float::Float;
 use std::{
     cmp::{Ordering, Reverse},
-    collections::{BinaryHeap, HashMap, HashSet},
+    collections::{BinaryHeap, HashMap},
     hash::Hash,
     ops::{Add, AddAssign, Div, Mul, Sub},
 };
@@ -15,7 +15,6 @@ pub enum Method {
     SlopeOne,
 }
 
-type Means<UserId, Value> = HashMap<UserId, Value>;
 type MinHeap<T> = BinaryHeap<Reverse<T>>;
 
 #[derive(Debug, Clone, Default)]
