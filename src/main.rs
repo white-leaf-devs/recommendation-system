@@ -153,7 +153,7 @@ fn database_connected_prompt<C, User, UserId, Item, ItemId>(
 ) -> Result<(), Error>
 where
     C: Controller<User, UserId, Item, ItemId>,
-    User: Entity<Id = UserId> + ToTable,
+    User: Entity<Id = UserId> + ToTable + Clone,
     Item: Entity<Id = ItemId> + ToTable + Clone,
     UserId: Hash + Eq + Display + Clone + Default,
     ItemId: Hash + Eq + Display + Clone,
