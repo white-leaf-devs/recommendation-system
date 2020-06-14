@@ -7,10 +7,10 @@ pub mod schema;
 use crate::models::{books::Book, ratings::Rating, users::User};
 use crate::schema::{books, ratings, users};
 use anyhow::Error;
-use controller::{error::ErrorKind, Controller, ItemsUsers, MapedRatings, Ratings, SearchBy};
+use controller::{error::ErrorKind, Controller, MapedRatings, Ratings, SearchBy};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 pub fn establish_connection(url: &str) -> Result<PgConnection, Error> {
     Ok(PgConnection::establish(&url)?)

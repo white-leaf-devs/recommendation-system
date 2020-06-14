@@ -78,7 +78,6 @@ where
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
-pub type ItemsUsers<ItemId, UserId> = HashMap<ItemId, HashSet<UserId>>;
 pub type Ratings<ItemId, Value = f64> = HashMap<ItemId, Value>;
 pub type MapedRatings<UserId, ItemId, Value = f64> = HashMap<UserId, Ratings<ItemId, Value>>;
 
