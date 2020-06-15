@@ -1,4 +1,5 @@
-use crate::distances::items::AdjCosine;
+use crate::{distances::items::AdjCosine, error::ErrorKind};
+use anyhow::Error;
 use controller::{Controller, Entity, LazyItemChunks, MapedRatings};
 use std::{
     collections::{HashMap, HashSet},
@@ -9,6 +10,7 @@ pub struct SimilarityMatrix<'a, C, User, UserId, Item, ItemId>
 where
     User: Entity<Id = UserId>,
     Item: Entity<Id = ItemId>,
+    UserId: Hash + Eq,
     C: Controller<User, UserId, Item, ItemId>,
 {
     controller: &'a C,
@@ -16,6 +18,8 @@ where
     ver_chunk_size: usize,
     hor_chunk_size: usize,
     threshold: usize,
+
+    adj_cosine: AdjCosine<UserId, f64>,
 
     ver_iter: LazyItemChunks<'a, User, UserId, Item, ItemId>,
     hor_iter: LazyItemChunks<'a, User, UserId, Item, ItemId>,
@@ -25,14 +29,19 @@ impl<'a, C, User, UserId, Item, ItemId> SimilarityMatrix<'a, C, User, UserId, It
 where
     User: Entity<Id = UserId>,
     Item: Entity<Id = ItemId>,
+    UserId: Hash + Eq,
     C: Controller<User, UserId, Item, ItemId>,
 {
-    pub fn new(controller: &'a C, m: usize, n: usize, threshold: usize) -> Self {
+    pub fn new(controller: &'a C, m: usize, n: usize, threshold: usize) -> Self
+    where
+        UserId: Default,
+    {
         Self {
             controller,
             ver_chunk_size: m,
             hor_chunk_size: n,
             threshold,
+            adj_cosine: AdjCosine::new(),
             ver_iter: controller.items_by_chunks(m),
             hor_iter: controller.items_by_chunks(n),
         }
@@ -52,26 +61,35 @@ where
         }
     }
 
-    pub fn get_chunk(&mut self, i: usize, j: usize) -> Option<HashMap<ItemId, HashMap<ItemId, f64>>>
+    pub fn get_chunk(
+        &mut self,
+        i: usize,
+        j: usize,
+    ) -> Result<HashMap<ItemId, HashMap<ItemId, f64>>, Error>
     where
         UserId: Hash + Eq + Clone + Default,
         ItemId: Hash + Eq + Clone,
     {
-        let ver_items = self.ver_iter.nth(i)?;
-        let hor_items = self.hor_iter.nth(j)?;
+        let ver_items = self
+            .ver_iter
+            .nth(i)
+            .ok_or_else(|| ErrorKind::IndexOutOfBound)?;
+
+        let hor_items = self
+            .hor_iter
+            .nth(j)
+            .ok_or_else(|| ErrorKind::IndexOutOfBound)?;
 
         let ver_items_users: MapedRatings<ItemId, UserId> = self
             .controller
-            .users_who_rated(&ver_items)
-            .ok()?
+            .users_who_rated(&ver_items)?
             .into_iter()
             .filter(|(_, ratings)| !ratings.is_empty())
             .collect();
 
         let hor_items_users: MapedRatings<ItemId, UserId> = self
             .controller
-            .users_who_rated(&hor_items)
-            .ok()?
+            .users_who_rated(&hor_items)?
             .into_iter()
             .filter(|(_, ratings)| !ratings.is_empty())
             .collect();
@@ -85,12 +103,20 @@ where
             }
         }
 
-        let all_users: Vec<_> = all_users.into_iter().collect();
-        let all_partial_users = self.controller.create_partial_users(&all_users).ok()?;
-        let maped_ratings = self.controller.maped_ratings_by(&all_partial_users).ok()?;
+        // Shrink some means by their usage frequency
+        self.adj_cosine.shrink_means();
 
-        let mut adj_cosine = AdjCosine::new();
-        adj_cosine.update_means(&maped_ratings);
+        // Collect all the users that doesn't have a calculated mean
+        let all_users: Vec<_> = all_users
+            .into_iter()
+            .filter(|user_id| !self.adj_cosine.has_mean_for(user_id))
+            .collect();
+        let all_partial_users = self.controller.create_partial_users(&all_users)?;
+
+        for partial_users_chunk in all_partial_users.chunks(10000) {
+            let mean_chunk = self.controller.get_means(partial_users_chunk);
+            self.adj_cosine.add_new_means(&mean_chunk);
+        }
 
         let mut matrix = HashMap::new();
         for (item_a, users_a) in ver_items_users.into_iter() {
@@ -99,7 +125,7 @@ where
                     continue;
                 }
 
-                if let Ok(similarity) = adj_cosine.calculate(&users_a, users_b) {
+                if let Ok(similarity) = self.adj_cosine.calculate(&users_a, users_b) {
                     matrix
                         .entry(item_a.clone())
                         .or_insert_with(HashMap::new)
@@ -113,6 +139,6 @@ where
                 .insert(item_a, 1.0);
         }
 
-        Some(matrix)
+        Ok(matrix)
     }
 }
