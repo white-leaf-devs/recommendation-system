@@ -22,4 +22,7 @@ pub enum ErrorKind {
 
     #[error("This feature is not implemented yet")]
     NotImplemented,
+
+    #[error("Indices out of bounds")]
+    IndexOutOfBound,
 }
