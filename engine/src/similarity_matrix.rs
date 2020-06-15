@@ -119,13 +119,13 @@ where
         }
 
         let mut matrix = HashMap::new();
-        for (item_a, users_a) in ver_items_users.into_iter() {
-            for (item_b, users_b) in hor_items_users.iter() {
+        for (item_a, item_a_ratings) in ver_items_users.into_iter() {
+            for (item_b, item_b_ratings) in hor_items_users.iter() {
                 if matrix.contains_key(item_b) {
                     continue;
                 }
 
-                if let Ok(similarity) = self.adj_cosine.calculate(&users_a, users_b) {
+                if let Ok(similarity) = self.adj_cosine.calculate(&item_a_ratings, item_b_ratings) {
                     matrix
                         .entry(item_a.clone())
                         .or_insert_with(HashMap::new)
