@@ -163,6 +163,18 @@ user_distance(searchby, searchby, user_method)
 user_distance(id('243'), name('Alan'), minkowski(3))
 ```
 
+###### `item_distance`
+
+Compute the distance between two specified items 
+
+```python
+# Syntax
+item_distance(searchby, searchby, item_method)
+
+# Example 
+item_distance(id('12'), id('11'), adj_cosine)
+```
+
 ###### `user_knn`
 
 Find the `k` nearest neighbors for a given user, optionally by chunks of `chunk_size`
