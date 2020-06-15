@@ -86,11 +86,10 @@ mod tests {
             5 => 2.,
         };
 
-        let mut iter = common_keys_iter(&a, &b);
+        let iter = common_keys_iter(&a, &b);
 
-        assert_eq!(iter.next(), Some((&0, (&0., &2.))));
-        assert_eq!(iter.next(), Some((&2, (&0., &2.))));
-        assert_eq!(iter.next(), Some((&5, (&0., &2.))));
-        assert_eq!(iter.next(), None);
+        for (k, _) in iter {
+            assert!(k == &2 || k == &0 || k == &5);
+        }
     }
 }

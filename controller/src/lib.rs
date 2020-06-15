@@ -1,6 +1,6 @@
 use anyhow::Error;
 use prettytable::{cell, format::consts::FORMAT_NO_LINESEP, row, table, Table};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt::{self, Display};
 
 #[derive(Debug, Clone, Eq, PartialEq)]

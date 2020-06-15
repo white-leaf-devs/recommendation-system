@@ -10,11 +10,7 @@ use parser::{Database, Statement};
 use rustyline::Editor;
 use shelves::ShelvesController;
 use simple_movie::SimpleMovieController;
-use std::{
-    fmt::{Debug, Display},
-    hash::Hash,
-    time::Instant,
-};
+use std::{fmt::Display, hash::Hash, time::Instant};
 
 macro_rules! prompt {
     ($ed:ident) => {{

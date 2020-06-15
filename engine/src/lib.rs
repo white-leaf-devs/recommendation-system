@@ -521,28 +521,28 @@ mod tests {
 
     #[test]
     fn item_based_pred() -> Result<(), Error> {
-        use movie_lens::MovieLensController;
+        use books::BooksController;
         use std::time::Instant;
 
-        let controller = MovieLensController::new()?;
+        let controller = BooksController::new()?;
         let engine = Engine::with_controller(&controller);
 
         let user = controller
-            .users_by(&SearchBy::id("1"))?
+            .users_by(&SearchBy::id("123"))?
             .drain(..1)
             .next()
             .unwrap();
 
         let item = controller
-            .items_by(&SearchBy::name("Father of the Bride Part II (1995)"))?
+            .items_by(&SearchBy::id("0679425608"))?
             .drain(..1)
             .next()
             .unwrap();
 
         let now = Instant::now();
         println!(
-            "\nItem based prediction (UserId 1, Father of the Bride Part II (1995), 2500): {:?}",
-            engine.item_based_predict(user, item, 2500)?
+            "Item based prediction: {:?}",
+            engine.item_based_predict(user, item, 2000)?
         );
         println!("Elapsed: {}", now.elapsed().as_secs_f64());
 
