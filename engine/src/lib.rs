@@ -32,12 +32,7 @@ use distances::items::{denormalize_user_rating, normalize_user_ratings, AdjCosin
 use error::ErrorKind;
 use knn::{Knn, MaxHeapKnn, MinHeapKnn};
 use num_traits::Zero;
-use std::{
-    collections::{HashMap, HashSet},
-    fmt::Debug,
-    hash::Hash,
-    marker::PhantomData,
-};
+use std::{collections::HashSet, hash::Hash, marker::PhantomData};
 
 pub struct Engine<'a, C, User, UserId, Item, ItemId>
 where

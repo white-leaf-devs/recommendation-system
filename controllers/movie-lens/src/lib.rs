@@ -9,7 +9,7 @@ use crate::models::{
     ratings::Rating,
     users::{Mean, User},
 };
-use crate::schema::{means, movies, ratings, users};
+use crate::schema::{movies, ratings, users};
 use anyhow::Error;
 use controller::{error::ErrorKind, Controller, MapedRatings, Ratings, SearchBy};
 use diesel::pg::PgConnection;
@@ -190,7 +190,7 @@ impl Controller<User, i32, Movie, i32> for MovieLensController {
     fn get_range(&self) -> (f64, f64) {
         (0.5, 5.)
     }
-    fn get_means(&self, users: &Vec<User>) -> HashMap<i32, f64> {
+    fn get_means(&self, users: &[User]) -> HashMap<i32, f64> {
         let means = Mean::belonging_to(users)
             .load::<Mean>(&self.pg_conn)
             .unwrap();

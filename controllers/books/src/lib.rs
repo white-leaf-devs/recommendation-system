@@ -193,7 +193,8 @@ impl Controller<User, i32, Book, String> for BooksController {
     fn get_range(&self) -> (f64, f64) {
         (0., 10.)
     }
-    fn get_means(&self, users: &Vec<User>) -> HashMap<i32, f64> {
+
+    fn get_means(&self, users: &[User]) -> HashMap<i32, f64> {
         let means = Mean::belonging_to(users)
             .load::<Mean>(&self.pg_conn)
             .unwrap();

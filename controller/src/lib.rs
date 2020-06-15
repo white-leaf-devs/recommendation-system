@@ -207,7 +207,7 @@ where
     fn maped_ratings_except(&self, user: &User) -> Result<MapedRatings<UserId, ItemId>>;
 
     fn get_range(&self) -> (f64, f64);
-    fn get_means(&self, users: &Vec<User>) -> HashMap<UserId, f64>;
+    fn get_means(&self, users: &[User]) -> HashMap<UserId, f64>;
 }
 
 pub mod error {

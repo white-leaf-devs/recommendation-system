@@ -3,16 +3,12 @@ use controller::{Controller, Entity};
 use diesel::pg::PgConnection;
 use diesel::{insert_into, prelude::*};
 use movie_lens::establish_connection;
-use movie_lens::models::{
-    movies::{Movie, NewMovie},
-    ratings::NewRating,
-    users::{NewMean, NewUser, User},
-};
-use movie_lens::schema::{means, movies, ratings, users};
+use movie_lens::models::users::NewMean;
+use movie_lens::schema::means;
 use movie_lens::MovieLensController;
 use std::collections::HashMap;
 
-fn insert_means(conn: &PgConnection, new_means: &Vec<NewMean>) -> Result<(), Error> {
+fn insert_means(conn: &PgConnection, new_means: &[NewMean]) -> Result<(), Error> {
     insert_into(means::table).values(new_means).execute(conn)?;
 
     Ok(())
@@ -24,7 +20,7 @@ fn compute_mean(ratings: &HashMap<i32, f64>) -> f64 {
     }
 
     let mut mean = 0.0;
-    for (_, rating) in ratings {
+    for rating in ratings.values() {
         mean += rating;
     }
     mean / ratings.len() as f64
