@@ -32,7 +32,12 @@ use distances::items::{denormalize_user_rating, normalize_user_ratings, AdjCosin
 use error::ErrorKind;
 use knn::{Knn, MaxHeapKnn, MinHeapKnn};
 use num_traits::Zero;
-use std::{collections::HashSet, hash::Hash, marker::PhantomData};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Debug,
+    hash::Hash,
+    marker::PhantomData,
+};
 
 pub struct Engine<'a, C, User, UserId, Item, ItemId>
 where
@@ -239,6 +244,7 @@ where
         chunk_size: usize,
     ) -> Result<f64, Error>
     where
+        User: Clone,
         UserId: Default,
     {
         let item_id = item.get_id();
@@ -295,11 +301,23 @@ where
 
             println!("Gathering ratings for {}", all_partial_users.len());
 
-            // Query all the user ratings that doesn't have a mean calculated
-            let maped_ratings = self.controller.maped_ratings_by(&all_partial_users)?;
+            let mut partial_users_chunk = Vec::new();
 
-            // Update means for these new ratings
-            adj_cosine.update_means(&maped_ratings);
+            for (i, partial_user) in all_partial_users.iter().enumerate() {
+                partial_users_chunk.push((*partial_user).clone());
+                if i % 10000 == 0 {
+                    let mean_chunk = self.controller.get_means(&partial_users_chunk);
+                    adj_cosine.add_new_means(&mean_chunk);
+                    partial_users_chunk.clear();
+                }
+            }
+
+            if !partial_users_chunk.is_empty() {
+                let mean_chunk = self.controller.get_means(&partial_users_chunk);
+                // Update means for these new ratings
+                adj_cosine.add_new_means(&mean_chunk);
+                partial_users_chunk.clear();
+            }
 
             for other_item in &item_chunk {
                 let other_item_id = other_item.get_id();
@@ -528,6 +546,104 @@ mod tests {
         );
         println!("Elapsed: {}", now.elapsed().as_secs_f64());
 
+        let controller = SimpleMovieController::new()?;
+        let engine = Engine::with_controller(&controller);
+
+        let user = controller
+            .users_by(&SearchBy::name("Josh"))?
+            .drain(..1)
+            .next()
+            .unwrap();
+
+        let item = controller
+            .items_by(&SearchBy::name("Blade Runner"))?
+            .drain(..1)
+            .next()
+            .unwrap();
+
+        let now = Instant::now();
+        println!(
+            "\nItem based prediction SimpleMovie: {:?}",
+            engine.item_based_predict(user, item, 2500)?
+        );
+        println!("Elapsed: {}", now.elapsed().as_secs_f64());
+
+        use movie_lens_small::MovieLensSmallController;
+
+        let controller = MovieLensSmallController::new()?;
+        let engine = Engine::with_controller(&controller);
+
+        let user = controller
+            .users_by(&SearchBy::id("2"))?
+            .drain(..1)
+            .next()
+            .unwrap();
+
+        let item = controller
+            .items_by(&SearchBy::name("Suture (1993)"))?
+            .drain(..1)
+            .next()
+            .unwrap();
+
+        let now = Instant::now();
+        println!(
+            "\nItem based prediction MovieLensSmall: {:?}",
+            engine.item_based_predict(user, item, 2500)?
+        );
+        println!("Elapsed: {}", now.elapsed().as_secs_f64());
+
+        /*let controller = BooksController::new()?;
+        let engine = Engine::with_controller(&controller);
+
+        let user = controller
+            .users_by(&SearchBy::id("1"))?
+            .drain(..1)
+            .next()
+            .unwrap();
+
+        let item = controller
+            .items_by(&SearchBy::name("Father of the Bride Part II (1995)"))?
+            .drain(..1)
+            .next()
+            .unwrap();
+
+        let now = Instant::now();
+        println!(
+            "\nItem based prediction Books: {:?}",
+            engine.item_based_predict(user, item, 2500)?
+        );
+        println!("Elapsed: {}", now.elapsed().as_secs_f64());*/
+
         Ok(())
     }
+
+    /*#[test]
+    fn shelves_item_based_pred() -> Result<(), Error> {
+        use shelves::ShelvesController;
+        use std::time::Instant;
+
+        let controller = ShelvesController::new()?;
+        let engine = Engine::with_controller(&controller);
+
+        let user = controller
+            .users_by(&SearchBy::id("0"))?
+            .drain(..1)
+            .next()
+            .unwrap();
+
+        let item = controller
+            .items_by(&SearchBy::id("1000"))?
+            .drain(..1)
+            .next()
+            .unwrap();
+
+        let now = Instant::now();
+        println!(
+            "Item based prediction (UserId 0, ItemId 1000, 1): {:?}",
+            engine.item_based_predict(user, item, 1)?
+        );
+        println!("Elapsed: {}", now.elapsed().as_secs_f64());
+
+        Ok(())
+    }*/
 }

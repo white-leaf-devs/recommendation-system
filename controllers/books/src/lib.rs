@@ -4,7 +4,11 @@ extern crate diesel;
 pub mod models;
 pub mod schema;
 
-use crate::models::{books::Book, ratings::Rating, users::User};
+use crate::models::{
+    books::Book,
+    ratings::Rating,
+    users::{Mean, User},
+};
 use crate::schema::{books, ratings, users};
 use anyhow::Error;
 use controller::{error::ErrorKind, Controller, MapedRatings, Ratings, SearchBy};
@@ -188,6 +192,19 @@ impl Controller<User, i32, Book, String> for BooksController {
 
     fn get_range(&self) -> (f64, f64) {
         (0., 10.)
+    }
+    fn get_means(&self, users: &Vec<User>) -> HashMap<i32, f64> {
+        let means = Mean::belonging_to(users)
+            .load::<Mean>(&self.pg_conn)
+            .unwrap();
+
+        let mut means_by_user = HashMap::new();
+
+        for mean in means {
+            means_by_user.insert(mean.user_id, mean.val);
+        }
+
+        means_by_user
     }
 }
 

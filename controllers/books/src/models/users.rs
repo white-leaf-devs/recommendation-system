@@ -1,4 +1,4 @@
-use crate::schema::users;
+use crate::schema::{means, users};
 use common_macros::hash_map;
 use controller::Entity;
 use std::collections::HashMap;
@@ -28,6 +28,21 @@ impl Entity for User {
 
         map
     }
+}
+
+#[derive(Debug, Clone, Identifiable, Queryable, Associations)]
+#[belongs_to(User)]
+pub struct Mean {
+    pub id: i32,
+    pub user_id: i32,
+    pub val: f64,
+}
+
+#[derive(Debug, Clone, Insertable)]
+#[table_name = "means"]
+pub struct NewMean {
+    pub user_id: i32,
+    pub val: f64,
 }
 
 // To insert a new user into the database

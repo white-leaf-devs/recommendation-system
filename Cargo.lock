@@ -365,6 +365,7 @@ dependencies = [
  "movie-lens-small",
  "num-traits",
  "rand",
+ "shelves",
  "simple-movie",
  "thiserror",
 ]

@@ -174,6 +174,9 @@ impl Controller<User, i32, Book, i32> for ShelvesController {
     fn get_range(&self) -> (f64, f64) {
         (0., 5.)
     }
+    fn get_means(&self, users: &Vec<User>) -> HashMap<i32, f64> {
+        todo!()
+    }
 }
 
 #[cfg(feature = "test-controller")]
