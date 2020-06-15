@@ -190,6 +190,7 @@ impl Controller<User, i32, Movie, i32> for MovieLensController {
     fn get_range(&self) -> (f64, f64) {
         (0.5, 5.)
     }
+
     fn get_means(&self, users: &[User]) -> HashMap<i32, f64> {
         let means = Mean::belonging_to(users)
             .load::<Mean>(&self.pg_conn)
