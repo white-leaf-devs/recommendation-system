@@ -107,16 +107,18 @@ where
                             }
                         };
 
-                        if let Some(chunk) = &maybe_chunk {
-                            let val = chunk.get(&item_id_a).and_then(|row| row.get(&item_id_b));
+                        match &maybe_chunk {
+                            Ok(chunk) => {
+                                let val = chunk.get(&item_id_a).and_then(|row| row.get(&item_id_b));
 
-                            if let Some(val) = val {
-                                println!("Value for ({}, {}) is {}", item_id_a, item_id_b, val);
-                            } else {
-                                println!("No value found for ({}, {})", item_id_a, item_id_b);
+                                if let Some(val) = val {
+                                    println!("Value for ({}, {}) is {}", item_id_a, item_id_b, val);
+                                } else {
+                                    println!("No value found for ({}, {})", item_id_a, item_id_b);
+                                }
                             }
-                        } else {
-                            println!("Failed to use current chunk (maybe out-of-bounds)");
+
+                            Err(e) => println!("Failed to get chunk ({})", e),
                         }
                     }
 
