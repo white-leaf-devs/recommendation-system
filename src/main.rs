@@ -54,8 +54,8 @@ macro_rules! prompt {
 fn sim_matrix_prompt<C, User, UserId, Item, ItemId>(
     controller: &C,
     name: &str,
-    m: usize,
-    n: usize,
+    ver_chunk_size: usize,
+    hor_chunk_size: usize,
     threshold: usize,
     rl: &mut Editor<()>,
 ) -> Result<(), Error>
@@ -66,12 +66,19 @@ where
     UserId: Hash + Eq + Display + Clone + Default,
     ItemId: Hash + Eq + Display + Clone,
 {
-    let mut sim_matrix = SimilarityMatrix::new(controller, m, n, threshold);
+    let mut sim_matrix =
+        SimilarityMatrix::new(controller, ver_chunk_size, hor_chunk_size, threshold);
     let mut curr_i = 0;
     let mut curr_j = 0;
 
     let now = Instant::now();
-    let mut maybe_chunk = sim_matrix.get_chunk(curr_i, curr_j);
+    let mut chunk = match sim_matrix.get_chunk(curr_i, curr_j) {
+        Ok(chunk) => chunk,
+        Err(e) => {
+            println!("{}", e);
+            return Ok(());
+        }
+    };
     println!("Operation took {:.4} seconds", now.elapsed().as_secs_f64());
 
     loop {
@@ -107,27 +114,32 @@ where
                             }
                         };
 
-                        match &maybe_chunk {
-                            Ok(chunk) => {
-                                let val = chunk.get(&item_id_a).and_then(|row| row.get(&item_id_b));
+                        let val = chunk.get(&item_id_a).and_then(|row| row.get(&item_id_b));
 
-                                if let Some(val) = val {
-                                    println!("Value for ({}, {}) is {}", item_id_a, item_id_b, val);
-                                } else {
-                                    println!("No value found for ({}, {})", item_id_a, item_id_b);
-                                }
-                            }
-
-                            Err(e) => println!("Failed to get chunk ({})", e),
+                        if let Some(val) = val {
+                            println!("Value for ({}, {}) is {}", item_id_a, item_id_b, val);
+                        } else {
+                            println!("No value found for ({}, {})", item_id_a, item_id_b);
                         }
                     }
 
                     Statement::SimMatrixMoveTo(i, j) => {
+                        let old_i = curr_i;
+                        let old_j = curr_j;
+
                         curr_i = i;
                         curr_j = j;
 
                         let now = Instant::now();
-                        maybe_chunk = sim_matrix.get_chunk(curr_i, curr_j);
+                        chunk = match sim_matrix.get_chunk(curr_i, curr_j) {
+                            Ok(chunk) => chunk,
+                            Err(e) => {
+                                println!("{}", e);
+                                curr_i = old_i;
+                                curr_j = old_j;
+                                chunk
+                            }
+                        };
                         println!("Operation took {:.4} seconds", now.elapsed().as_secs_f64());
                     }
 
