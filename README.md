@@ -201,6 +201,42 @@ item_based_predict(searchby, searchby, item_method, chunk_size)
 item_based_predict(id('123'), name('The Great Gatsby'), adj_cosine, 100)
 ```
 
+###### `enter_sim_matrix`
 
+Enter the similarity matrix by chunks, this uses item distances. This puts you into a sub shell where you can move in the matrix and get some values
+
+```python
+# Syntax 
+enter_sim_matrix(vert_chunk_size, hori_chunk_size, threshold, item_method)
+
+# Example
+enter_sim_matrix(100, 100, 100, adj_cosine)
+```
+
+###### `move_to` (only in sim_matrix shell)
+
+Move to another chunk inside the similarity matrix
+
+```python
+# Syntax
+move_to(number, number)
+
+# Example
+move_to(0, 1)
+```
+
+###### `get` (only in sim_matrix shell)
+
+From the similarity matrix get the value for two items specified
+
+```python
+# Syntax
+get(searchby, searchby)
+
+# Example
+get(id('123'), id('243'))
+```
+
+### Disconnecting and exiting
 
 If you wish to try another database you can simple type `d<Enter>` and you will disconnect from the current database, `<CTRL+C>` and `<CTRL+D>` works as expected, cancelling current line and exiting.
