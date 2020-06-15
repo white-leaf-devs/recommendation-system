@@ -294,24 +294,10 @@ where
                 .collect();
             let all_partial_users = self.controller.create_partial_users(&all_users)?;
 
-            println!("Gathering ratings for {}", all_partial_users.len());
-
-            let mut partial_users_chunk = Vec::new();
-
-            for (i, partial_user) in all_partial_users.iter().enumerate() {
-                partial_users_chunk.push((*partial_user).clone());
-                if i % 10000 == 0 {
-                    let mean_chunk = self.controller.get_means(&partial_users_chunk);
-                    adj_cosine.add_new_means(&mean_chunk);
-                    partial_users_chunk.clear();
-                }
-            }
-
-            if !partial_users_chunk.is_empty() {
-                let mean_chunk = self.controller.get_means(&partial_users_chunk);
-                // Update means for these new ratings
+            println!("Gathering ratings for {} users", all_partial_users.len());
+            for partial_users_chunk in all_partial_users.chunks(10000) {
+                let mean_chunk = self.controller.get_means(partial_users_chunk);
                 adj_cosine.add_new_means(&mean_chunk);
-                partial_users_chunk.clear();
             }
 
             for other_item in &item_chunk {
