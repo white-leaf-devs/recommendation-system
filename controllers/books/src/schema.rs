@@ -9,6 +9,14 @@ table! {
 }
 
 table! {
+    means (id) {
+        id -> Int4,
+        user_id -> Int4,
+        val -> Float8,
+    }
+}
+
+table! {
     ratings (id) {
         id -> Int4,
         user_id -> Int4,
@@ -25,11 +33,13 @@ table! {
     }
 }
 
+joinable!(means -> users (user_id));
 joinable!(ratings -> books (book_id));
 joinable!(ratings -> users (user_id));
 
 allow_tables_to_appear_in_same_query!(
     books,
+    means,
     ratings,
     users,
 );
