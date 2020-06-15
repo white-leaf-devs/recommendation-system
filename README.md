@@ -70,14 +70,29 @@ databases names are `books`, `simple-movie` and `movie-lens-small`, for example:
 >> connect(books)
 ```
 
-After that you should note that the prompt has changed indicating the database you are
-connected to, showing something like this:
+After that you should note that the prompt has changed indicating the database you are connected to, showing something like this:
 
 ```
 (books) >>
 ```
 
-Before you start digging into the provided functions you should now that some of the provided databases can query its users and items by `id` or `name`, we refer this as `searchby` and its syntax is pretty straightforward. You can write `id(<string>)` or `name(<string>)` to search an user or item by its id or name respectively. For distance methods you simply need to pass and identifier:
+### Searchby
+
+We will use the term `searchby` later on, it's used as an dynamic identifier for users and items and each database, this allows us to search one of those by `id` or `name`
+
+```python
+# Syntax
+searchby = id('string') | name('string')
+
+
+# Example
+id('123')
+name('Patrick C')
+```
+
+### User based distance methods
+
+For some functions it's necessary to specify the distance method, those use the term `user_method` and accept the following values
 
 - Manhattan distance: `manhattan`
 - Euclidean distance: `euclidean`
@@ -88,13 +103,104 @@ Before you start digging into the provided functions you should now that some of
 - Pearson's correlation: `pearson_c`
 - Pearson's approximation: `pearson_a`
 
-Now it's time to play with the following provided functions:
+### Item based distance methods
 
-- `query_user(searchby)`: Query an user by its `id` or `name`, ex. `query_user(id('243'))`
-- `query_item(searchby)`: Query an item by its `id` or `name`, ex. `query_item(name('Alien')`
-- `query_ratings(searchby)`: Query the ratings from the user with `id` or `name`, ex. `query_ratings(id('243'))`
-- `distance(searchby, searchby, method)`: Calculate distance between both users using the specified method, ex. `distance(id('243'), name('Alan'), minkowski(3))`
-- `knn(k, searchby, method)`: Calculate the kNN for the specified user and method, ex. `knn(5, id('243'), euclidean)`
-- `predict(k, searchby, searchby, method)`: Predict an item score for the user with the specified k and method to use in the inner knn, ex. `predict(5, id('243'), name('Alien'), euclidean)`
+Just like the above section some other functions need a method, those use the term `item_method` and accept the following value
+
+- Adjusted cosine: `adj_cosine`
+
+- Slope one: `slope_one`
+
+### Functions
+
+In the following functions and argument with a `?` indicates it's optional.
+
+###### `query_user`
+
+Query an user by its `id` or `name` 
+
+```python
+# Syntax
+query_user(searchby)
+
+# Example
+query_user(id('243'))
+```
+
+###### `query_item`
+
+Query an item by its `id` or `name`
+
+```python
+# Syntax
+query_item(searchby)
+
+# Example
+query_item(name('The Great Gatsby'))
+```
+
+###### `query_ratings`
+
+Query the ratings for an user by its `id` or `name`
+
+```python
+# Syntax 
+query_ratings(searchby)
+
+# Example
+query_ratings(id('12'))
+```
+
+###### `user_distance`
+
+Compute the distance between two specified users
+
+```python
+# Syntax
+user_distance(searchby, searchby, user_method)
+
+# Example
+user_distance(id('243'), name('Alan'), minkowski(3))
+```
+
+###### `user_knn`
+
+Find the `k` nearest neighbors for a given user, optionally by chunks of `chunk_size`
+
+```python
+# Syntax
+user_knn(number, searchby, user_method, chunk_size?)
+
+# Examples
+user_knn(5, id('243'), euclidean) # without chunks
+user_knn(5, id('411'), euclidean, 100) # chunk_size = 100
+```
+
+###### `user_based_predict`
+
+Try to predict an item score for the specified user, this function works with a `knn` using distance between users so its signature receives some of the parameters needed by the underneath `knn`, this function can also work by chunks of `chunk_size`
+
+```python
+# Syntax
+user_based_predict(number, searchby, searchby, user_method, chunk_size?)
+
+# Examples
+user_based_predict(50, id('123'), name('Alien'), euclidean)
+user_based_predict(90, id('234'), name('Alien'), euclidean, 100)
+```
+
+###### `item_based_predict`
+
+Try to predict an item score for the specified user, this function doesn't use a `knn` and instead use a distance between items, this function only works with chunks.
+
+```python
+# Syntax
+item_based_predict(searchby, searchby, item_method, chunk_size)
+
+# Example
+item_based_predict(id('123'), name('The Great Gatsby'), adj_cosine, 100)
+```
+
+
 
 If you wish to try another database you can simple type `d<Enter>` and you will disconnect from the current database, `<CTRL+C>` and `<CTRL+D>` works as expected, cancelling current line and exiting.
