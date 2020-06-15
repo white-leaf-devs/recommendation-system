@@ -108,7 +108,6 @@ For some functions it's necessary to specify the distance method, those use the 
 Just like the above section some other functions need a method, those use the term `item_method` and accept the following value
 
 - Adjusted cosine: `adj_cosine`
-
 - Slope one: `slope_one`
 
 ### Functions
