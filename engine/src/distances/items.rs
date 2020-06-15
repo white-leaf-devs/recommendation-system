@@ -5,6 +5,7 @@ use num_traits::float::Float;
 use std::{
     cmp::{Ordering, Reverse},
     collections::{BinaryHeap, HashMap, HashSet},
+    fmt::Debug,
     hash::Hash,
     ops::{Add, AddAssign, Div, Mul, Sub},
 };
@@ -128,6 +129,17 @@ where
                 self.means.insert(id.to_owned(), mean);
                 self.mfreq.insert(id.to_owned(), (0, ratings.len()));
             }
+        }
+    }
+
+    pub fn add_new_means(&mut self, new_means: &HashMap<UserId, Value>)
+    where
+        UserId: Clone,
+        Value: Float,
+    {
+        for (id, mean) in new_means {
+            self.means.insert(id.clone(), *mean);
+            self.mfreq.insert(id.clone(), (0, 1));
         }
     }
 

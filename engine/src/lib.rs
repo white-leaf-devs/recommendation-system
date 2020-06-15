@@ -34,6 +34,7 @@ use knn::{Knn, MaxHeapKnn, MinHeapKnn};
 use num_traits::Zero;
 use std::{
     collections::{HashMap, HashSet},
+    fmt::Debug,
     hash::Hash,
     marker::PhantomData,
 };
@@ -302,26 +303,19 @@ where
 
             let mut partial_users_chunk = Vec::new();
 
-            // Query all the user ratings that doesn't have a mean calculated
-            // in chunks (because of the limit at Diesel query input)
             for (i, partial_user) in all_partial_users.iter().enumerate() {
-                if i % 10000 == 0 && i != 0 {
-                    println!("Starting to query from  {} users", i);
-                    let maped_ratings_chunk =
-                        self.controller.maped_ratings_by(&partial_users_chunk)?;
-                    // Update means for these new ratings
-                    adj_cosine.update_means(&maped_ratings_chunk);
+                partial_users_chunk.push((*partial_user).clone());
+                if i % 10000 == 0 {
+                    let mean_chunk = self.controller.get_means(&partial_users_chunk);
+                    adj_cosine.add_new_means(&mean_chunk);
                     partial_users_chunk.clear();
-                    println!("Finished.");
-                } else {
-                    partial_users_chunk.push((*partial_user).clone());
                 }
             }
 
             if !partial_users_chunk.is_empty() {
-                let maped_ratings_chunk = self.controller.maped_ratings_by(&partial_users_chunk)?;
+                let mean_chunk = self.controller.get_means(&partial_users_chunk);
                 // Update means for these new ratings
-                adj_cosine.update_means(&maped_ratings_chunk);
+                adj_cosine.add_new_means(&mean_chunk);
                 partial_users_chunk.clear();
             }
 
@@ -344,7 +338,7 @@ where
             return Err(ErrorKind::DivisionByZero.into());
         }
 
-        Ok(denormalize_user_rating(num / dem, 1.0, 5.0)?)
+        Ok(denormalize_user_rating(num / dem, min_rating, max_rating)?)
     }
 }
 
@@ -547,10 +541,78 @@ mod tests {
 
         let now = Instant::now();
         println!(
-            "Item based prediction (UserId 1, Father of the Bride Part II (1995), 2500): {:?}",
+            "\nItem based prediction (UserId 1, Father of the Bride Part II (1995), 2500): {:?}",
             engine.item_based_predict(user, item, 2500)?
         );
         println!("Elapsed: {}", now.elapsed().as_secs_f64());
+
+        let controller = SimpleMovieController::new()?;
+        let engine = Engine::with_controller(&controller);
+
+        let user = controller
+            .users_by(&SearchBy::name("Josh"))?
+            .drain(..1)
+            .next()
+            .unwrap();
+
+        let item = controller
+            .items_by(&SearchBy::name("Blade Runner"))?
+            .drain(..1)
+            .next()
+            .unwrap();
+
+        let now = Instant::now();
+        println!(
+            "\nItem based prediction SimpleMovie: {:?}",
+            engine.item_based_predict(user, item, 2500)?
+        );
+        println!("Elapsed: {}", now.elapsed().as_secs_f64());
+
+        use movie_lens_small::MovieLensSmallController;
+
+        let controller = MovieLensSmallController::new()?;
+        let engine = Engine::with_controller(&controller);
+
+        let user = controller
+            .users_by(&SearchBy::id("2"))?
+            .drain(..1)
+            .next()
+            .unwrap();
+
+        let item = controller
+            .items_by(&SearchBy::name("Suture (1993)"))?
+            .drain(..1)
+            .next()
+            .unwrap();
+
+        let now = Instant::now();
+        println!(
+            "\nItem based prediction MovieLensSmall: {:?}",
+            engine.item_based_predict(user, item, 2500)?
+        );
+        println!("Elapsed: {}", now.elapsed().as_secs_f64());
+
+        /*let controller = BooksController::new()?;
+        let engine = Engine::with_controller(&controller);
+
+        let user = controller
+            .users_by(&SearchBy::id("1"))?
+            .drain(..1)
+            .next()
+            .unwrap();
+
+        let item = controller
+            .items_by(&SearchBy::name("Father of the Bride Part II (1995)"))?
+            .drain(..1)
+            .next()
+            .unwrap();
+
+        let now = Instant::now();
+        println!(
+            "\nItem based prediction Books: {:?}",
+            engine.item_based_predict(user, item, 2500)?
+        );
+        println!("Elapsed: {}", now.elapsed().as_secs_f64());*/
 
         Ok(())
     }
