@@ -32,6 +32,8 @@ where
     UserId: Hash + Eq,
     C: Controller<User, UserId, Item, ItemId>,
 {
+    const PARTIAL_USERS_CHUNK_SIZE: usize = 20000;
+
     pub fn new(controller: &'a C, m: usize, n: usize, threshold: usize) -> Self
     where
         UserId: Default,
@@ -113,7 +115,7 @@ where
             .collect();
         let all_partial_users = self.controller.create_partial_users(&all_users)?;
 
-        for partial_users_chunk in all_partial_users.chunks(10000) {
+        for partial_users_chunk in all_partial_users.chunks(Self::PARTIAL_USERS_CHUNK_SIZE) {
             let mean_chunk = self.controller.get_means(partial_users_chunk);
             self.adj_cosine.add_new_means(&mean_chunk);
         }
