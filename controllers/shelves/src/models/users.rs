@@ -1,4 +1,4 @@
-use crate::schema::users;
+use crate::schema::{means, users};
 use controller::Entity;
 
 // To query data from the database
@@ -20,4 +20,19 @@ impl Entity for User {
 #[table_name = "users"]
 pub struct NewUser {
     pub id: i32,
+}
+
+#[derive(Debug, Clone, Identifiable, Queryable, Associations)]
+#[belongs_to(User)]
+pub struct Mean {
+    pub id: i32,
+    pub user_id: i32,
+    pub val: f64,
+}
+
+#[derive(Debug, Clone, Insertable)]
+#[table_name = "means"]
+pub struct NewMean {
+    pub user_id: i32,
+    pub val: f64,
 }
