@@ -54,6 +54,8 @@ where
     ItemId: Hash + Eq + Clone,
     C: Controller<User, UserId, Item, ItemId>,
 {
+    const PARTIAL_USERS_CHUNK_SIZE: usize = 20000;
+
     pub fn with_controller(controller: &'a C) -> Self {
         Self {
             controller,
@@ -295,7 +297,7 @@ where
             let all_partial_users = self.controller.create_partial_users(&all_users)?;
 
             println!("Gathering ratings for {} users", all_partial_users.len());
-            for partial_users_chunk in all_partial_users.chunks(10000) {
+            for partial_users_chunk in all_partial_users.chunks(Self::PARTIAL_USERS_CHUNK_SIZE) {
                 let mean_chunk = self.controller.get_means(partial_users_chunk);
                 adj_cosine.add_new_means(&mean_chunk);
             }
