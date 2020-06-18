@@ -218,10 +218,10 @@ Enter the similarity matrix by chunks, this uses item distances. This puts you i
 
 ```python
 # Syntax 
-enter_sim_matrix(vert_chunk_size, hori_chunk_size, threshold, item_method)
+enter_sim_matrix(vert_chunk_size, hori_chunk_size, item_method)
 
 # Example
-enter_sim_matrix(100, 100, 100, adj_cosine)
+enter_sim_matrix(100, 100, adj_cosine)
 ```
 
 ###### `move_to` (only in sim_matrix shell)

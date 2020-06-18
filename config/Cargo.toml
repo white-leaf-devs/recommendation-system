@@ -1,0 +1,16 @@
+[package]
+name = "config"
+version = "0.1.0"
+authors = ["Kevin Del Castillo <quebin31@gmail.com>"]
+edition = "2018"
+workspace = ".."
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.31"
+serde = { version = "1.0.112", features = [ "derive" ] }
+toml = "0.5.6"
+
+[dev-dependencies]
+common_macros = "0.1.1"

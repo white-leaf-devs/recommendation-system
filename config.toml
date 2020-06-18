@@ -1,0 +1,23 @@
+[system]
+# Verbose levels:
+#   0  => Errors
+#   1  => Warnings
+#   2  => Info
+#   3+ => Debug
+term_verbosity_level = 0
+file_verbosity_level = 1
+
+[sim_matrix]
+chunk_size_threshold = 0.3 # percentage of original size
+partial_users_chunk_size = 10000 
+allow_chunk_optimization = true 
+
+[engine]
+partial_users_chunk_size = 10000
+
+[databases] # urls
+simple-movie = "postgres://postgres:@localhost/simple-movie"
+books = "postgres://postgres:@localhost/books"
+shelves = "postgres://postgres:@localhost/shelves"
+movie-lens = "postgres://postgres:@localhost/movie-lens"
+movie-lens-small = "postgres://postgres:@localhost/movie-lens-small"

@@ -1,5 +1,6 @@
 use crate::{distances::items::AdjCosine, error::ErrorKind};
 use anyhow::Error;
+use config::Config;
 use controller::{Controller, Entity, LazyItemChunks, MapedRatings};
 use std::{
     collections::{HashMap, HashSet},
@@ -13,11 +14,11 @@ where
     UserId: Hash + Eq,
     C: Controller<User, UserId, Item, ItemId>,
 {
+    config: &'a Config,
     controller: &'a C,
 
     ver_chunk_size: usize,
     hor_chunk_size: usize,
-    threshold: usize,
 
     adj_cosine: AdjCosine<UserId, f64>,
 
@@ -32,17 +33,15 @@ where
     UserId: Hash + Eq,
     C: Controller<User, UserId, Item, ItemId>,
 {
-    const PARTIAL_USERS_CHUNK_SIZE: usize = 20000;
-
-    pub fn new(controller: &'a C, m: usize, n: usize, threshold: usize) -> Self
+    pub fn new(controller: &'a C, config: &'a Config, m: usize, n: usize) -> Self
     where
         UserId: Default,
     {
         Self {
+            config,
             controller,
             ver_chunk_size: m,
             hor_chunk_size: n,
-            threshold,
             adj_cosine: AdjCosine::new(),
             ver_iter: controller.items_by_chunks(m),
             hor_iter: controller.items_by_chunks(n),
@@ -54,7 +53,15 @@ where
     }
 
     pub fn optimize_chunks(&mut self) {
-        while self.approximate_chunk_size() > self.threshold {
+        if !self.config.sim_matrix.allow_chunk_optimization {
+            return;
+        }
+
+        let threshold = self.config.sim_matrix.chunk_size_threshold;
+        let original_size = self.approximate_chunk_size();
+        let target_size = (original_size as f64 * threshold) as usize;
+
+        while self.approximate_chunk_size() > target_size {
             self.ver_chunk_size /= 2;
             self.hor_chunk_size /= 2;
 
@@ -115,7 +122,8 @@ where
             .collect();
         let all_partial_users = self.controller.create_partial_users(&all_users)?;
 
-        for partial_users_chunk in all_partial_users.chunks(Self::PARTIAL_USERS_CHUNK_SIZE) {
+        let partial_users_chunk_size = self.config.sim_matrix.partial_users_chunk_size;
+        for partial_users_chunk in all_partial_users.chunks(partial_users_chunk_size) {
             let mean_chunk = self.controller.get_means(partial_users_chunk);
             self.adj_cosine.add_new_means(&mean_chunk);
         }
