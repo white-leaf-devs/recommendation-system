@@ -7,6 +7,7 @@ use controller::{Controller, SearchBy};
 use diesel::pg::PgConnection;
 use diesel::{insert_into, prelude::*};
 use indicatif::ProgressIterator;
+use std::collections::HashMap;
 
 fn insert_users(conn: &PgConnection) -> Result<(), Error> {
     let mut csv = csv::ReaderBuilder::new()
@@ -76,7 +77,7 @@ fn insert_books(conn: &PgConnection) -> Result<(), Error> {
     Ok(())
 }
 
-fn insert_ratings(conn: &PgConnection) -> Result<(), Error> {
+fn insert_ratings(conn: &PgConnection, url: &str) -> Result<(), Error> {
     let mut csv = csv::ReaderBuilder::new()
         .has_headers(false)
         .delimiter(b',')
@@ -86,7 +87,7 @@ fn insert_ratings(conn: &PgConnection) -> Result<(), Error> {
     println!("Collecting records for ratings...");
     let records: Vec<_> = csv.records().collect();
 
-    let controller = BooksController::new()?;
+    let controller = BooksController::with_url(url)?;
     for record in records.iter().progress() {
         if let Ok(record) = record {
             let user_id: i32 = record[0].parse()?;
@@ -116,11 +117,13 @@ fn insert_ratings(conn: &PgConnection) -> Result<(), Error> {
 }
 
 fn main() -> Result<(), Error> {
-    let url = "postgres://postgres:@localhost/books";
+    let vars: HashMap<String, String> = dotenv::vars().collect();
+
+    let url = &vars["DATABASE_URL"];
     let conn = establish_connection(url)?;
 
     insert_users(&conn)?;
     insert_books(&conn)?;
-    insert_ratings(&conn)?;
+    insert_ratings(&conn, url)?;
     Ok(())
 }

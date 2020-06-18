@@ -7,6 +7,7 @@ use movie_lens_small::establish_connection;
 use movie_lens_small::models::{movies::NewMovie, ratings::NewRating, users::NewUser};
 use movie_lens_small::schema::{movies, ratings, users};
 use movie_lens_small::MovieLensSmallController;
+use std::collections::HashMap;
 
 fn insert_users(conn: &PgConnection) -> Result<(), Error> {
     let mut users = Vec::new();
@@ -51,7 +52,7 @@ fn insert_movies(conn: &PgConnection) -> Result<(), Error> {
     Ok(())
 }
 
-fn insert_ratings(conn: &PgConnection) -> Result<(), Error> {
+fn insert_ratings(conn: &PgConnection, url: &str) -> Result<(), Error> {
     let mut csv = csv::ReaderBuilder::new()
         .has_headers(true)
         .delimiter(b',')
@@ -61,7 +62,7 @@ fn insert_ratings(conn: &PgConnection) -> Result<(), Error> {
     println!("Collecting records for ratings...");
     let records: Vec<_> = csv.records().collect();
 
-    let controller = MovieLensSmallController::new()?;
+    let controller = MovieLensSmallController::with_url(url)?;
     for record in records.iter().progress() {
         if let Ok(record) = record {
             let user_id: i32 = record[0].parse()?;
@@ -91,11 +92,13 @@ fn insert_ratings(conn: &PgConnection) -> Result<(), Error> {
 }
 
 fn main() -> Result<(), Error> {
-    let url = "postgres://postgres:@localhost/movie-lens-small";
+    let vars: HashMap<String, String> = dotenv::vars().collect();
+
+    let url = &vars["DATABASE_URL"];
     let conn = establish_connection(url)?;
 
     insert_users(&conn)?;
     insert_movies(&conn)?;
-    insert_ratings(&conn)?;
+    insert_ratings(&conn, url)?;
     Ok(())
 }
