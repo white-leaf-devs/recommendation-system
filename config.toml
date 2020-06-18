@@ -1,10 +1,15 @@
 [system]
+# Verbose levels:
+#   0  => Errors
+#   1  => Warnings
+#   2  => Info
+#   3+ => Debug
 term_verbosity_level = 0
 file_verbosity_level = 1
 
 [sim_matrix]
-chunk_size_threshold = 0.3
-partial_users_chunk_size = 10000
+chunk_size_threshold = 0.3 # percentage of original size
+partial_users_chunk_size = 10000 
 allow_chunk_optimization = true 
 
 [engine]
