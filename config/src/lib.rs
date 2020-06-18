@@ -15,7 +15,14 @@ pub struct EngineConfig {
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
+pub struct SystemConfig {
+    pub term_verbosity_level: usize,
+    pub file_verbosity_level: usize,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct Config {
+    pub system: SystemConfig,
     pub engine: EngineConfig,
     pub sim_matrix: SimMatrixConfig,
 }
@@ -36,6 +43,10 @@ mod tests {
     #[test]
     fn load_example_config() -> Result<(), Error> {
         let expected = Config {
+            system: SystemConfig {
+                term_verbosity_level: 1,
+                file_verbosity_level: 2,
+            },
             engine: EngineConfig {
                 partial_users_chunk_size: 10000,
             },
