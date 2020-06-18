@@ -44,7 +44,7 @@ pub enum Statement {
     ItemBasedPredict(SearchBy, SearchBy, ItemMethod, usize),
 
     // Specific for similarity matrix
-    EnterSimMatrix(usize, usize, usize, ItemMethod),
+    EnterSimMatrix(usize, usize, ItemMethod),
     SimMatrixGet(SearchBy, SearchBy),
     SimMatrixMoveTo(usize, usize),
 }
@@ -207,11 +207,9 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
         }
 
         "enter_sim_matrix" => {
-            let (input, (m, _, n, _, threshold, _, item_method)) = delimited(
+            let (input, (m, _, n, _, item_method)) = delimited(
                 char('('),
                 tuple((
-                    parse_number,
-                    parse_separator,
                     parse_number,
                     parse_separator,
                     parse_number,
@@ -223,7 +221,7 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
 
             (
                 input,
-                Statement::EnterSimMatrix(m as usize, n as usize, threshold as usize, item_method),
+                Statement::EnterSimMatrix(m as usize, n as usize, item_method),
             )
         }
 
@@ -494,7 +492,7 @@ mod tests {
         let parsed = parse_statement("enter_sim_matrix(100, 100, 50, adj_cosine)");
         let expected = (
             "",
-            Statement::EnterSimMatrix(100, 100, 50, ItemMethod::AdjCosine),
+            Statement::EnterSimMatrix(100, 100, ItemMethod::AdjCosine),
         );
 
         assert_eq!(parsed, Ok(expected));
