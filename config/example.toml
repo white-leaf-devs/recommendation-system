@@ -9,3 +9,6 @@ allow_chunk_optimization = true
 
 [engine]
 partial_users_chunk_size = 10000
+
+[databases]
+some-database = "postgres://postgres:@localhost/some-database"

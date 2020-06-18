@@ -1,6 +1,6 @@
 use anyhow::Error;
 use serde::Deserialize;
-use std::path::Path;
+use std::{collections::HashMap, path::Path};
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct SimMatrixConfig {
@@ -25,6 +25,7 @@ pub struct Config {
     pub system: SystemConfig,
     pub engine: EngineConfig,
     pub sim_matrix: SimMatrixConfig,
+    pub databases: HashMap<String, String>,
 }
 
 impl Config {
@@ -39,6 +40,7 @@ impl Config {
 mod tests {
     use super::*;
     use anyhow::Error;
+    use common_macros::hash_map;
 
     #[test]
     fn load_example_config() -> Result<(), Error> {
@@ -54,6 +56,9 @@ mod tests {
                 chunk_size_threshold: 0.3,
                 partial_users_chunk_size: 10000,
                 allow_chunk_optimization: true,
+            },
+            databases: hash_map! {
+                "some-database".into() => "postgres://postgres:@localhost/some-database".into()
             },
         };
 
