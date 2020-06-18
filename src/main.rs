@@ -2,6 +2,7 @@ pub mod parser;
 
 use anyhow::Error;
 use books::BooksController;
+use clap::{App, Arg};
 use config::Config;
 use controller::{Controller, Entity, ToTable};
 use engine::{similarity_matrix::SimilarityMatrix, Engine};
@@ -57,6 +58,7 @@ macro_rules! prompt {
 }
 
 fn sim_matrix_prompt<C, User, UserId, Item, ItemId>(
+    config: &Config,
     controller: &C,
     name: &str,
     ver_chunk_size: usize,
@@ -70,8 +72,7 @@ where
     UserId: Hash + Eq + Display + Clone + Default,
     ItemId: Hash + Eq + Display + Clone,
 {
-    let config = Config::load("config.toml")?;
-    let mut sim_matrix = SimilarityMatrix::new(controller, &config, ver_chunk_size, hor_chunk_size);
+    let mut sim_matrix = SimilarityMatrix::new(controller, config, ver_chunk_size, hor_chunk_size);
     let mut curr_i = 0;
     let mut curr_j = 0;
 
@@ -162,6 +163,7 @@ where
 }
 
 fn database_connected_prompt<C, User, UserId, Item, ItemId>(
+    config: &Config,
     controller: C,
     name: &str,
     rl: &mut Editor<()>,
@@ -173,8 +175,7 @@ where
     UserId: Hash + Eq + Display + Clone + Default,
     ItemId: Hash + Eq + Display + Clone,
 {
-    let config = Config::load("config.toml")?;
-    let engine = Engine::with_controller(&controller, &config);
+    let engine = Engine::with_controller(&controller, config);
 
     loop {
         let opt: String = prompt!(rl, name)?;
@@ -441,7 +442,7 @@ where
                     }
 
                     Statement::EnterSimMatrix(m, n, _method) => {
-                        sim_matrix_prompt(&controller, name, m, n, rl)?;
+                        sim_matrix_prompt(&config, &controller, name, m, n, rl)?;
                     }
                 },
 
@@ -453,7 +454,10 @@ where
     Ok(())
 }
 
+const NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+const AUTHORS: &str = env!("CARGO_PKG_AUTHORS");
+const ABOUT: &str = env!("CARGO_PKG_DESCRIPTION");
 const PROMPT: &str = ">> ";
 
 fn to_level_filter(level: usize) -> LevelFilter {
@@ -466,7 +470,22 @@ fn to_level_filter(level: usize) -> LevelFilter {
 }
 
 fn main() -> Result<(), Error> {
-    let config = Config::load("config.toml")?;
+    let matches = App::new(NAME)
+        .version(VERSION)
+        .author(AUTHORS)
+        .about(ABOUT)
+        .arg(
+            Arg::with_name("config")
+                .short("c")
+                .long("config")
+                .value_name("PATH")
+                .default_value("config.toml")
+                .help("Set custom config file path"),
+        )
+        .get_matches();
+
+    let config_path = matches.value_of("config").unwrap();
+    let config = Config::load(config_path)?;
     let term_level = to_level_filter(config.system.term_verbosity_level);
     let file_log = File::create("rs.log")?;
     let file_level = to_level_filter(config.system.file_verbosity_level);
@@ -508,30 +527,35 @@ fn main() -> Result<(), Error> {
 
                         match db {
                             Database::Books => database_connected_prompt(
+                                &config,
                                 BooksController::with_url(url)?,
                                 &name,
                                 &mut rl,
                             )?,
 
                             Database::Shelves => database_connected_prompt(
+                                &config,
                                 ShelvesController::with_url(url)?,
                                 &name,
                                 &mut rl,
                             )?,
 
                             Database::SimpleMovie => database_connected_prompt(
+                                &config,
                                 SimpleMovieController::with_url(url)?,
                                 &name,
                                 &mut rl,
                             )?,
 
                             Database::MovieLens => database_connected_prompt(
+                                &config,
                                 MovieLensController::with_url(url)?,
                                 &name,
                                 &mut rl,
                             )?,
 
                             Database::MovieLensSmall => database_connected_prompt(
+                                &config,
                                 MovieLensSmallController::with_url(url)?,
                                 &name,
                                 &mut rl,

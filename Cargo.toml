@@ -15,6 +15,7 @@ members = [
 [dependencies]
 anyhow = "1"
 books = { version = "*", path = "controllers/books" }
+clap = "2.33.1"
 config = { version = "*", path = "config" }
 controller = { version = "*", path = "controller" }
 engine = { version = "*", path = "engine" }
