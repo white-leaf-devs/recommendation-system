@@ -368,6 +368,7 @@ dependencies = [
  "assert_approx_eq",
  "books",
  "common_macros",
+ "config",
  "controller",
  "criterion",
  "movie-lens",
@@ -705,6 +706,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "books",
+ "config",
  "controller",
  "engine",
  "movie-lens",

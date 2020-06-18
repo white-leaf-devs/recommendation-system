@@ -2,6 +2,7 @@ pub mod parser;
 
 use anyhow::Error;
 use books::BooksController;
+use config::Config;
 use controller::{Controller, Entity, ToTable};
 use engine::{similarity_matrix::SimilarityMatrix, Engine};
 use movie_lens::MovieLensController;
@@ -56,7 +57,6 @@ fn sim_matrix_prompt<C, User, UserId, Item, ItemId>(
     name: &str,
     ver_chunk_size: usize,
     hor_chunk_size: usize,
-    threshold: usize,
     rl: &mut Editor<()>,
 ) -> Result<(), Error>
 where
@@ -66,8 +66,8 @@ where
     UserId: Hash + Eq + Display + Clone + Default,
     ItemId: Hash + Eq + Display + Clone,
 {
-    let mut sim_matrix =
-        SimilarityMatrix::new(controller, ver_chunk_size, hor_chunk_size, threshold);
+    let config = Config::load("config.toml")?;
+    let mut sim_matrix = SimilarityMatrix::new(controller, &config, ver_chunk_size, hor_chunk_size);
     let mut curr_i = 0;
     let mut curr_j = 0;
 
@@ -168,7 +168,8 @@ where
     UserId: Hash + Eq + Display + Clone + Default,
     ItemId: Hash + Eq + Display + Clone,
 {
-    let engine = Engine::with_controller(&controller);
+    let config = Config::load("config.toml")?;
+    let engine = Engine::with_controller(&controller, &config);
 
     loop {
         let opt: String = prompt!(rl, name)?;
@@ -434,8 +435,8 @@ where
                         println!("Operation took {:.4} seconds", now.elapsed().as_secs_f64());
                     }
 
-                    Statement::EnterSimMatrix(m, n, threshold, _method) => {
-                        sim_matrix_prompt(&controller, name, m, n, threshold, rl)?;
+                    Statement::EnterSimMatrix(m, n, _method) => {
+                        sim_matrix_prompt(&controller, name, m, n, rl)?;
                     }
                 },
 
