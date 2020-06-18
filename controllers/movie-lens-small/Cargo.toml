@@ -13,4 +13,5 @@ common_macros = "0.1"
 controller = { version = "*", path = "../../controller" }
 csv = "1"
 diesel = { version = "1", features = [ "postgres" ] }
+dotenv = "0.15.0"
 indicatif = "0.14"

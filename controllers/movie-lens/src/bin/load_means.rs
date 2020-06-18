@@ -27,10 +27,12 @@ fn compute_mean(ratings: &HashMap<i32, f64>) -> f64 {
 }
 
 fn main() -> Result<(), Error> {
-    let url = "postgres://postgres:@localhost/movie-lens";
+    let vars: HashMap<String, String> = dotenv::vars().collect();
+
+    let url = &vars["DATABASE_URL"];
     let conn = establish_connection(url)?;
 
-    let controller = MovieLensController::new()?;
+    let controller = MovieLensController::with_url(url)?;
 
     let users_iterator = controller.users_by_chunks(10000);
     for user_chunk in users_iterator {

@@ -6,7 +6,7 @@ use movie_lens::establish_connection;
 use movie_lens::models::{movies::NewMovie, ratings::NewRating, users::NewUser};
 use movie_lens::schema::{movies, ratings, users};
 use std::fs::File;
-use std::io::BufReader;
+use std::{collections::HashMap, io::BufReader};
 
 fn insert_users(conn: &PgConnection) -> Result<(), Error> {
     let mut users = Vec::new();
@@ -97,7 +97,9 @@ fn insert_ratings(conn: &PgConnection) -> Result<(), Error> {
 }
 
 fn main() -> Result<(), Error> {
-    let url = "postgres://postgres:@localhost/movie-lens";
+    let vars: HashMap<String, String> = dotenv::vars().collect();
+
+    let url = &vars["DATABASE_URL"];
     let conn = establish_connection(url)?;
 
     insert_users(&conn)?;

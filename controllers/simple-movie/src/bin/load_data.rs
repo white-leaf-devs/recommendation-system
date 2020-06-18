@@ -8,6 +8,7 @@ use simple_movie::models::{
     users::{NewUser, User},
 };
 use simple_movie::schema::{movies, ratings, users};
+use std::collections::HashMap;
 
 fn create_movie(conn: &PgConnection, name: &str) -> Result<Movie, Error> {
     let new_movie = NewMovie { name };
@@ -49,7 +50,9 @@ fn create_rating(
 }
 
 fn main() -> Result<(), Error> {
-    let url = "postgres://postgres:@localhost/simple-movie";
+    let vars: HashMap<String, String> = dotenv::vars().collect();
+
+    let url = &vars["DATABASE_URL"];
     let conn = establish_connection(url)?;
 
     let mut csv = csv::ReaderBuilder::new()

@@ -5,6 +5,7 @@ use indicatif::ProgressIterator;
 use shelves::establish_connection;
 use shelves::models::{books::NewBook, ratings::NewRating, users::NewUser};
 use shelves::schema::{books, ratings, users};
+use std::collections::HashMap;
 
 fn insert_users(conn: &PgConnection) -> Result<(), Error> {
     let mut csv = csv::ReaderBuilder::new()
@@ -100,7 +101,9 @@ fn insert_ratings(conn: &PgConnection) -> Result<(), Error> {
 }
 
 fn main() -> Result<(), Error> {
-    let url = "postgres://postgres:@localhost/shelves";
+    let vars: HashMap<String, String> = dotenv::vars().collect();
+
+    let url = &vars["DATABASE_URL"];
     let conn = establish_connection(url)?;
 
     insert_users(&conn)?;
