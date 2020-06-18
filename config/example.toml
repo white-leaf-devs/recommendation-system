@@ -1,0 +1,7 @@
+[sim_matrix]
+chunk_size_threshold = 0.3
+partial_users_chunk_size = 10000
+allow_chunk_optimization = true 
+
+[engine]
+partial_users_chunk_size = 10000
