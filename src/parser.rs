@@ -8,6 +8,7 @@ use nom::combinator::opt;
 use nom::sequence::{delimited, tuple};
 use nom::{branch::alt, character::complete::char};
 use nom::{bytes::complete::tag, IResult};
+use std::fmt::{self, Display, Formatter};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Database {
@@ -28,6 +29,20 @@ impl From<&str> for Database {
             "movie-lens-small" => Self::MovieLensSmall,
             _ => unreachable!(),
         }
+    }
+}
+
+impl Display for Database {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        let name = match self {
+            Database::Books => "books",
+            Database::Shelves => "shelves",
+            Database::SimpleMovie => "simple-movie",
+            Database::MovieLens => "movie-lens",
+            Database::MovieLensSmall => "movie-lens-small",
+        };
+
+        write!(f, "{}", name)
     }
 }
 
