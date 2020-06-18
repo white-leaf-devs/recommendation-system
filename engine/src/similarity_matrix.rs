@@ -53,6 +53,10 @@ where
     }
 
     pub fn optimize_chunks(&mut self) {
+        if !self.config.sim_matrix.allow_chunk_optimization {
+            return;
+        }
+
         let threshold = self.config.sim_matrix.chunk_size_threshold;
         let original_size = self.approximate_chunk_size();
         let target_size = (original_size as f64 * threshold) as usize;
