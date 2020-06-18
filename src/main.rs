@@ -503,34 +503,37 @@ fn main() -> Result<(), Error> {
             line => match parser::parse_line(line) {
                 Some(stmt) => {
                     if let Statement::Connect(db) = stmt {
+                        let name = db.to_string();
+                        let url = &config.databases[&name];
+
                         match db {
                             Database::Books => database_connected_prompt(
-                                BooksController::new()?,
-                                "books",
+                                BooksController::with_url(url)?,
+                                &name,
                                 &mut rl,
                             )?,
 
                             Database::Shelves => database_connected_prompt(
-                                ShelvesController::new()?,
-                                "shelves",
+                                ShelvesController::with_url(url)?,
+                                &name,
                                 &mut rl,
                             )?,
 
                             Database::SimpleMovie => database_connected_prompt(
-                                SimpleMovieController::new()?,
-                                "simple-movie",
+                                SimpleMovieController::with_url(url)?,
+                                &name,
                                 &mut rl,
                             )?,
 
                             Database::MovieLens => database_connected_prompt(
-                                MovieLensController::new()?,
-                                "movie-lens",
+                                MovieLensController::with_url(url)?,
+                                &name,
                                 &mut rl,
                             )?,
 
                             Database::MovieLensSmall => database_connected_prompt(
-                                MovieLensSmallController::new()?,
-                                "movie-lens-small",
+                                MovieLensSmallController::with_url(url)?,
+                                &name,
                                 &mut rl,
                             )?,
                         }
