@@ -489,7 +489,7 @@ mod tests {
 
     #[test]
     fn enter_sim_matrix_statement() {
-        let parsed = parse_statement("enter_sim_matrix(100, 100, 50, adj_cosine)");
+        let parsed = parse_statement("enter_sim_matrix(100, 100, adj_cosine)");
         let expected = (
             "",
             Statement::EnterSimMatrix(100, 100, ItemMethod::AdjCosine),
