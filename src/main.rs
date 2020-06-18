@@ -11,7 +11,10 @@ use parser::{Database, Statement};
 use rustyline::Editor;
 use shelves::ShelvesController;
 use simple_movie::SimpleMovieController;
-use std::{fmt::Display, hash::Hash, time::Instant};
+use simplelog::{
+    CombinedLogger, Config as LogConfig, LevelFilter, TermLogger, TerminalMode, WriteLogger,
+};
+use std::{fmt::Display, fs::File, hash::Hash, time::Instant};
 
 macro_rules! prompt {
     ($ed:ident) => {{
@@ -75,7 +78,7 @@ where
     let mut chunk = match sim_matrix.get_chunk(curr_i, curr_j) {
         Ok(chunk) => chunk,
         Err(e) => {
-            println!("{}", e);
+            log::error!("{}", e);
             return Ok(());
         }
     };
@@ -101,7 +104,7 @@ where
                         let item_id_a = match controller.items_by(&searchby_a) {
                             Ok(items) => items[0].get_id(),
                             Err(e) => {
-                                println!("{}", e);
+                                log::error!("{}", e);
                                 continue;
                             }
                         };
@@ -109,7 +112,7 @@ where
                         let item_id_b = match controller.items_by(&searchby_b) {
                             Ok(items) => items[0].get_id(),
                             Err(e) => {
-                                println!("{}", e);
+                                log::error!("{}", e);
                                 continue;
                             }
                         };
@@ -119,7 +122,7 @@ where
                         if let Some(val) = val {
                             println!("Value for ({}, {}) is {}", item_id_a, item_id_b, val);
                         } else {
-                            println!("No value found for ({}, {})", item_id_a, item_id_b);
+                            log::error!("No value found for ({}, {})", item_id_a, item_id_b);
                         }
                     }
 
@@ -134,7 +137,7 @@ where
                         chunk = match sim_matrix.get_chunk(curr_i, curr_j) {
                             Ok(chunk) => chunk,
                             Err(e) => {
-                                println!("{}", e);
+                                log::error!("{}", e);
                                 curr_i = old_i;
                                 curr_j = old_j;
                                 chunk
@@ -144,11 +147,12 @@ where
                     }
 
                     _ => {
-                        println!("Invalid statement in this context.");
-                        println!("Exit the matrix first!");
+                        log::error!("Invalid statement in this context.");
+                        log::error!("Exit the matrix first!");
                     }
                 },
-                None => println!("Invalid syntax!"),
+
+                None => log::error!("Invalid syntax!"),
             },
         }
     }
@@ -187,13 +191,13 @@ where
             line => match parser::parse_line(line) {
                 Some(stmt) => match stmt {
                     Statement::Connect(_) => {
-                        println!("Invalid statement in this context.");
-                        println!("Disconnect from current database first!");
+                        log::error!("Invalid statement in this context.");
+                        log::error!("Disconnect from current database first!");
                     }
 
                     Statement::SimMatrixGet(_, _) | Statement::SimMatrixMoveTo(_, _) => {
-                        println!("Invalid statement in this context.");
-                        println!("Enter the matrix first!");
+                        log::error!("Invalid statement in this context.");
+                        log::error!("Enter the matrix first!");
                     }
 
                     Statement::QueryUser(searchby) => match controller.users_by(&searchby) {
@@ -202,7 +206,7 @@ where
                                 println!("{}", user.to_table());
                             }
                         }
-                        Err(e) => println!("{}", e),
+                        Err(e) => log::error!("{}", e),
                     },
 
                     Statement::QueryItem(searchby) => match controller.items_by(&searchby) {
@@ -211,7 +215,7 @@ where
                                 println!("{}", item.to_table());
                             }
                         }
-                        Err(e) => println!("{}", e),
+                        Err(e) => log::error!("{}", e),
                     },
 
                     Statement::QueryRatings(searchby) => match controller.users_by(&searchby) {
@@ -221,7 +225,7 @@ where
                                     if !ratings.is_empty() {
                                         println!("{}", ratings.to_table());
                                     } else {
-                                        println!(
+                                        log::error!(
                                             "No ratings found for user with id({})",
                                             user.get_id()
                                         );
@@ -229,7 +233,7 @@ where
                                 }
                             }
                         }
-                        Err(e) => println!("{}", e),
+                        Err(e) => log::error!("{}", e),
                     },
 
                     Statement::ItemDistance(searchby_a, searchby_b, method) => {
@@ -239,7 +243,7 @@ where
                         {
                             Ok(item) => item,
                             Err(e) => {
-                                println!("{}", e);
+                                log::error!("{}", e);
                                 continue;
                             }
                         };
@@ -250,7 +254,7 @@ where
                         {
                             Ok(item) => item,
                             Err(e) => {
-                                println!("{}", e);
+                                log::error!("{}", e);
                                 continue;
                             }
                         };
@@ -260,8 +264,8 @@ where
                         match dist {
                             Ok(dist) => println!("Distance is {}", dist),
                             Err(e) => {
-                                println!("Distance couldn't be calculated");
-                                println!("Reason: {}", e);
+                                log::error!("Distance couldn't be calculated");
+                                log::error!("Reason: {}", e);
                             }
                         }
 
@@ -275,7 +279,7 @@ where
                         {
                             Ok(user) => user,
                             Err(e) => {
-                                println!("{}", e);
+                                log::error!("{}", e);
                                 continue;
                             }
                         };
@@ -286,7 +290,7 @@ where
                         {
                             Ok(user) => user,
                             Err(e) => {
-                                println!("{}", e);
+                                log::error!("{}", e);
                                 continue;
                             }
                         };
@@ -296,8 +300,8 @@ where
                         match dist {
                             Ok(dist) => println!("Distance is {}", dist),
                             Err(e) => {
-                                println!("Distance couldn't be calculated");
-                                println!("Reason: {}", e);
+                                log::error!("Distance couldn't be calculated");
+                                log::error!("Reason: {}", e);
                             }
                         }
 
@@ -311,7 +315,7 @@ where
                         {
                             Ok(user) => user,
                             Err(e) => {
-                                println!("{}", e);
+                                log::error!("{}", e);
                                 continue;
                             }
                         };
@@ -329,8 +333,8 @@ where
                             }
 
                             Err(e) => {
-                                println!("Failed to find the {} nearest neighbors", k);
-                                println!("Reason: {}", e);
+                                log::error!("Failed to find the {} nearest neighbors", k);
+                                log::error!("Reason: {}", e);
                             }
                         }
 
@@ -350,7 +354,7 @@ where
                         {
                             Ok(user) => user,
                             Err(e) => {
-                                println!("{}", e);
+                                log::error!("{}", e);
                                 continue;
                             }
                         };
@@ -361,7 +365,7 @@ where
                         {
                             Ok(item) => item,
                             Err(e) => {
-                                println!("{}", e);
+                                log::error!("{}", e);
                                 continue;
                             }
                         };
@@ -379,8 +383,8 @@ where
                             ),
 
                             Err(e) => {
-                                println!("Failed to predict the score");
-                                println!("Reason: {}", e);
+                                log::error!("Failed to predict the score");
+                                log::error!("Reason: {}", e);
                             }
                         }
 
@@ -399,7 +403,7 @@ where
                         {
                             Ok(user) => user,
                             Err(e) => {
-                                println!("{}", e);
+                                log::error!("{}", e);
                                 continue;
                             }
                         };
@@ -410,7 +414,7 @@ where
                         {
                             Ok(item) => item,
                             Err(e) => {
-                                println!("{}", e);
+                                log::error!("{}", e);
                                 continue;
                             }
                         };
@@ -427,8 +431,8 @@ where
                             ),
 
                             Err(e) => {
-                                println!("Failed to predict the score");
-                                println!("Reason: {}", e);
+                                log::error!("Failed to predict the score");
+                                log::error!("Reason: {}", e);
                             }
                         }
 
@@ -440,7 +444,7 @@ where
                     }
                 },
 
-                None => println!("Invalid syntax!"),
+                None => log::error!("Invalid syntax!"),
             },
         }
     }
@@ -451,7 +455,26 @@ where
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const PROMPT: &str = ">> ";
 
+fn to_level_filter(level: usize) -> LevelFilter {
+    match level {
+        0 => LevelFilter::Error,
+        1 => LevelFilter::Warn,
+        2 => LevelFilter::Info,
+        _ => LevelFilter::Debug,
+    }
+}
+
 fn main() -> Result<(), Error> {
+    let config = Config::load("config.toml")?;
+    let term_level = to_level_filter(config.system.term_verbosity_level);
+    let file_log = File::create("rs.log")?;
+    let file_level = to_level_filter(config.system.file_verbosity_level);
+
+    CombinedLogger::init(vec![
+        TermLogger::new(term_level, LogConfig::default(), TerminalMode::Mixed),
+        WriteLogger::new(file_level, LogConfig::default(), file_log),
+    ])?;
+
     println!("Welcome to recommendation-system {}", VERSION);
     let mut rl = rustyline::Editor::<()>::new();
 
@@ -505,11 +528,12 @@ fn main() -> Result<(), Error> {
                             )?,
                         }
                     } else {
-                        println!("Invalid statement in this context.");
-                        println!("Connect to a database first!");
+                        log::error!("Invalid statement in this context.");
+                        log::error!("Connect to a database first!");
                     }
                 }
-                None => println!("Invalid syntax!"),
+
+                None => log::error!("Invalid syntax!"),
             },
         }
     }
