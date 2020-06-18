@@ -12,7 +12,8 @@ use rustyline::Editor;
 use shelves::ShelvesController;
 use simple_movie::SimpleMovieController;
 use simplelog::{
-    CombinedLogger, Config as LogConfig, LevelFilter, TermLogger, TerminalMode, WriteLogger,
+    CombinedLogger, Config as LogConfig, ConfigBuilder as LogConfigBuilder, LevelFilter,
+    TermLogger, TerminalMode, WriteLogger,
 };
 use std::{fmt::Display, fs::File, hash::Hash, time::Instant};
 
@@ -471,7 +472,13 @@ fn main() -> Result<(), Error> {
     let file_level = to_level_filter(config.system.file_verbosity_level);
 
     CombinedLogger::init(vec![
-        TermLogger::new(term_level, LogConfig::default(), TerminalMode::Mixed),
+        TermLogger::new(
+            term_level,
+            LogConfigBuilder::new()
+                .set_time_level(LevelFilter::Off)
+                .build(),
+            TerminalMode::Mixed,
+        ),
         WriteLogger::new(file_level, LogConfig::default(), file_log),
     ])?;
 
