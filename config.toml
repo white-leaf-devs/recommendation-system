@@ -14,3 +14,10 @@ allow_chunk_optimization = true
 
 [engine]
 partial_users_chunk_size = 10000
+
+[databases] # urls
+simple-movie = "postgres://postgres:@localhost/simple-movie"
+books = "postgres://postgres:@localhost/books"
+shelves = "postgres://postgres:@localhost/shelves"
+movie-lens = "postgres://postgres:@localhost/movie-lens"
+movie-lens-small = "postgres://postgres:@localhost/movie-lens-small"
