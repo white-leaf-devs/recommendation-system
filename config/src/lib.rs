@@ -18,6 +18,7 @@ pub struct EngineConfig {
 pub struct SystemConfig {
     pub term_verbosity_level: usize,
     pub file_verbosity_level: usize,
+    pub log_output: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
@@ -46,6 +47,7 @@ mod tests {
     fn load_example_config() -> Result<(), Error> {
         let expected = Config {
             system: SystemConfig {
+                log_output: Some("rs.log".to_string()),
                 term_verbosity_level: 1,
                 file_verbosity_level: 2,
             },
