@@ -487,7 +487,12 @@ fn main() -> Result<(), Error> {
     let config_path = matches.value_of("config").unwrap();
     let config = Config::load(config_path)?;
     let term_level = to_level_filter(config.system.term_verbosity_level);
-    let file_log = File::create("rs.log")?;
+    let file_log_path = config
+        .system
+        .log_output
+        .clone()
+        .unwrap_or_else(|| "rsys.log".to_string());
+    let file_log = File::create(&file_log_path)?;
     let file_level = to_level_filter(config.system.file_verbosity_level);
 
     CombinedLogger::init(vec![

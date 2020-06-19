@@ -6,6 +6,7 @@
 #   3+ => Debug
 term_verbosity_level = 0
 file_verbosity_level = 1
+log_output = "rsys.log"
 
 [sim_matrix]
 chunk_size_threshold = 0.3 # percentage of original size

@@ -2,3 +2,4 @@
 controllers/books/data
 controllers/movie-lens/data
 controllers/shelves/data
+*.log
