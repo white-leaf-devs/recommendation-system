@@ -114,7 +114,16 @@ where
 
                 Ok(sim)
             }
-            _ => Err(ErrorKind::NotImplemented.into()),
+
+            ItemMethod::SlopeOne => {
+                let item_a_id = item_a.get_id();
+                let item_b_id = item_b.get_id();
+                let users_who_rated = self.controller.users_who_rated(&[item_a, item_b])?;
+                let (dev, _) =
+                    slope_one(&users_who_rated[&item_a_id], &users_who_rated[&item_b_id])?;
+
+                Ok(dev)
+            }
         }
     }
 
