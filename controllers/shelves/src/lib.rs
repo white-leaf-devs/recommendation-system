@@ -124,12 +124,7 @@ impl Controller<User, i32, Book, i32> for ShelvesController {
     fn create_partial_items(&self, item_ids: &[i32]) -> Result<Vec<Book>, Error> {
         item_ids
             .iter()
-            .map(|id| -> Result<Book, Error> {
-                Ok(Book {
-                    id: *id,
-                    ..Default::default()
-                })
-            })
+            .map(|id| -> Result<Book, Error> { Ok(Book { id: *id }) })
             .collect()
     }
 
