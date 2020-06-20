@@ -121,6 +121,18 @@ impl Controller<User, i32, Book, i32> for ShelvesController {
             .collect()
     }
 
+    fn create_partial_items(&self, item_ids: &[i32]) -> Result<Vec<Book>, Error> {
+        item_ids
+            .iter()
+            .map(|id| -> Result<Book, Error> {
+                Ok(Book {
+                    id: *id,
+                    ..Default::default()
+                })
+            })
+            .collect()
+    }
+
     fn ratings_by(&self, user: &User) -> Result<Ratings<i32>, Error> {
         let ratings = Rating::belonging_to(user)
             .load::<Rating>(&self.pg_conn)?

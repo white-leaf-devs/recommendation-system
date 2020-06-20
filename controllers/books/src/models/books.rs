@@ -4,7 +4,7 @@ use controller::Entity;
 use std::collections::HashMap;
 
 // To query data from the database
-#[derive(Debug, Clone, Identifiable, Queryable)]
+#[derive(Debug, Clone, Identifiable, Queryable, Default)]
 pub struct Book {
     pub id: String,
     pub title: String,

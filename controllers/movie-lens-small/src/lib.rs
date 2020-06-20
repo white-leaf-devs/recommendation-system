@@ -156,6 +156,18 @@ impl Controller<User, i32, Movie, i32> for MovieLensSmallController {
             .collect()
     }
 
+    fn create_partial_items(&self, item_ids: &[i32]) -> Result<Vec<Movie>, Error> {
+        item_ids
+            .iter()
+            .map(|id| -> Result<Movie, Error> {
+                Ok(Movie {
+                    id: *id,
+                    ..Default::default()
+                })
+            })
+            .collect()
+    }
+
     fn maped_ratings_by(&self, users: &[User]) -> Result<MapedRatings<i32, i32>, Error> {
         let ratings = Rating::belonging_to(users).load::<Rating>(&self.pg_conn)?;
 

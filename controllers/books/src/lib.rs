@@ -136,6 +136,18 @@ impl Controller<User, i32, Book, String> for BooksController {
             .collect()
     }
 
+    fn create_partial_items(&self, book_ids: &[String]) -> Result<Vec<Book>, Error> {
+        book_ids
+            .iter()
+            .map(|id| -> Result<Book, Error> {
+                Ok(Book {
+                    id: id.clone(),
+                    ..Default::default()
+                })
+            })
+            .collect()
+    }
+
     fn ratings_by(&self, user: &User) -> Result<Ratings<String>, Error> {
         let ratings = Rating::belonging_to(user)
             .load::<Rating>(&self.pg_conn)?

@@ -3,7 +3,7 @@ use common_macros::hash_map;
 use controller::Entity;
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, Identifiable, Queryable)]
+#[derive(Debug, Clone, Identifiable, Queryable, Default)]
 pub struct Movie {
     pub id: i32,
     pub title: String,

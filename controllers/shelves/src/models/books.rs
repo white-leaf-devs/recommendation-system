@@ -2,7 +2,7 @@ use crate::schema::books;
 use controller::Entity;
 
 // To query data from the database
-#[derive(Debug, Clone, Identifiable, Queryable)]
+#[derive(Debug, Clone, Identifiable, Queryable, Default)]
 pub struct Book {
     pub id: i32,
 }

@@ -199,6 +199,7 @@ where
     }
 
     fn create_partial_users(&self, user_ids: &[UserId]) -> Result<Vec<User>>;
+    fn create_partial_items(&self, item_ids: &[ItemId]) -> Result<Vec<Item>>;
 
     fn users_who_rated(&self, items: &[Item]) -> Result<MapedRatings<ItemId, UserId>>;
     fn ratings_by(&self, user: &User) -> Result<Ratings<ItemId>>;
