@@ -343,9 +343,10 @@ where
         for partial_items_chunk in all_partial_items.chunks(chunk_size) {
             let users_who_rated = self.controller.users_who_rated(partial_items_chunk)?;
             for (item_id, ratings) in users_who_rated {
-                let (dev, card) = slope_one(target_item_ratings, &ratings)?;
-                num += (dev + user_ratings[&item_id]) * card as f64;
-                den += card as f64;
+                if let Ok((dev, card)) = slope_one(target_item_ratings, &ratings) {
+                    num += (dev + user_ratings[&item_id]) * card as f64;
+                    den += card as f64;
+                }
             }
         }
 
@@ -560,7 +561,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn item_based_pred() -> Result<(), Error> {
         use books::BooksController;
         use std::time::Instant;
@@ -570,21 +570,21 @@ mod tests {
         let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
-            .users_by(&SearchBy::id("123"))?
+            .users_by(&SearchBy::id("243"))?
             .drain(..1)
             .next()
             .unwrap();
 
         let item = controller
-            .items_by(&SearchBy::id("0679425608"))?
+            .items_by(&SearchBy::name("Flesh Tones: A Novel"))?
             .drain(..1)
             .next()
             .unwrap();
 
         let now = Instant::now();
         println!(
-            "Item based prediction: {:?}",
-            engine.item_based_predict(user, item, ItemMethod::AdjCosine, 2000)?
+            "Item based prediction Books: {:?}",
+            engine.item_based_predict(user, item, ItemMethod::SlopeOne, 2500)?
         );
         println!("Elapsed: {}", now.elapsed().as_secs_f64());
 
@@ -606,7 +606,7 @@ mod tests {
         let now = Instant::now();
         println!(
             "\nItem based prediction SimpleMovie: {:?}",
-            engine.item_based_predict(user, item, ItemMethod::AdjCosine, 2500)?
+            engine.item_based_predict(user, item, ItemMethod::SlopeOne, 2500)?
         );
         println!("Elapsed: {}", now.elapsed().as_secs_f64());
 
@@ -630,29 +630,31 @@ mod tests {
         let now = Instant::now();
         println!(
             "\nItem based prediction MovieLensSmall: {:?}",
-            engine.item_based_predict(user, item, ItemMethod::AdjCosine, 2500)?
+            engine.item_based_predict(user, item, ItemMethod::SlopeOne, 2500)?
         );
         println!("Elapsed: {}", now.elapsed().as_secs_f64());
 
-        let controller = BooksController::with_url(&config.databases["books"])?;
+        use movie_lens::MovieLensController;
+
+        let controller = MovieLensController::with_url(&config.databases["movie-lens"])?;
         let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
-            .users_by(&SearchBy::id("1"))?
+            .users_by(&SearchBy::id("35826"))?
             .drain(..1)
             .next()
             .unwrap();
 
         let item = controller
-            .items_by(&SearchBy::name("Father of the Bride Part II (1995)"))?
+            .items_by(&SearchBy::id("307"))?
             .drain(..1)
             .next()
             .unwrap();
 
         let now = Instant::now();
         println!(
-            "\nItem based prediction Books: {:?}",
-            engine.item_based_predict(user, item, ItemMethod::AdjCosine, 2500)?
+            "\nItem based prediction MovieLens: {:?}",
+            engine.item_based_predict(user, item, ItemMethod::SlopeOne, 2500)?
         );
         println!("Elapsed: {}", now.elapsed().as_secs_f64());
 
