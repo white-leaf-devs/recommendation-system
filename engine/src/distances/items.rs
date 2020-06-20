@@ -2,6 +2,7 @@ use crate::error::ErrorKind;
 use crate::utils::common_keys_iter;
 use controller::{MapedRatings, Ratings};
 use num_traits::float::Float;
+use num_traits::Zero;
 use std::{
     cmp::{Ordering, Reverse},
     collections::{BinaryHeap, HashMap},
@@ -222,4 +223,28 @@ where
     let two = Value::from(2.0).ok_or_else(|| ErrorKind::ConvertType)?;
 
     Ok((one / two) * ((normalized_rating + one) * (max_rating - min_rating)) + min_rating)
+}
+
+pub fn slope_one<UserId, Value>(
+    item_a_ratings: &Ratings<UserId, Value>,
+    item_b_ratings: &Ratings<UserId, Value>,
+) -> Result<(Value, usize), ErrorKind>
+where
+    UserId: Hash + Eq,
+    Value: Float + AddAssign + Sub,
+{
+    let mut distance = Value::zero();
+    let mut cardinality: usize = 0;
+
+    for (_, (val_a, val_b)) in common_keys_iter(item_a_ratings, item_b_ratings) {
+        distance += *val_a - *val_b;
+        cardinality += 1;
+    }
+
+    if cardinality.is_zero() {
+        Err(ErrorKind::DivisionByZero)
+    } else {
+        let distance = distance / Value::from(cardinality).ok_or_else(|| ErrorKind::ConvertType)?;
+        Ok((distance, cardinality))
+    }
 }

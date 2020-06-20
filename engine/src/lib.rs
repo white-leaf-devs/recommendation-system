@@ -28,8 +28,8 @@ use crate::{
 };
 use anyhow::Error;
 use config::Config;
-use controller::{Controller, Entity, MapedRatings};
-use distances::items::{denormalize_user_rating, normalize_user_ratings, AdjCosine};
+use controller::{Controller, Entity, MapedRatings, Ratings};
+use distances::items::{denormalize_user_rating, normalize_user_ratings, slope_one, AdjCosine};
 use error::ErrorKind;
 use knn::{Knn, MaxHeapKnn, MinHeapKnn};
 use num_traits::Zero;
@@ -235,14 +235,8 @@ where
         prediction.ok_or_else(|| ErrorKind::EmptyKNearestNeighbors.into())
     }
 
-    pub fn item_based_predict(
-        &self,
-        user: User,
-        item: Item,
-        chunk_size: usize,
-    ) -> Result<f64, Error>
+    fn adj_cosine_predict(&self, user: User, item: Item, chunk_size: usize) -> Result<f64, Error>
     where
-        User: Clone,
         UserId: Default,
     {
         let item_id = item.get_id();
@@ -325,6 +319,58 @@ where
 
         Ok(denormalize_user_rating(num / dem, min_rating, max_rating)?)
     }
+
+    pub fn slope_one_predict(&self, user: User, item: Item, chunk_size: usize) -> Result<f64, Error>
+    where
+        ItemId: Clone,
+    {
+        let target_item_id = item.get_id();
+        let target_item_ratings = &self.controller.users_who_rated(&[item])?[&target_item_id];
+
+        let user_ratings: Ratings<_, _> = self
+            .controller
+            .ratings_by(&user)?
+            .into_iter()
+            .filter(|(id, _)| id != &target_item_id)
+            .collect();
+
+        let items_ids: Vec<_> = user_ratings.iter().map(|(id, _)| id.to_owned()).collect();
+        let all_partial_items = self.controller.create_partial_items(&items_ids)?;
+
+        let mut num = 0.0;
+        let mut den = 0.0;
+
+        for partial_items_chunk in all_partial_items.chunks(chunk_size) {
+            let users_who_rated = self.controller.users_who_rated(partial_items_chunk)?;
+            for (item_id, ratings) in users_who_rated {
+                let (dev, card) = slope_one(target_item_ratings, &ratings)?;
+                num += (dev + user_ratings[&item_id]) * card as f64;
+                den += card as f64;
+            }
+        }
+
+        if den.is_zero() {
+            Err(ErrorKind::DivisionByZero.into())
+        } else {
+            Ok(num / den)
+        }
+    }
+
+    pub fn item_based_predict(
+        &self,
+        user: User,
+        item: Item,
+        method: ItemMethod,
+        chunk_size: usize,
+    ) -> Result<f64, Error>
+    where
+        UserId: Default,
+    {
+        match method {
+            ItemMethod::AdjCosine => self.adj_cosine_predict(user, item, chunk_size),
+            ItemMethod::SlopeOne => self.slope_one_predict(user, item, chunk_size),
+        }
+    }
 }
 
 #[cfg(feature = "test-engine")]
@@ -334,13 +380,15 @@ mod tests {
     use super::*;
     use anyhow::Error;
     use books::BooksController;
+    use config::Config;
     use controller::SearchBy;
     use simple_movie::SimpleMovieController;
 
     #[test]
     fn euclidean_distance() -> Result<(), Error> {
-        let controller = SimpleMovieController::new()?;
-        let engine = Engine::with_controller(&controller);
+        let config = Config::default();
+        let controller = SimpleMovieController::with_url(&config.databases["simple-movie"])?;
+        let engine = Engine::with_controller(&controller, &config);
 
         let user_a = controller
             .users_by(&SearchBy::id("52"))?
@@ -364,8 +412,9 @@ mod tests {
 
     #[test]
     fn manhattan_distance() -> Result<(), Error> {
-        let controller = SimpleMovieController::new()?;
-        let engine = Engine::with_controller(&controller);
+        let config = Config::default();
+        let controller = SimpleMovieController::with_url(&config.databases["simple-movie"])?;
+        let engine = Engine::with_controller(&controller, &config);
 
         let user_a = controller
             .users_by(&SearchBy::id("52"))?
@@ -389,8 +438,9 @@ mod tests {
 
     #[test]
     fn cosine_similarity_distance() -> Result<(), Error> {
-        let controller = SimpleMovieController::new()?;
-        let engine = Engine::with_controller(&controller);
+        let config = Config::default();
+        let controller = SimpleMovieController::with_url(&config.databases["simple-movie"])?;
+        let engine = Engine::with_controller(&controller, &config);
 
         let user_a = controller
             .users_by(&SearchBy::id("52"))?
@@ -414,8 +464,9 @@ mod tests {
 
     #[test]
     fn knn_with_manhattan() -> Result<(), Error> {
-        let controller = SimpleMovieController::new()?;
-        let engine = Engine::with_controller(&controller);
+        let config = Config::default();
+        let controller = SimpleMovieController::with_url(&config.databases["simple-movie"])?;
+        let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
             .users_by(&SearchBy::id("52"))?
@@ -433,8 +484,9 @@ mod tests {
 
     #[test]
     fn knn_with_euclidean() -> Result<(), Error> {
-        let controller = SimpleMovieController::new()?;
-        let engine = Engine::with_controller(&controller);
+        let config = Config::default();
+        let controller = SimpleMovieController::with_url(&config.databases["simple-movie"])?;
+        let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
             .users_by(&SearchBy::id("52"))?
@@ -452,8 +504,9 @@ mod tests {
 
     #[test]
     fn knn_with_cosine() -> Result<(), Error> {
-        let controller = SimpleMovieController::new()?;
-        let engine = Engine::with_controller(&controller);
+        let config = Config::default();
+        let controller = SimpleMovieController::with_url(&config.databases["simple-movie"])?;
+        let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
             .users_by(&SearchBy::id("52"))?
@@ -471,8 +524,9 @@ mod tests {
 
     #[test]
     fn knn_in_books() -> Result<(), Error> {
-        let controller = BooksController::new()?;
-        let engine = Engine::with_controller(&controller);
+        let config = Config::default();
+        let controller = BooksController::with_url(&config.databases["books"])?;
+        let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
             .users_by(&SearchBy::id("242"))?
@@ -494,8 +548,9 @@ mod tests {
         use movie_lens_small::MovieLensSmallController;
         use std::time::Instant;
 
-        let controller = MovieLensSmallController::new()?;
-        let mut sim_matrix = SimilarityMatrix::new(&controller, 10000, 10000, 100);
+        let config = Config::default();
+        let controller = MovieLensSmallController::with_url(&config.databases["movie-lens-small"])?;
+        let mut sim_matrix = SimilarityMatrix::new(&controller, &config, 10000, 10000);
 
         let now = Instant::now();
         let _matrix = sim_matrix.get_chunk(0, 0);
@@ -505,12 +560,14 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn item_based_pred() -> Result<(), Error> {
         use books::BooksController;
         use std::time::Instant;
 
-        let controller = BooksController::new()?;
-        let engine = Engine::with_controller(&controller);
+        let config = Config::default();
+        let controller = BooksController::with_url(&config.databases["books"])?;
+        let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
             .users_by(&SearchBy::id("123"))?
@@ -527,12 +584,12 @@ mod tests {
         let now = Instant::now();
         println!(
             "Item based prediction: {:?}",
-            engine.item_based_predict(user, item, 2000)?
+            engine.item_based_predict(user, item, ItemMethod::AdjCosine, 2000)?
         );
         println!("Elapsed: {}", now.elapsed().as_secs_f64());
 
-        let controller = SimpleMovieController::new()?;
-        let engine = Engine::with_controller(&controller);
+        let controller = SimpleMovieController::with_url(&config.databases["simple-movie"])?;
+        let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
             .users_by(&SearchBy::name("Josh"))?
@@ -549,14 +606,14 @@ mod tests {
         let now = Instant::now();
         println!(
             "\nItem based prediction SimpleMovie: {:?}",
-            engine.item_based_predict(user, item, 2500)?
+            engine.item_based_predict(user, item, ItemMethod::AdjCosine, 2500)?
         );
         println!("Elapsed: {}", now.elapsed().as_secs_f64());
 
         use movie_lens_small::MovieLensSmallController;
 
-        let controller = MovieLensSmallController::new()?;
-        let engine = Engine::with_controller(&controller);
+        let controller = MovieLensSmallController::with_url(&config.databases["movie-lens-small"])?;
+        let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
             .users_by(&SearchBy::id("2"))?
@@ -573,12 +630,12 @@ mod tests {
         let now = Instant::now();
         println!(
             "\nItem based prediction MovieLensSmall: {:?}",
-            engine.item_based_predict(user, item, 2500)?
+            engine.item_based_predict(user, item, ItemMethod::AdjCosine, 2500)?
         );
         println!("Elapsed: {}", now.elapsed().as_secs_f64());
 
-        /*let controller = BooksController::new()?;
-        let engine = Engine::with_controller(&controller);
+        let controller = BooksController::with_url(&config.databases["books"])?;
+        let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
             .users_by(&SearchBy::id("1"))?
@@ -595,20 +652,22 @@ mod tests {
         let now = Instant::now();
         println!(
             "\nItem based prediction Books: {:?}",
-            engine.item_based_predict(user, item, 2500)?
+            engine.item_based_predict(user, item, ItemMethod::AdjCosine, 2500)?
         );
-        println!("Elapsed: {}", now.elapsed().as_secs_f64());*/
+        println!("Elapsed: {}", now.elapsed().as_secs_f64());
 
         Ok(())
     }
 
-    /*#[test]
+    #[test]
+    #[ignore]
     fn shelves_item_based_pred() -> Result<(), Error> {
         use shelves::ShelvesController;
         use std::time::Instant;
 
-        let controller = ShelvesController::new()?;
-        let engine = Engine::with_controller(&controller);
+        let config = Config::default();
+        let controller = ShelvesController::with_url(&config.databases["shelves"])?;
+        let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
             .users_by(&SearchBy::id("0"))?
@@ -625,10 +684,10 @@ mod tests {
         let now = Instant::now();
         println!(
             "Item based prediction (UserId 0, ItemId 1000, 1): {:?}",
-            engine.item_based_predict(user, item, 1)?
+            engine.item_based_predict(user, item, ItemMethod::AdjCosine, 1)?
         );
         println!("Elapsed: {}", now.elapsed().as_secs_f64());
 
         Ok(())
-    }*/
+    }
 }
