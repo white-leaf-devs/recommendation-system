@@ -5,7 +5,7 @@
 #   2  => Info
 #   3+ => Debug
 term_verbosity_level = 0
-file_verbosity_level = 1
+file_verbosity_level = 3
 log_output = "rsys.log"
 
 [sim_matrix]
