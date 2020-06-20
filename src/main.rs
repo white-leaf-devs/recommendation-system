@@ -396,7 +396,7 @@ where
                     Statement::ItemBasedPredict(
                         searchby_user,
                         searchby_item,
-                        _method,
+                        method,
                         chunk_size,
                     ) => {
                         let user = match controller
@@ -424,7 +424,7 @@ where
                         let item_id = item.get_id();
 
                         let now = Instant::now();
-                        let prediction = engine.item_based_predict(user, item, chunk_size);
+                        let prediction = engine.item_based_predict(user, item, method, chunk_size);
 
                         match prediction {
                             Ok(predicted) => println!(
