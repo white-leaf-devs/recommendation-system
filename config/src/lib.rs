@@ -1,4 +1,5 @@
 use anyhow::Error;
+use common_macros::hash_map;
 use serde::Deserialize;
 use std::{collections::HashMap, path::Path};
 
@@ -27,6 +28,33 @@ pub struct Config {
     pub engine: EngineConfig,
     pub sim_matrix: SimMatrixConfig,
     pub databases: HashMap<String, String>,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            system: SystemConfig {
+                term_verbosity_level: 0,
+                file_verbosity_level: 3,
+                log_output: Some("debugrs.log".to_string()),
+            },
+            engine: EngineConfig {
+                partial_users_chunk_size: 10000,
+            },
+            sim_matrix: SimMatrixConfig {
+                chunk_size_threshold: 0.3,
+                partial_users_chunk_size: 10000,
+                allow_chunk_optimization: true,
+            },
+            databases: hash_map! {
+              "simple-movie".into() => "postgres://postgres:@localhost/simple-movie".into(),
+              "books".into() => "postgres://postgres:@localhost/books".into(),
+              "shelves".into() => "postgres://postgres:@localhost/shelves".into(),
+              "movie-lens".into() => "postgres://postgres:@localhost/movie-lens".into(),
+              "movie-lens-small".into() => "postgres://postgres:@localhost/movie-lens-small".into(),
+            },
+        }
+    }
 }
 
 impl Config {
