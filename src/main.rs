@@ -90,7 +90,7 @@ where
     println!("Operation took {:.4} seconds", now.elapsed().as_secs_f64());
 
     loop {
-        let formatted = format!("{}:sim_matrix({}, {})", name, curr_i, curr_j);
+        let formatted = format!("{}:matrix({}, {})", name, curr_i, curr_j);
         let opt: String = prompt!(rl, formatted)?;
 
         match opt.trim() {
