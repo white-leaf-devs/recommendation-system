@@ -43,6 +43,8 @@ where
         user_ratings: &Ratings<ItemId>,
         maped_ratings: MapedRatings<UserId, ItemId>,
     ) {
+        log::info!("Updating knn computation on new maped ratings chunk");
+        log::info!("Size of maped ratings chunk is {}", maped_ratings.len());
         for (user_id, ratings) in maped_ratings {
             let distance = distances::users::distance(user_ratings, &ratings, self.method);
 
@@ -64,6 +66,7 @@ where
     }
 
     fn into_vec(self: Box<Self>) -> Vec<MapedDistance<UserId, ItemId>> {
+        log::info!("Sorting knns and returning as vec");
         self.max_heap.into_sorted_vec()
     }
 }
@@ -94,6 +97,8 @@ where
         user_ratings: &Ratings<ItemId>,
         maped_ratings: MapedRatings<UserId, ItemId>,
     ) {
+        log::info!("Updating knn computation on new maped ratings chunk");
+        log::info!("Size of maped ratings chunk is {}", maped_ratings.len());
         for (user_id, ratings) in maped_ratings {
             let distance = distances::users::distance(user_ratings, &ratings, self.method);
 
@@ -115,6 +120,7 @@ where
     }
 
     fn into_vec(self: Box<Self>) -> Vec<MapedDistance<UserId, ItemId>> {
+        log::info!("Sorting knns and returning as vec");
         self.min_heap
             .into_sorted_vec()
             .into_iter()
