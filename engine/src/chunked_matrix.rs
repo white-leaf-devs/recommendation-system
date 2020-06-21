@@ -175,11 +175,21 @@ where
     }
 
     fn get_value(&self, id_a: &ItemId, id_b: &ItemId) -> Option<f64> {
-        match (self.matrix_chunk.get(id_a), self.matrix_chunk.get(id_b)) {
-            (Some(row), None) => row.get(id_b).cloned(),
-            (None, Some(row)) => row.get(id_a).cloned(),
-            _ => None,
+        if let Some(row_a) = self.matrix_chunk.get(id_a) {
+            let maybe_val = row_a.get(id_b);
+            if let Some(val) = maybe_val {
+                return Some(*val);
+            }
         }
+
+        if let Some(row_b) = self.matrix_chunk.get(id_b) {
+            let maybe_val = row_b.get(id_a);
+            if let Some(val) = maybe_val {
+                return Some(*val);
+            }
+        }
+
+        None
     }
 }
 
@@ -308,10 +318,20 @@ where
     }
 
     fn get_value(&self, id_a: &ItemId, id_b: &ItemId) -> Option<f64> {
-        match (self.matrix_chunk.get(id_a), self.matrix_chunk.get(id_b)) {
-            (Some(row), None) => row.get(id_b).cloned(),
-            (None, Some(row)) => row.get(id_a).map(|v| -v),
-            _ => None,
+        if let Some(row_a) = self.matrix_chunk.get(id_a) {
+            let maybe_val = row_a.get(id_b);
+            if let Some(val) = maybe_val {
+                return Some(*val);
+            }
         }
+
+        if let Some(row_b) = self.matrix_chunk.get(id_b) {
+            let maybe_val = row_b.get(id_a);
+            if let Some(val) = maybe_val {
+                return Some(-val);
+            }
+        }
+
+        None
     }
 }
