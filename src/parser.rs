@@ -59,9 +59,9 @@ pub enum Statement {
     ItemBasedPredict(SearchBy, SearchBy, ItemMethod, usize),
 
     // Specific for similarity matrix
-    EnterSimMatrix(usize, usize, ItemMethod),
-    SimMatrixGet(SearchBy, SearchBy),
-    SimMatrixMoveTo(usize, usize),
+    EnterMatrix(usize, usize, ItemMethod),
+    MatrixGet(SearchBy, SearchBy),
+    MatrixMoveTo(usize, usize),
 }
 
 fn parse_user_method(input: &str) -> IResult<&str, UserMethod> {
@@ -121,16 +121,16 @@ fn parse_searchby(input: &str) -> IResult<&str, SearchBy> {
 
 fn parse_statement(input: &str) -> IResult<&str, Statement> {
     let (input, statement_type) = alt((
-        tag("connect"),
-        tag("user_knn"),
         tag("get"),
         tag("move_to"),
+        tag("connect"),
+        tag("user_knn"),
         tag("query_user"),
         tag("query_item"),
+        tag("enter_matrix"),
         tag("query_ratings"),
         tag("user_distance"),
         tag("item_distance"),
-        tag("enter_sim_matrix"),
         tag("user_based_predict"),
         tag("item_based_predict"),
     ))(input)?;
@@ -221,7 +221,7 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
             )
         }
 
-        "enter_sim_matrix" => {
+        "enter_matrix" => {
             let (input, (m, _, n, _, item_method)) = delimited(
                 char('('),
                 tuple((
@@ -236,7 +236,7 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
 
             (
                 input,
-                Statement::EnterSimMatrix(m as usize, n as usize, item_method),
+                Statement::EnterMatrix(m as usize, n as usize, item_method),
             )
         }
 
@@ -249,7 +249,7 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
 
             (
                 input,
-                Statement::SimMatrixGet(item_a_searchby, item_b_searchby),
+                Statement::MatrixGet(item_a_searchby, item_b_searchby),
             )
         }
 
@@ -260,7 +260,7 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
                 char(')'),
             )(input)?;
 
-            (input, Statement::SimMatrixMoveTo(i as usize, j as usize))
+            (input, Statement::MatrixMoveTo(i as usize, j as usize))
         }
 
         "user_based_predict" => {
@@ -503,31 +503,28 @@ mod tests {
     }
 
     #[test]
-    fn enter_sim_matrix_statement() {
-        let parsed = parse_statement("enter_sim_matrix(100, 100, adj_cosine)");
-        let expected = (
-            "",
-            Statement::EnterSimMatrix(100, 100, ItemMethod::AdjCosine),
-        );
+    fn enter_matrix_statement() {
+        let parsed = parse_statement("enter_matrix(100, 100, adj_cosine)");
+        let expected = ("", Statement::EnterMatrix(100, 100, ItemMethod::AdjCosine));
 
         assert_eq!(parsed, Ok(expected));
     }
 
     #[test]
-    fn sim_matrix_get_statement() {
+    fn matrix_get_statement() {
         let parsed = parse_statement("get(id('10'), name('Alien'))");
         let expected = (
             "",
-            Statement::SimMatrixGet(SearchBy::id("10"), SearchBy::name("Alien")),
+            Statement::MatrixGet(SearchBy::id("10"), SearchBy::name("Alien")),
         );
 
         assert_eq!(parsed, Ok(expected));
     }
 
     #[test]
-    fn sim_matrix_move_to_statement() {
+    fn matrix_move_to_statement() {
         let parsed = parse_statement("move_to(10, 1)");
-        let expected = ("", Statement::SimMatrixMoveTo(10, 1));
+        let expected = ("", Statement::MatrixMoveTo(10, 1));
 
         assert_eq!(parsed, Ok(expected));
     }

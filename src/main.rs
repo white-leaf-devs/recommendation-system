@@ -105,7 +105,7 @@ where
 
             line => match parser::parse_line(line) {
                 Some(stmt) => match stmt {
-                    Statement::SimMatrixGet(searchby_a, searchby_b) => {
+                    Statement::MatrixGet(searchby_a, searchby_b) => {
                         let item_id_a = match controller.items_by(&searchby_a) {
                             Ok(items) => items[0].get_id(),
                             Err(e) => {
@@ -131,7 +131,7 @@ where
                         }
                     }
 
-                    Statement::SimMatrixMoveTo(i, j) => {
+                    Statement::MatrixMoveTo(i, j) => {
                         curr_i = i;
                         curr_j = j;
 
@@ -195,7 +195,7 @@ where
                         log::error!("Disconnect from current database first!");
                     }
 
-                    Statement::SimMatrixGet(_, _) | Statement::SimMatrixMoveTo(_, _) => {
+                    Statement::MatrixGet(_, _) | Statement::MatrixMoveTo(_, _) => {
                         log::error!("Invalid statement in this context.");
                         log::error!("Enter the matrix first!");
                     }
@@ -439,7 +439,7 @@ where
                         println!("Operation took {:.4} seconds", now.elapsed().as_secs_f64());
                     }
 
-                    Statement::EnterSimMatrix(m, n, method) => match method {
+                    Statement::EnterMatrix(m, n, method) => match method {
                         ItemMethod::AdjCosine => {
                             let matrix = SimilarityMatrix::new(&controller, &config, m, n);
                             chunked_matrix_prompt(&controller, matrix, name, rl)?;
