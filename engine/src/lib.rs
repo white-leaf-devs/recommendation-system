@@ -15,11 +15,11 @@
 // You should have received a copy of the GNU General Public License
 // along with recommend.  If not, see <http://www.gnu.org/licenses/>.
 
+pub mod chunked_matrix;
 pub mod distances;
 pub mod error;
 pub mod knn;
 pub mod maped_distance;
-pub mod similarity_matrix;
 pub mod utils;
 
 use crate::{
@@ -554,7 +554,8 @@ mod tests {
 
     #[test]
     fn similarity_matrix() -> Result<(), Error> {
-        use super::similarity_matrix::SimilarityMatrix;
+        use super::chunked_matrix::ChunkedMatrix;
+        use super::chunked_matrix::SimilarityMatrix;
         use movie_lens_small::MovieLensSmallController;
         use std::time::Instant;
 
@@ -563,7 +564,7 @@ mod tests {
         let mut sim_matrix = SimilarityMatrix::new(&controller, &config, 10000, 10000);
 
         let now = Instant::now();
-        let _matrix = sim_matrix.get_chunk(0, 0);
+        sim_matrix.calculate_chunk(0, 0)?;
         println!("Elapsed: {}", now.elapsed().as_secs_f64());
 
         Ok(())

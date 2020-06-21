@@ -5,7 +5,11 @@ use books::BooksController;
 use clap::{App, Arg};
 use config::Config;
 use controller::{Controller, Entity, ToTable};
-use engine::{similarity_matrix::SimilarityMatrix, Engine};
+use engine::{
+    chunked_matrix::{ChunkedMatrix, DeviationMatrix, SimilarityMatrix},
+    distances::items::Method as ItemMethod,
+    Engine,
+};
 use movie_lens::MovieLensController;
 use movie_lens_small::MovieLensSmallController;
 use parser::{Database, Statement};
@@ -57,33 +61,32 @@ macro_rules! prompt {
     }};
 }
 
-fn sim_matrix_prompt<C, User, UserId, Item, ItemId>(
-    config: &Config,
+fn chunked_matrix_prompt<'a, M, C, User, UserId, Item, ItemId>(
     controller: &C,
+    mut matrix: M,
     name: &str,
-    ver_chunk_size: usize,
-    hor_chunk_size: usize,
     rl: &mut Editor<()>,
 ) -> Result<(), Error>
 where
+    M: ChunkedMatrix<'a, C, User, UserId, Item, ItemId>,
     C: Controller<User, UserId, Item, ItemId>,
     User: Entity<Id = UserId> + ToTable,
     Item: Entity<Id = ItemId> + ToTable,
     UserId: Hash + Eq + Display + Clone + Default,
     ItemId: Hash + Eq + Display + Clone,
 {
-    let mut sim_matrix = SimilarityMatrix::new(controller, config, ver_chunk_size, hor_chunk_size);
     let mut curr_i = 0;
     let mut curr_j = 0;
 
     let now = Instant::now();
-    let mut chunk = match sim_matrix.get_chunk(curr_i, curr_j) {
+    match matrix.calculate_chunk(curr_i, curr_j) {
         Ok(chunk) => chunk,
         Err(e) => {
             log::error!("{}", e);
             return Ok(());
         }
-    };
+    }
+
     println!("Operation took {:.4} seconds", now.elapsed().as_secs_f64());
 
     loop {
@@ -119,7 +122,7 @@ where
                             }
                         };
 
-                        let val = chunk.get(&item_id_a).and_then(|row| row.get(&item_id_b));
+                        let val = matrix.get_value(&item_id_a, &item_id_b);
 
                         if let Some(val) = val {
                             println!("Value for ({}, {}) is {}", item_id_a, item_id_b, val);
@@ -129,22 +132,17 @@ where
                     }
 
                     Statement::SimMatrixMoveTo(i, j) => {
-                        let old_i = curr_i;
-                        let old_j = curr_j;
-
                         curr_i = i;
                         curr_j = j;
 
                         let now = Instant::now();
-                        chunk = match sim_matrix.get_chunk(curr_i, curr_j) {
+                        match matrix.calculate_chunk(curr_i, curr_j) {
                             Ok(chunk) => chunk,
                             Err(e) => {
                                 log::error!("{}", e);
-                                curr_i = old_i;
-                                curr_j = old_j;
-                                chunk
+                                return Ok(());
                             }
-                        };
+                        }
                         println!("Operation took {:.4} seconds", now.elapsed().as_secs_f64());
                     }
 
@@ -441,9 +439,17 @@ where
                         println!("Operation took {:.4} seconds", now.elapsed().as_secs_f64());
                     }
 
-                    Statement::EnterSimMatrix(m, n, _method) => {
-                        sim_matrix_prompt(&config, &controller, name, m, n, rl)?;
-                    }
+                    Statement::EnterSimMatrix(m, n, method) => match method {
+                        ItemMethod::AdjCosine => {
+                            let matrix = SimilarityMatrix::new(&controller, &config, m, n);
+                            chunked_matrix_prompt(&controller, matrix, name, rl)?;
+                        }
+
+                        ItemMethod::SlopeOne => {
+                            let matrix = DeviationMatrix::new(&controller, &config, m, n);
+                            chunked_matrix_prompt(&controller, matrix, name, rl)?;
+                        }
+                    },
                 },
 
                 None => log::error!("Invalid syntax!"),

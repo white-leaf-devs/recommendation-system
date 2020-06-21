@@ -403,6 +403,7 @@ dependencies = [
  "config",
  "controller",
  "criterion",
+ "log",
  "movie-lens",
  "movie-lens-small",
  "num-traits",
