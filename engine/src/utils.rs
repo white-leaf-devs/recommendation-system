@@ -29,12 +29,13 @@ pub fn common_keys_iter<'a, K, V>(
 where
     K: Hash + Eq,
 {
-    let mut is_swaped = false;
+    let is_swaped;
 
     let (shortest, longest) = if a.len() > b.len() {
         is_swaped = true;
         (b, a)
     } else {
+        is_swaped = false;
         (a, b)
     };
 
