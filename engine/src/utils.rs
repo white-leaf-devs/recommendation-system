@@ -29,11 +29,19 @@ pub fn common_keys_iter<'a, K, V>(
 where
     K: Hash + Eq,
 {
-    let (shortest, longest) = if a.len() > b.len() { (b, a) } else { (a, b) };
+    let mut is_swaped = false;
+
+    let (shortest, longest) = if a.len() > b.len() {
+        is_swaped = true;
+        (b, a)
+    } else {
+        (a, b)
+    };
 
     CommonKeyIterator {
         shortest: shortest.iter(),
         longest,
+        is_swaped,
     }
 }
 
@@ -44,6 +52,7 @@ where
 {
     shortest: MapIter<'a, K, V>,
     longest: &'a HashMap<K, V>,
+    is_swaped: bool,
 }
 
 impl<'a, K, V> Iterator for CommonKeyIterator<'a, K, V>
@@ -57,7 +66,12 @@ where
 
         loop {
             if let Some(b_val) = self.longest.get(a_val.0) {
-                break Some((a_val.0, (a_val.1, b_val)));
+                let values = if self.is_swaped {
+                    (b_val, a_val.1)
+                } else {
+                    (a_val.1, b_val)
+                };
+                break Some((a_val.0, values));
             } else {
                 a_val = self.shortest.next()?;
             }
