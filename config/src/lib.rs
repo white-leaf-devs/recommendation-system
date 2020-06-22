@@ -4,6 +4,13 @@ use serde::Deserialize;
 use std::{collections::HashMap, path::Path};
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
+pub struct DatabaseEntry {
+    pub psql_url: String,
+    pub mongo_url: String,
+    pub mongo_db: String,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct SimMatrixConfig {
     pub chunk_size_threshold: f64,
     pub partial_users_chunk_size: usize,
@@ -27,7 +34,7 @@ pub struct Config {
     pub system: SystemConfig,
     pub engine: EngineConfig,
     pub sim_matrix: SimMatrixConfig,
-    pub databases: HashMap<String, String>,
+    pub databases: HashMap<String, DatabaseEntry>,
 }
 
 impl Default for Config {
@@ -47,11 +54,31 @@ impl Default for Config {
                 allow_chunk_optimization: true,
             },
             databases: hash_map! {
-              "simple-movie".into() => "postgres://postgres:@localhost/simple-movie".into(),
-              "books".into() => "postgres://postgres:@localhost/books".into(),
-              "shelves".into() => "postgres://postgres:@localhost/shelves".into(),
-              "movie-lens".into() => "postgres://postgres:@localhost/movie-lens".into(),
-              "movie-lens-small".into() => "postgres://postgres:@localhost/movie-lens-small".into(),
+                "simple-movie".into() => DatabaseEntry {
+                    psql_url: "postgres://postgres:@localhost/simple-movie".into(),
+                    mongo_url: "mongodb://localhost:27017".into(),
+                    mongo_db: "simple-movie".into()
+                },
+                "books".into() => DatabaseEntry {
+                    psql_url: "postgres://postgres:@localhost/books".into(),
+                    mongo_url: "mongodb://localhost:27017".into(),
+                    mongo_db: "books".into()
+                },
+                "shelves".into() => DatabaseEntry {
+                    psql_url: "postgres://postgres:@localhost/shelves".into(),
+                    mongo_url: "mongodb://localhost:27017".into(),
+                    mongo_db: "shelves".into(),
+                },
+                "movie-lens".into() => DatabaseEntry {
+                    psql_url: "postgres://postgres:@localhost/movie-lens".into(),
+                    mongo_url: "mongodb://localhost:27017".into(),
+                    mongo_db: "movie-lens".into(),
+                },
+                "movie-lens-small".into() => DatabaseEntry {
+                    psql_url: "postgres://postgres:@localhost/movie-lens-small".into(),
+                    mongo_url: "mongodb://localhost:27017".into(),
+                    mongo_db: "movie-lens-small".into(),
+                }
             },
         }
     }
@@ -88,7 +115,11 @@ mod tests {
                 allow_chunk_optimization: true,
             },
             databases: hash_map! {
-                "some-database".into() => "postgres://postgres:@localhost/some-database".into()
+                "some-database".into() => DatabaseEntry {
+                    psql_url: "postgres://postgres:@localhost/some-database".into(),
+                    mongo_url: "mongodb://localhost:27017".into(),
+                    mongo_db: "some-database".into(),
+                }
             },
         };
 
