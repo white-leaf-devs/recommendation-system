@@ -11,5 +11,7 @@ allow_chunk_optimization = true
 [engine]
 partial_users_chunk_size = 10000
 
-[databases]
-some-database = "postgres://postgres:@localhost/some-database"
+[databases.some-database]
+psql_url = "postgres://postgres:@localhost/some-database"
+mongo_url = "mongodb://localhost:27017"
+mongo_db = "some-database"

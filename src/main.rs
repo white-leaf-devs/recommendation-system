@@ -534,40 +534,42 @@ fn main() -> Result<(), Error> {
                 Some(stmt) => {
                     if let Statement::Connect(db) = stmt {
                         let name = db.to_string();
-                        let url = &config.databases[&name];
+                        let psql_url = &config.databases[&name].psql_url;
+                        let mongo_url = &config.databases[&name].mongo_url;
+                        let mongo_db = &config.databases[&name].mongo_db;
 
                         match db {
                             Database::Books => database_connected_prompt(
                                 &config,
-                                BooksController::with_url(url)?,
+                                BooksController::with_url(psql_url)?,
                                 &name,
                                 &mut rl,
                             )?,
 
                             Database::Shelves => database_connected_prompt(
                                 &config,
-                                ShelvesController::with_url(url)?,
+                                ShelvesController::with_url(psql_url)?,
                                 &name,
                                 &mut rl,
                             )?,
 
                             Database::SimpleMovie => database_connected_prompt(
                                 &config,
-                                SimpleMovieController::with_url(url)?,
+                                SimpleMovieController::with_url(psql_url, mongo_url, mongo_db)?,
                                 &name,
                                 &mut rl,
                             )?,
 
                             Database::MovieLens => database_connected_prompt(
                                 &config,
-                                MovieLensController::with_url(url)?,
+                                MovieLensController::with_url(psql_url)?,
                                 &name,
                                 &mut rl,
                             )?,
 
                             Database::MovieLensSmall => database_connected_prompt(
                                 &config,
-                                MovieLensSmallController::with_url(url)?,
+                                MovieLensSmallController::with_url(psql_url)?,
                                 &name,
                                 &mut rl,
                             )?,
