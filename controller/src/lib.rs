@@ -227,5 +227,8 @@ pub mod error {
 
         #[error("Controller function not implemented")]
         NotImplemented,
+
+        #[error("Failed to cast bson value")]
+        BsonConvert,
     }
 }
