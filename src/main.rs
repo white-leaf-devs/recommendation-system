@@ -567,7 +567,7 @@ fn main() -> Result<(), Error> {
 
                             Database::MovieLens => database_connected_prompt(
                                 &config,
-                                MovieLensController::with_url(psql_url)?,
+                                MovieLensController::with_url(psql_url, mongo_url, mongo_db)?,
                                 &name,
                                 &mut rl,
                             )?,
