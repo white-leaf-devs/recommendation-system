@@ -1,11 +1,11 @@
 [system]
 # Verbose levels:
-#   0  => Errors
-#   1  => Warnings
-#   2  => Info
-#   3+ => Debug
+#   0  => Errors (log::error!)
+#   1  => Warnings (log::warning!)
+#   2  => Info (log::info!)
+#   3+ => Debug (log::debug!)
 term_verbosity_level = 0
-file_verbosity_level = 3
+file_verbosity_level = 2
 log_output = "rsys.log"
 
 [sim_matrix]
