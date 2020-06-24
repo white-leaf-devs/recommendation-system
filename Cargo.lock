@@ -1852,8 +1852,8 @@ dependencies = [
  "csv",
  "diesel",
  "dotenv",
- "indicatif",
-]
+ "indicatif 0.15.0",
+ "mongodb",
 
 [[package]]
 name = "simple-movie"
