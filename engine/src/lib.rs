@@ -21,7 +21,7 @@ use distances::items::{denormalize_user_rating, normalize_user_ratings, slope_on
 use error::ErrorKind;
 use knn::{Knn, MaxHeapKnn, MinHeapKnn};
 use num_traits::Zero;
-use std::{collections::HashSet, hash::Hash, marker::PhantomData};
+use std::{collections::HashSet, fmt::Debug, hash::Hash, marker::PhantomData};
 
 pub struct Engine<'a, C, User, UserId, Item, ItemId>
 where
@@ -40,8 +40,8 @@ impl<'a, C, User, UserId, Item, ItemId> Engine<'a, C, User, UserId, Item, ItemId
 where
     User: Entity<Id = UserId>,
     Item: Entity<Id = ItemId>,
-    UserId: Hash + Eq + Clone,
-    ItemId: Hash + Eq + Clone,
+    UserId: Hash + Eq + Clone + Debug,
+    ItemId: Hash + Eq + Clone + Debug,
     C: Controller<User, UserId, Item, ItemId>,
 {
     pub fn with_controller(controller: &'a C, config: &'a Config) -> Self {
@@ -236,71 +236,100 @@ where
     where
         UserId: Default,
     {
+        let user_id = user.get_id();
         let item_id = item.get_id();
 
+        log::info!(
+            "Predicting score for user({:?}) for item({:?})",
+            user_id,
+            item_id
+        );
+
+        log::info!("Gathering user({:?}) ratings", user_id);
         let user_ratings = self.controller.ratings_by(&user)?;
         let (min_rating, max_rating) = self.controller.get_range();
+        log::info!("Normalizing user({:?}) ratings", user_id);
         let normalized_ratings = normalize_user_ratings(&user_ratings, min_rating, max_rating)?;
 
+        log::info!("Gathering users who rated for target item");
         let target_items_users = self.controller.users_who_rated(&[item])?;
+        log::info!(
+            "Gathered {} scores for this item",
+            target_items_users[&item_id].len()
+        );
 
         let mut num = 0.0;
         let mut dem = 0.0;
 
         let mut adj_cosine = AdjCosine::new();
 
+        log::info!("Iterating items by chunks of size {}", chunk_size);
         let items_chunks = self.controller.items_by_chunks(chunk_size);
         for item_chunk_base in items_chunks {
+            log::info!("Initial chunk size: {}", item_chunk_base.len());
             let item_chunk: Vec<_> = item_chunk_base
                 .into_iter()
                 .filter(|other_item| user_ratings.contains_key(&other_item.get_id()))
                 .collect();
+            log::info!("Chunk size after filter: {}", item_chunk.len());
 
             if item_chunk.is_empty() {
                 continue;
             }
 
+            log::info!("Gathering users who rated for {} items", item_chunk.len());
             let mut users_who_rated: MapedRatings<ItemId, UserId> = self
                 .controller
                 .users_who_rated(&item_chunk)?
                 .into_iter()
-                .filter(|(_, ratings)| ratings.contains_key(&user.get_id()))
+                .filter(|(_, ratings)| ratings.contains_key(&user_id))
                 .collect();
+            log::info!(
+                "Gathered a total of {} inverted maped ratings",
+                users_who_rated.len()
+            );
 
             users_who_rated.insert(item_id.clone(), target_items_users[&item_id].clone());
 
             let all_users_iter = users_who_rated.values();
             let mut all_users = HashSet::new();
 
+            log::info!("Collecting all unique users ids");
             for users in all_users_iter {
-                for user in users.keys() {
-                    all_users.insert(user.clone());
+                for user_id in users.keys() {
+                    all_users.insert(user_id.clone());
                 }
             }
 
             // Shrink some means by their usage frequency
+            log::info!("Shrinking means based on their usage");
             adj_cosine.shrink_means();
 
             // Collect all the users that doesn't have a calculated mean
+            log::info!("Filtering users that have a cached mean");
             let all_users: Vec<_> = all_users
                 .into_iter()
                 .filter(|user_id| !adj_cosine.has_mean_for(user_id))
                 .collect();
             let all_partial_users = self.controller.create_partial_users(&all_users)?;
 
-            println!("Gathering ratings for {} users", all_partial_users.len());
+            log::info!("Gathering means for {} users", all_partial_users.len());
             let partial_users_chunk_size = self.config.engine.partial_users_chunk_size;
             for partial_users_chunk in all_partial_users.chunks(partial_users_chunk_size) {
                 let mean_chunk = self.controller.get_means(partial_users_chunk);
                 adj_cosine.add_new_means(&mean_chunk);
             }
 
+            log::info!("Iterating over all the items of this chunk");
             for other_item in &item_chunk {
                 let other_item_id = other_item.get_id();
+
+                log::info!("Item {:?}", other_item_id);
                 if !normalized_ratings.contains_key(&other_item_id) || item_id == other_item_id {
                     continue;
                 }
 
+                log::info!("Calculating");
                 if let Ok(similarity) = adj_cosine
                     .calculate(&users_who_rated[&item_id], &users_who_rated[&other_item_id])
                 {

@@ -25,7 +25,12 @@ use simplelog::{
     CombinedLogger, Config as LogConfig, ConfigBuilder as LogConfigBuilder, LevelFilter,
     TermLogger, TerminalMode, WriteLogger,
 };
-use std::{fmt::Display, fs::File, hash::Hash, time::Instant};
+use std::{
+    fmt::{Debug, Display},
+    fs::File,
+    hash::Hash,
+    time::Instant,
+};
 
 macro_rules! prompt {
     ($ed:ident) => {{
@@ -77,8 +82,8 @@ where
     C: Controller<User, UserId, Item, ItemId>,
     User: Entity<Id = UserId> + ToTable,
     Item: Entity<Id = ItemId> + ToTable,
-    UserId: Hash + Eq + Display + Clone + Default,
-    ItemId: Hash + Eq + Display + Clone,
+    UserId: Hash + Eq + Display + Clone + Debug + Default,
+    ItemId: Hash + Eq + Display + Clone + Debug,
 {
     let mut curr_i = 0;
     let mut curr_j = 0;
@@ -175,8 +180,8 @@ where
     C: Controller<User, UserId, Item, ItemId>,
     User: Entity<Id = UserId> + ToTable + Clone,
     Item: Entity<Id = ItemId> + ToTable + Clone,
-    UserId: Hash + Eq + Display + Clone + Default,
-    ItemId: Hash + Eq + Display + Clone,
+    UserId: Hash + Eq + Display + Clone + Debug + Default,
+    ItemId: Hash + Eq + Display + Clone + Debug,
 {
     let engine = Engine::with_controller(&controller, config);
 
