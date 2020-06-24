@@ -35,15 +35,15 @@ fn main() -> Result<(), Error> {
         for record in csv.records().progress() {
             if let Ok(record) = record {
                 let user_id: i32 = record[0].parse()?;
-                let movie_id: i32 = record[1].parse()?;
+                let book_id: i32 = record[1].parse()?;
                 let score: f64 = record[3].parse()?;
 
-                if !seen_items.contains(&movie_id)
+                if !seen_items.contains(&book_id)
                     && (items_with_ratings.keys().len() < chunk_size
-                        || items_with_ratings.contains_key(&movie_id))
+                        || items_with_ratings.contains_key(&book_id))
                 {
                     items_with_ratings
-                        .entry(movie_id)
+                        .entry(book_id)
                         .or_insert_with(HashMap::new)
                         .insert(user_id.to_string(), Bson::Double(score));
                 }
