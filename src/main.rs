@@ -546,7 +546,7 @@ fn main() -> Result<(), Error> {
                         match db {
                             Database::Books => database_connected_prompt(
                                 &config,
-                                BooksController::with_url(psql_url)?,
+                                BooksController::with_url(psql_url, mongo_url, mongo_db)?,
                                 &name,
                                 &mut rl,
                             )?,
