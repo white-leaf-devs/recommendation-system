@@ -1,5 +1,5 @@
 // Copyright (c) 2020 White Leaf
-// 
+//
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
@@ -37,7 +37,7 @@ fn main() -> Result<(), Error> {
     let url = &vars["DATABASE_URL"];
     let conn = establish_connection(url)?;
 
-    let controller = MovieLensController::with_url(url)?;
+    let controller = MovieLensController::with_url(url, "", "")?;
 
     let users_iterator = controller.users_by_chunks(10000);
     for user_chunk in users_iterator {
