@@ -40,7 +40,8 @@ fn main() -> Result<(), Error> {
             if let Some(current_item) = &mut current_item {
                 if *current_item != book_id {
                     let data = to_bson(&current_ratings)?;
-                    collection.insert_one(doc! { "item_id": book_id, "scores": data}, None)?;
+                    collection
+                        .insert_one(doc! { "item_id": *current_item, "scores": data}, None)?;
 
                     *current_item = book_id;
                     current_ratings.clear();
