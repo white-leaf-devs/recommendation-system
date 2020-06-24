@@ -1,3 +1,8 @@
+// Copyright (c) 2020 White Leaf
+// 
+// This software is released under the MIT License.
+// https://opensource.org/licenses/MIT
+
 use nom::bytes::complete::{tag, take_till1, take_while, take_while1};
 use nom::character::complete::{char, digit1};
 use nom::combinator::map_res;

@@ -1,3 +1,8 @@
+// Copyright (c) 2020 White Leaf
+//
+// This software is released under the MIT License.
+// https://opensource.org/licenses/MIT
+
 use anyhow::Error;
 use controller::Controller;
 use mongodb::bson::{doc, to_bson, Bson, Document};

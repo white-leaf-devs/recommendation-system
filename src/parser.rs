@@ -1,3 +1,8 @@
+// Copyright (c) 2020 White Leaf
+// 
+// This software is released under the MIT License.
+// https://opensource.org/licenses/MIT
+
 pub mod basics;
 
 use crate::parser::basics::{parse_ident, parse_number, parse_separator, parse_string};

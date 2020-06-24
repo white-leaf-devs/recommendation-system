@@ -1,3 +1,8 @@
+// Copyright (c) 2020 White Leaf
+// 
+// This software is released under the MIT License.
+// https://opensource.org/licenses/MIT
+
 use anyhow::Error;
 use diesel::pg::PgConnection;
 use diesel::{insert_into, prelude::*};

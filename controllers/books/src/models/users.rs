@@ -1,3 +1,8 @@
+// Copyright (c) 2020 White Leaf
+//
+// This software is released under the MIT License.
+// https://opensource.org/licenses/MIT
+
 use crate::schema::{means, users};
 use common_macros::hash_map;
 use controller::Entity;
