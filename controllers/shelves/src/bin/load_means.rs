@@ -38,7 +38,7 @@ fn main() -> Result<(), Error> {
     let url = &vars["DATABASE_URL"];
     let conn = establish_connection(url)?;
 
-    let controller = ShelvesController::with_url(url)?;
+    let controller = ShelvesController::with_url(url, "", "")?;
 
     let users_iterator = controller.users_by_chunks(10000);
     for user_chunk in users_iterator {
