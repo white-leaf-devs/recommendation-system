@@ -112,7 +112,7 @@ Just like the above section some other functions need a method, those use the te
 
 ### Functions
 
-In the following functions and argument with a `?` indicates it's optional.
+In the following functions an argument with a `?` indicates it's optional.
 
 ###### `query_user`
 
@@ -212,21 +212,21 @@ item_based_predict(searchby, searchby, item_method, chunk_size)
 item_based_predict(id('123'), name('The Great Gatsby'), adj_cosine, 100)
 ```
 
-###### `enter_sim_matrix`
+###### `enter_matrix`
 
-Enter the similarity matrix by chunks, this uses item distances. This puts you into a sub shell where you can move in the matrix and get some values
+Enter "the matrix" by chunks, this uses item distances. This puts you into a sub shell where you can move in the matrix and get some values
 
 ```python
 # Syntax 
-enter_sim_matrix(vert_chunk_size, hori_chunk_size, item_method)
+enter_matrix(vert_chunk_size, hori_chunk_size, item_method)
 
 # Example
-enter_sim_matrix(100, 100, adj_cosine)
+enter_matrix(100, 100, adj_cosine)
 ```
 
-###### `move_to` (only in sim_matrix shell)
+###### `move_to` (only in `matrix` shell)
 
-Move to another chunk inside the similarity matrix
+Move to another chunk inside the matrix
 
 ```python
 # Syntax
@@ -236,9 +236,9 @@ move_to(number, number)
 move_to(0, 1)
 ```
 
-###### `get` (only in sim_matrix shell)
+###### `get` (only in `matrix` shell)
 
-From the similarity matrix get the value for two items specified
+From the matrix get the value for two specified items
 
 ```python
 # Syntax
