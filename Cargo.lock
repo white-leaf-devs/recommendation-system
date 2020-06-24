@@ -1877,7 +1877,8 @@ dependencies = [
  "csv",
  "diesel",
  "dotenv",
- "indicatif 0.14.0",
+ "indicatif 0.15.0",
+ "mongodb",
 ]
 
 [[package]]
