@@ -21,7 +21,7 @@ fn main() -> Result<(), Error> {
     let db = client.database(mongo_db);
     let collection = db.collection("users_who_rated");
 
-    let file = File::open("data/ratings.csv")?;
+    let file = File::open("data/ratings-by-items.csv")?;
     let reader = BufReader::new(file);
     let mut csv = csv::ReaderBuilder::new()
         .has_headers(true)
@@ -37,25 +37,27 @@ fn main() -> Result<(), Error> {
             let movie_id: i32 = record[1].parse()?;
             let score: f64 = record[2].parse()?;
 
-            if current_item.is_none() {
-                current_item = Some(movie_id);
-            }
+            if let Some(current_item) = &mut current_item {
+                if *current_item != movie_id {
+                    let data = to_bson(&current_ratings)?;
+                    collection.insert_one(doc! { "item_id": movie_id, "scores": data}, None)?;
 
-            if current_item.unwrap() != movie_id {
-                let data = to_bson(&current_ratings)?;
-                collection.insert_one(doc! {"item_id":movie_id, "scores":data}, None)?;
-
+                    *current_item = movie_id;
+                    current_ratings.clear();
+                }
+            } else {
                 current_item = Some(movie_id);
-                current_ratings.clear();
             }
 
             current_ratings.insert(user_id.to_string(), Bson::Double(score));
         }
     }
 
-    if !current_ratings.is_empty() && !current_item.is_none() {
-        let data = to_bson(&current_ratings)?;
-        collection.insert_one(doc! {"item_id":current_item.unwrap(), "scores":data}, None)?;
+    if let Some(current_item) = current_item {
+        if !current_ratings.is_empty() {
+            let data = to_bson(&current_ratings)?;
+            collection.insert_one(doc! { "item_id": current_item, "scores": data}, None)?;
+        }
     }
 
     Ok(())
