@@ -22,14 +22,9 @@ fn main() -> Result<(), Error> {
     let collection = db.collection("users_who_rated");
 
     let mut seen_items = HashSet::new();
-    let mut items_with_ratings = HashMap::new();
-
     let chunk_size = 4000;
-    let mut has_inserted = true;
 
-    while has_inserted {
-        has_inserted = false;
-
+    loop {
         let file = File::open("data/ratings.csv")?;
         let reader = BufReader::new(file);
         let mut csv = csv::ReaderBuilder::new()
@@ -37,6 +32,7 @@ fn main() -> Result<(), Error> {
             .delimiter(b',')
             .from_reader(reader);
 
+        let mut items_with_ratings = HashMap::new();
         for record in csv.records().progress() {
             if let Ok(record) = record {
                 let user_id: i32 = record[0].parse()?;
@@ -54,23 +50,24 @@ fn main() -> Result<(), Error> {
                 }
             }
         }
+
         println!(
-            "Current items_with_ratings Size:\t{}",
+            "Current items_with_ratings: {}",
             items_with_ratings.keys().len()
         );
+
         // Push the ratings vec when it's 10K length
-        if items_with_ratings.keys().len() != 0 {
+        if !items_with_ratings.is_empty() {
             let mut docs = Vec::new();
-            for (movie_id, ratings) in &items_with_ratings {
-                let data = to_bson(ratings)?;
+            for (movie_id, ratings) in items_with_ratings {
+                let data = to_bson(&ratings)?;
                 docs.push(doc! {"item_id": movie_id, "scores": data});
-                seen_items.insert(movie_id.clone());
+                seen_items.insert(movie_id);
             }
-            // Insert current item chunk into MongoDB
+
             collection.insert_many(docs, None)?;
-            // Clear ratings for the following iterations
-            items_with_ratings.clear();
-            has_inserted = true
+        } else {
+            break;
         }
     }
 
