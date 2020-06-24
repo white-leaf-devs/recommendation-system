@@ -14,7 +14,7 @@ controller = { version = "*", path = "../../controller" }
 csv = "1"
 diesel = { version = "1", features = [ "postgres" ] }
 dotenv = "0.15.0"
-indicatif = "0.14"
+indicatif = "0.15"
 
 [features]
 default = []
