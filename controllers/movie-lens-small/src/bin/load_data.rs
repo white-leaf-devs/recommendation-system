@@ -67,7 +67,7 @@ fn insert_ratings(conn: &PgConnection, url: &str) -> Result<(), Error> {
     println!("Collecting records for ratings...");
     let records: Vec<_> = csv.records().collect();
 
-    let controller = MovieLensSmallController::with_url(url)?;
+    let controller = MovieLensSmallController::with_url(url, "", "")?;
     for record in records.iter().progress() {
         if let Ok(record) = record {
             let user_id: i32 = record[0].parse()?;

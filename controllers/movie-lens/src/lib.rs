@@ -1,5 +1,5 @@
 // Copyright (c) 2020 White Leaf
-// 
+//
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
@@ -19,6 +19,8 @@ use anyhow::Error;
 use controller::{error::ErrorKind, Controller, MapedRatings, Ratings, SearchBy};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use mongodb::bson::doc;
+use mongodb::sync::{Client, Database};
 use std::collections::HashMap;
 
 pub fn establish_connection(url: &str) -> Result<PgConnection, Error> {
@@ -27,16 +29,24 @@ pub fn establish_connection(url: &str) -> Result<PgConnection, Error> {
 
 pub struct MovieLensController {
     pg_conn: PgConnection,
+    mongo_db: Database,
 }
 
 impl MovieLensController {
     pub fn new() -> Result<Self, Error> {
-        Self::with_url("postgres://postgres:@localhost/movie-lens")
+        Self::with_url(
+            "postgres://postgres:@localhost/movie-lens",
+            "mongodb://localhost:27017",
+            "movie-lens",
+        )
     }
 
-    pub fn with_url(url: &str) -> Result<Self, Error> {
-        let pg_conn = establish_connection(url)?;
-        Ok(Self { pg_conn })
+    pub fn with_url(psql_url: &str, mongo_url: &str, mongo_db: &str) -> Result<Self, Error> {
+        let pg_conn = establish_connection(psql_url)?;
+        let client = Client::with_uri_str(mongo_url)?;
+        let mongo_db = client.database(mongo_db);
+
+        Ok(Self { pg_conn, mongo_db })
     }
 }
 
@@ -118,14 +128,30 @@ impl Controller<User, i32, Movie, i32> for MovieLensController {
     }
 
     fn users_who_rated(&self, items: &[Movie]) -> Result<MapedRatings<i32, i32>, Error> {
-        let ratings = Rating::belonging_to(items).load::<Rating>(&self.pg_conn)?;
+        let collection = self.mongo_db.collection("users_who_rated");
+        let ids: Vec<_> = items.iter().map(|m| m.id).collect();
+
+        let cursor = collection.find(
+            doc! {
+                "item_id": { "$in": ids }
+            },
+            None,
+        )?;
 
         let mut items_users = HashMap::new();
-        for rating in ratings {
-            items_users
-                .entry(rating.movie_id)
-                .or_insert_with(HashMap::new)
-                .insert(rating.user_id, rating.score);
+        for doc in cursor {
+            let doc = doc?;
+            let item_id = doc.get_i32("item_id")?;
+
+            for (user_id, score) in doc.get_document("scores")? {
+                let user_id: i32 = user_id.parse()?;
+                let score = score.as_f64().ok_or_else(|| ErrorKind::BsonConvert)?;
+
+                items_users
+                    .entry(item_id)
+                    .or_insert_with(HashMap::new)
+                    .insert(user_id, score);
+            }
         }
 
         Ok(items_users)
