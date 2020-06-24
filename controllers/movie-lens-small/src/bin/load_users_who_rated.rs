@@ -39,7 +39,6 @@ fn main() -> Result<(), Error> {
 
             if current_item.is_none() {
                 current_item = Some(movie_id);
-                continue;
             }
 
             if current_item.unwrap() != movie_id {
