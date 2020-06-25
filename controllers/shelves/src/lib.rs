@@ -1,5 +1,5 @@
 // Copyright (c) 2020 White Leaf
-// 
+//
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
@@ -133,7 +133,7 @@ impl Controller<User, i32, Book, i32> for ShelvesController {
 
             for (user_id, score) in doc.get_document("scores")? {
                 let user_id: i32 = user_id.parse()?;
-                let score = score.as_f64().ok_or_else(||ErrorKind::BsonConvert)?;
+                let score = score.as_f64().ok_or_else(|| ErrorKind::BsonConvert)?;
                 items_users
                     .entry(item_id)
                     .or_insert_with(HashMap::new)
@@ -212,22 +212,19 @@ impl Controller<User, i32, Book, i32> for ShelvesController {
         Ok(maped_ratings)
     }
 
-    fn get_range(&self) -> (f64, f64) {
-        (0., 5.)
+    fn means_for(&self, users: &[User]) -> Result<HashMap<i32, f64>, Error> {
+        let means = Mean::belonging_to(users).load::<Mean>(&self.pg_conn)?;
+
+        let means_by_user = means
+            .into_iter()
+            .map(|mean| (mean.user_id, mean.val))
+            .collect();
+
+        Ok(means_by_user)
     }
 
-    fn get_means(&self, _users: &[User]) -> HashMap<i32, f64> {
-        let means = Mean::belonging_to(_users)
-            .load::<Mean>(&self.pg_conn)
-            .unwrap();
-
-        let mut means_by_user = HashMap::new();
-
-        for mean in means {
-            means_by_user.insert(mean.user_id, mean.val);
-        }
-
-        means_by_user
+    fn score_range(&self) -> (f64, f64) {
+        (0., 5.)
     }
 }
 
