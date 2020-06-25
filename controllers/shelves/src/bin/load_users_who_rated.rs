@@ -33,6 +33,10 @@ fn main() -> Result<(), Error> {
 
     for record in csv.records().progress() {
         if let Ok(record) = record {
+            if record[0] == "user_id".to_string() {
+                continue;
+            }
+
             let user_id: i32 = record[0].parse()?;
             let book_id: i32 = record[1].parse()?;
             let score: f64 = record[3].parse()?;
