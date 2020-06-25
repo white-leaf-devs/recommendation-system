@@ -3,6 +3,7 @@ table! {
         id -> Int4,
         user_id -> Int4,
         val -> Float8,
+        score_number -> Int4,
     }
 }
 
