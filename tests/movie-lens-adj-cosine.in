@@ -1,0 +1,2 @@
+connect(movie-lens)
+item_based_predict(id('123100'), id('3898'), adj_cosine, 1000)
