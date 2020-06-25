@@ -183,7 +183,7 @@ where
     UserId: Hash + Eq + Display + Clone + Debug + Default,
     ItemId: Hash + Eq + Display + Clone + Debug,
 {
-    let engine = Engine::with_controller(&controller, config);
+    let mut engine = Engine::with_controller(&controller, config);
 
     loop {
         let opt: String = prompt!(rl, name)?;
