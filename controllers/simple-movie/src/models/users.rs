@@ -41,6 +41,7 @@ pub struct NewUser<'a> {
 pub struct NewMean {
     pub user_id: i32,
     pub val: f64,
+    pub score_number: i32,
 }
 
 #[derive(Debug, Clone, Identifiable, Queryable, Associations)]
@@ -49,4 +50,5 @@ pub struct Mean {
     pub id: i32,
     pub user_id: i32,
     pub val: f64,
+    pub score_number: i32,
 }

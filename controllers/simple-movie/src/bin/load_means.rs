@@ -13,8 +13,17 @@ use simple_movie::schema::means;
 use simple_movie::SimpleMovieController;
 use std::collections::HashMap;
 
-fn create_mean(conn: &PgConnection, user_id: i32, mean: f64) -> Result<(), Error> {
-    let new_mean = NewMean { user_id, val: mean };
+fn create_mean(
+    conn: &PgConnection,
+    user_id: i32,
+    mean: f64,
+    score_number: usize,
+) -> Result<(), Error> {
+    let new_mean = NewMean {
+        user_id,
+        val: mean,
+        score_number: score_number as i32,
+    };
 
     insert_into(means::table).values(&new_mean).execute(conn)?;
 
@@ -39,7 +48,7 @@ fn main() -> Result<(), Error> {
     let url = &vars["DATABASE_URL"];
     let conn = establish_connection(url)?;
 
-    let controller = SimpleMovieController::with_url(url, "", "")?;
+    let controller = SimpleMovieController::new()?;
 
     let users_iterator = controller.users_by_chunks(10000);
     for user_chunk in users_iterator {
@@ -48,9 +57,9 @@ fn main() -> Result<(), Error> {
             let user_id = user.get_id();
             if maped_ratings.contains_key(&user_id) {
                 let mean = compute_mean(&maped_ratings[&user_id]);
-                create_mean(&conn, user_id, mean)?;
+                create_mean(&conn, user_id, mean, maped_ratings[&user_id].len())?;
             } else {
-                create_mean(&conn, user_id, 0.0)?;
+                create_mean(&conn, user_id, 0.0, 0)?;
             }
         }
     }
