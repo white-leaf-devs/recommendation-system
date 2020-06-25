@@ -324,12 +324,10 @@ where
             for other_item in &item_chunk {
                 let other_item_id = other_item.get_id();
 
-                log::info!("Item {:?}", other_item_id);
                 if !normalized_ratings.contains_key(&other_item_id) || item_id == other_item_id {
                     continue;
                 }
 
-                log::info!("Calculating");
                 if let Ok(similarity) = adj_cosine
                     .calculate(&users_who_rated[&item_id], &users_who_rated[&other_item_id])
                 {
