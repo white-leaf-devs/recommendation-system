@@ -366,6 +366,7 @@ where
                     dem += similarity.abs();
                 }
             }
+
             let iter_time = now.elapsed().as_secs_f64();
             log::info!("Iterating over the items took {} seconds", iter_time);
             iters_time += iter_time;
