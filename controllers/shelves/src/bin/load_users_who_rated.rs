@@ -33,7 +33,7 @@ fn main() -> Result<(), Error> {
 
     for record in csv.records().progress() {
         if let Ok(record) = record {
-            if record[0] == "user_id".to_string() {
+            if &record[0] == "user_id" {
                 continue;
             }
 
