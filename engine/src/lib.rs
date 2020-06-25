@@ -21,7 +21,7 @@ use distances::items::{denormalize_user_rating, normalize_user_ratings, slope_on
 use error::ErrorKind;
 use knn::{Knn, MaxHeapKnn, MinHeapKnn};
 use num_traits::Zero;
-use std::{collections::HashSet, fmt::Debug, hash::Hash, marker::PhantomData};
+use std::{collections::HashSet, fmt::Debug, hash::Hash, marker::PhantomData, time::Instant};
 
 pub struct Engine<'a, C, User, UserId, Item, ItemId>
 where
@@ -263,31 +263,44 @@ where
 
         let mut adj_cosine = AdjCosine::new();
 
+        let mut means_time = 0.0;
+        let mut iters_time = 0.0;
+        let mut uwrs_time = 0.0;
+
         log::info!("Iterating items by chunks of size {}", chunk_size);
         let items_chunks = self.controller.items_by_chunks(chunk_size);
         for item_chunk_base in items_chunks {
             log::info!("Initial chunk size: {}", item_chunk_base.len());
+            let now = Instant::now();
             let item_chunk: Vec<_> = item_chunk_base
                 .into_iter()
                 .filter(|other_item| user_ratings.contains_key(&other_item.get_id()))
                 .collect();
             log::info!("Chunk size after filter: {}", item_chunk.len());
+            log::info!(
+                "Filtering chunk took {} seconds",
+                now.elapsed().as_secs_f64()
+            );
 
             if item_chunk.is_empty() {
                 continue;
             }
 
             log::info!("Gathering users who rated for {} items", item_chunk.len());
+            let now = Instant::now();
             let mut users_who_rated: MapedRatings<ItemId, UserId> = self
                 .controller
                 .users_who_rated(&item_chunk)?
                 .into_iter()
                 .filter(|(_, ratings)| ratings.contains_key(&user_id))
                 .collect();
+            let uwr_time = now.elapsed().as_secs_f64();
+            uwrs_time += uwr_time;
             log::info!(
                 "Gathered a total of {} inverted maped ratings",
                 users_who_rated.len()
             );
+            log::info!("Gathering users who rated took {} seconds", uwr_time);
 
             users_who_rated.insert(item_id.clone(), target_items_users[&item_id].clone());
 
@@ -314,13 +327,18 @@ where
             let all_partial_users = self.controller.create_partial_users(&all_users)?;
 
             log::info!("Gathering means for {} users", all_partial_users.len());
+            let now = Instant::now();
             let partial_users_chunk_size = self.config.engine.partial_users_chunk_size;
             for partial_users_chunk in all_partial_users.chunks(partial_users_chunk_size) {
                 let mean_chunk = self.controller.get_means(partial_users_chunk);
                 adj_cosine.add_new_means(&mean_chunk);
             }
+            let mean_time = now.elapsed().as_secs_f64();
+            log::info!("Obtaining took {} seconds", mean_time);
+            means_time += mean_time;
 
             log::info!("Iterating over all the items of this chunk");
+            let now = Instant::now();
             for other_item in &item_chunk {
                 let other_item_id = other_item.get_id();
 
@@ -335,12 +353,22 @@ where
                     dem += similarity.abs();
                 }
             }
+            let iter_time = now.elapsed().as_secs_f64();
+            log::info!("Iterating over the items took {} seconds", iter_time);
+            iters_time += iter_time;
         }
 
+        log::info!("Gathering means took in total {} seconds", means_time);
+        log::info!(
+            "Gathering users who rated took in total {} seconds",
+            uwrs_time
+        );
+        log::info!("Computing distances took in total {} seconds", iters_time);
         if dem.is_zero() {
             return Err(ErrorKind::DivisionByZero.into());
         }
 
+        log::info!("Denormalizing the final score");
         Ok(denormalize_user_rating(num / dem, min_rating, max_rating)?)
     }
 
