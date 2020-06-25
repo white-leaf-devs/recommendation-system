@@ -3,7 +3,7 @@ log_output = "rs.log"
 term_verbosity_level = 1
 file_verbosity_level = 2
 
-[sim_matrix]
+[matrix]
 chunk_size_threshold = 0.3
 partial_users_chunk_size = 10000
 allow_chunk_optimization = true 

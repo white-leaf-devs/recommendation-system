@@ -8,7 +8,7 @@ term_verbosity_level = 0
 file_verbosity_level = 2
 log_output = "rsys.log"
 
-[sim_matrix]
+[matrix]
 chunk_size_threshold = 0.3 # percentage of original size
 partial_users_chunk_size = 10000 
 allow_chunk_optimization = true 

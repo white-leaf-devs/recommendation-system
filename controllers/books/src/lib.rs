@@ -233,22 +233,19 @@ impl Controller<User, i32, Book, String> for BooksController {
         Ok(maped_ratings)
     }
 
-    fn get_range(&self) -> (f64, f64) {
-        (0., 10.)
+    fn means_for(&self, users: &[User]) -> Result<HashMap<i32, f64>, Error> {
+        let means = Mean::belonging_to(users).load::<Mean>(&self.pg_conn)?;
+
+        let means_by_user = means
+            .into_iter()
+            .map(|mean| (mean.user_id, mean.val))
+            .collect();
+
+        Ok(means_by_user)
     }
 
-    fn get_means(&self, users: &[User]) -> HashMap<i32, f64> {
-        let means = Mean::belonging_to(users)
-            .load::<Mean>(&self.pg_conn)
-            .unwrap();
-
-        let mut means_by_user = HashMap::new();
-
-        for mean in means {
-            means_by_user.insert(mean.user_id, mean.val);
-        }
-
-        means_by_user
+    fn score_range(&self) -> (f64, f64) {
+        (0., 10.)
     }
 }
 

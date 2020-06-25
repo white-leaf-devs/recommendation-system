@@ -27,10 +27,13 @@ pub struct Engine<'a, C, User, UserId, Item, ItemId>
 where
     User: Entity<Id = UserId>,
     Item: Entity<Id = ItemId>,
+    UserId: Hash + Eq,
     C: Controller<User, UserId, Item, ItemId>,
 {
     config: &'a Config,
     controller: &'a C,
+
+    adj_cosine: AdjCosine<UserId, f64>,
 
     user_type: PhantomData<User>,
     item_type: PhantomData<Item>,
@@ -40,7 +43,7 @@ impl<'a, C, User, UserId, Item, ItemId> Engine<'a, C, User, UserId, Item, ItemId
 where
     User: Entity<Id = UserId>,
     Item: Entity<Id = ItemId>,
-    UserId: Hash + Eq + Clone + Debug,
+    UserId: Hash + Eq + Clone + Debug + Default,
     ItemId: Hash + Eq + Clone + Debug,
     C: Controller<User, UserId, Item, ItemId>,
 {
@@ -48,6 +51,7 @@ where
         Self {
             config,
             controller,
+            adj_cosine: AdjCosine::new(),
             user_type: PhantomData,
             item_type: PhantomData,
         }
@@ -66,7 +70,7 @@ where
     }
 
     pub fn item_distance(
-        &self,
+        &mut self,
         item_a: Item,
         item_b: Item,
         method: ItemMethod,
@@ -90,14 +94,23 @@ where
                     }
                 }
 
-                let all_users: Vec<_> = all_users.into_iter().collect();
-                let all_users = self.controller.create_partial_users(&all_users)?;
-                let maped_ratings = self.controller.maped_ratings_by(&all_users)?;
+                self.adj_cosine.shrink_means();
 
-                let mut adj_cosine = AdjCosine::new();
-                adj_cosine.update_means(&maped_ratings);
+                let all_users: Vec<_> = all_users
+                    .into_iter()
+                    .filter(|uid| !self.adj_cosine.has_mean_for(uid))
+                    .collect();
 
-                let sim = adj_cosine
+                let all_partial_users = self.controller.create_partial_users(&all_users)?;
+
+                let partial_users_chunk_size = self.config.engine.partial_users_chunk_size;
+                for partial_users_chunk in all_partial_users.chunks(partial_users_chunk_size) {
+                    let mean_chunk = self.controller.means_for(partial_users_chunk)?;
+                    self.adj_cosine.add_new_means(&mean_chunk);
+                }
+
+                let sim = self
+                    .adj_cosine
                     .calculate(&users_who_rated[&item_a_id], &users_who_rated[&item_b_id])?;
 
                 Ok(sim)
@@ -247,7 +260,7 @@ where
 
         log::info!("Gathering user({:?}) ratings", user_id);
         let user_ratings = self.controller.ratings_by(&user)?;
-        let (min_rating, max_rating) = self.controller.get_range();
+        let (min_rating, max_rating) = self.controller.score_range();
         log::info!("Normalizing user({:?}) ratings", user_id);
         let normalized_ratings = normalize_user_ratings(&user_ratings, min_rating, max_rating)?;
 
@@ -330,7 +343,7 @@ where
             let now = Instant::now();
             let partial_users_chunk_size = self.config.engine.partial_users_chunk_size;
             for partial_users_chunk in all_partial_users.chunks(partial_users_chunk_size) {
-                let mean_chunk = self.controller.get_means(partial_users_chunk);
+                let mean_chunk = self.controller.means_for(partial_users_chunk)?;
                 adj_cosine.add_new_means(&mean_chunk);
             }
             let mean_time = now.elapsed().as_secs_f64();

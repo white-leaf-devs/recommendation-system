@@ -86,11 +86,11 @@ where
     }
 
     fn optimize_chunks_size(&mut self) {
-        if !self.config.sim_matrix.allow_chunk_optimization {
+        if !self.config.matrix.allow_chunk_optimization {
             return;
         }
 
-        let threshold = self.config.sim_matrix.chunk_size_threshold;
+        let threshold = self.config.matrix.chunk_size_threshold;
         let original_size = self.approximate_chunk_size();
         let target_size = (original_size as f64 * threshold) as usize;
 
@@ -147,9 +147,9 @@ where
             .collect();
         let all_partial_users = self.controller.create_partial_users(&all_users)?;
 
-        let partial_users_chunk_size = self.config.sim_matrix.partial_users_chunk_size;
+        let partial_users_chunk_size = self.config.matrix.partial_users_chunk_size;
         for partial_users_chunk in all_partial_users.chunks(partial_users_chunk_size) {
-            let mean_chunk = self.controller.get_means(partial_users_chunk);
+            let mean_chunk = self.controller.means_for(partial_users_chunk)?;
             self.adj_cosine.add_new_means(&mean_chunk);
         }
 
@@ -254,11 +254,11 @@ where
     }
 
     fn optimize_chunks_size(&mut self) {
-        if !self.config.sim_matrix.allow_chunk_optimization {
+        if !self.config.matrix.allow_chunk_optimization {
             return;
         }
 
-        let threshold = self.config.sim_matrix.chunk_size_threshold;
+        let threshold = self.config.matrix.chunk_size_threshold;
         let original_size = self.approximate_chunk_size();
         let target_size = (original_size as f64 * threshold) as usize;
 

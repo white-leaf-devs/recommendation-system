@@ -16,7 +16,7 @@ pub struct DatabaseEntry {
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
-pub struct SimMatrixConfig {
+pub struct MatrixConfig {
     pub chunk_size_threshold: f64,
     pub partial_users_chunk_size: usize,
     pub allow_chunk_optimization: bool,
@@ -38,7 +38,7 @@ pub struct SystemConfig {
 pub struct Config {
     pub system: SystemConfig,
     pub engine: EngineConfig,
-    pub sim_matrix: SimMatrixConfig,
+    pub matrix: MatrixConfig,
     pub databases: HashMap<String, DatabaseEntry>,
 }
 
@@ -53,7 +53,7 @@ impl Default for Config {
             engine: EngineConfig {
                 partial_users_chunk_size: 10000,
             },
-            sim_matrix: SimMatrixConfig {
+            matrix: MatrixConfig {
                 chunk_size_threshold: 0.3,
                 partial_users_chunk_size: 10000,
                 allow_chunk_optimization: true,
@@ -114,7 +114,7 @@ mod tests {
             engine: EngineConfig {
                 partial_users_chunk_size: 10000,
             },
-            sim_matrix: SimMatrixConfig {
+            matrix: MatrixConfig {
                 chunk_size_threshold: 0.3,
                 partial_users_chunk_size: 10000,
                 allow_chunk_optimization: true,
