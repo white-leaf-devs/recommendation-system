@@ -7,7 +7,7 @@ command -v "cargo" || ( echo "!! 'cargo' not found in path, aborting" && exit 1 
 DIR="$(dirname "$(readlink -f "$0")")"
 pushd "$DIR" &> /dev/null
 
-echo "=> Preparing things for movie-lens-small!"
+echo "=> Preparing things for books!"
 diesel setup
 
 echo "=> Creating main tables"
@@ -28,7 +28,7 @@ diesel migration --migration-dir triggers run
 echo "=> Loading users who rated"
 cargo run --release --bin load_users_who_rated
 
-echo "=> Altering sequence on movies table"
+echo "=> Altering sequence on books table"
 diesel migration --migration-dir sequence run
 
 source ".env"

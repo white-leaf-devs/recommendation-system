@@ -35,21 +35,6 @@ impl Entity for User {
     }
 }
 
-#[derive(Debug, Clone, Identifiable, Queryable, Associations)]
-#[belongs_to(User)]
-pub struct Mean {
-    pub id: i32,
-    pub user_id: i32,
-    pub val: f64,
-}
-
-#[derive(Debug, Clone, Insertable)]
-#[table_name = "means"]
-pub struct NewMean {
-    pub user_id: i32,
-    pub val: f64,
-}
-
 // To insert a new user into the database
 #[derive(Debug, Clone, Insertable)]
 #[table_name = "users"]
@@ -57,4 +42,21 @@ pub struct NewUser<'a> {
     pub id: i32,
     pub location: &'a str,
     pub age: Option<i16>,
+}
+
+#[derive(Debug, Clone, Identifiable, Queryable, Associations)]
+#[primary_key(user_id)]
+#[belongs_to(User)]
+pub struct Mean {
+    pub user_id: i32,
+    pub val: f64,
+    pub score_number: i32,
+}
+
+#[derive(Debug, Clone, Insertable)]
+#[table_name = "means"]
+pub struct NewMean {
+    pub user_id: i32,
+    pub val: f64,
+    pub score_number: i32,
 }
