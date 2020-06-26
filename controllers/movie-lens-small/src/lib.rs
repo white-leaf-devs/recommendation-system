@@ -16,7 +16,7 @@ use crate::models::{
 };
 use crate::schema::{movies, ratings, users};
 use anyhow::Error;
-use controller::{error::ErrorKind, Controller, MapedRatings, Ratings, SearchBy};
+use controller::{eid, error::ErrorKind, maped_ratings, means, ratings, Controller, SearchBy};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use mongodb::bson::doc;
@@ -50,13 +50,16 @@ impl MovieLensSmallController {
     }
 }
 
-impl Controller<User, i32, Movie, i32> for MovieLensSmallController {
-    fn users(&self) -> Result<Vec<User>, Error> {
+impl Controller for MovieLensSmallController {
+    type User = User;
+    type Item = Movie;
+
+    fn users(&self) -> Result<Vec<Self::User>, Error> {
         let users = users::table.load::<User>(&self.pg_conn)?;
         Ok(users)
     }
 
-    fn users_by(&self, by: &SearchBy) -> Result<Vec<User>, Error> {
+    fn users_by(&self, by: &SearchBy) -> Result<Vec<Self::User>, Error> {
         match by {
             SearchBy::Id(id) => {
                 let id: i32 = id.parse()?;
@@ -73,7 +76,7 @@ impl Controller<User, i32, Movie, i32> for MovieLensSmallController {
         }
     }
 
-    fn users_offset_limit(&self, offset: usize, limit: usize) -> Result<Vec<User>, Error> {
+    fn users_offset_limit(&self, offset: usize, limit: usize) -> Result<Vec<Self::User>, Error> {
         let users = users::table
             .limit(limit as i64)
             .offset(offset as i64)
@@ -82,12 +85,12 @@ impl Controller<User, i32, Movie, i32> for MovieLensSmallController {
         Ok(users)
     }
 
-    fn items(&self) -> Result<Vec<Movie>, Error> {
+    fn items(&self) -> Result<Vec<Self::Item>, Error> {
         let items = movies::table.load::<Movie>(&self.pg_conn)?;
         Ok(items)
     }
 
-    fn items_by(&self, by: &SearchBy) -> Result<Vec<Movie>, Error> {
+    fn items_by(&self, by: &SearchBy) -> Result<Vec<Self::Item>, Error> {
         match by {
             SearchBy::Id(id) => {
                 let id: i32 = id.parse()?;
@@ -118,7 +121,7 @@ impl Controller<User, i32, Movie, i32> for MovieLensSmallController {
         }
     }
 
-    fn items_offset_limit(&self, offset: usize, limit: usize) -> Result<Vec<Movie>, Error> {
+    fn items_offset_limit(&self, offset: usize, limit: usize) -> Result<Vec<Self::Item>, Error> {
         let items = movies::table
             .limit(limit as i64)
             .offset(offset as i64)
@@ -127,31 +130,11 @@ impl Controller<User, i32, Movie, i32> for MovieLensSmallController {
         Ok(items)
     }
 
-    fn ratings_by(&self, user: &User) -> Result<Ratings<i32>, Error> {
-        let ratings = Rating::belonging_to(user)
-            .load::<Rating>(&self.pg_conn)?
-            .iter()
-            .map(|rating| (rating.movie_id, rating.score))
-            .collect();
-
-        Ok(ratings)
-    }
-
-    fn maped_ratings(&self) -> Result<MapedRatings<i32, i32>, Error> {
-        let ratings = ratings::table.load::<Rating>(&self.pg_conn)?;
-
-        let mut maped_ratings = HashMap::new();
-        for rating in ratings {
-            maped_ratings
-                .entry(rating.user_id)
-                .or_insert_with(HashMap::new)
-                .insert(rating.movie_id, rating.score);
-        }
-
-        Ok(maped_ratings)
-    }
-
-    fn users_who_rated(&self, items: &[Movie]) -> Result<MapedRatings<i32, i32>, Error> {
+    #[allow(clippy::type_complexity)]
+    fn users_who_rated(
+        &self,
+        items: &[Self::Item],
+    ) -> Result<maped_ratings!(Self::Item => Self::User), Error> {
         let collection = self.mongo_db.collection("users_who_rated");
         let ids: Vec<_> = items.iter().map(|m| m.id).collect();
 
@@ -181,14 +164,45 @@ impl Controller<User, i32, Movie, i32> for MovieLensSmallController {
         Ok(items_users)
     }
 
-    fn create_partial_users(&self, user_ids: &[i32]) -> Result<Vec<User>, Error> {
+    fn ratings_by(&self, user: &Self::User) -> Result<ratings!(Self::Item), Error> {
+        let ratings = Rating::belonging_to(user)
+            .load::<Rating>(&self.pg_conn)?
+            .iter()
+            .map(|rating| (rating.movie_id, rating.score))
+            .collect();
+
+        Ok(ratings)
+    }
+
+    #[allow(clippy::type_complexity)]
+    fn maped_ratings(&self) -> Result<maped_ratings!(Self::User => Self::Item), Error> {
+        let ratings = ratings::table.load::<Rating>(&self.pg_conn)?;
+
+        let mut maped_ratings = HashMap::new();
+        for rating in ratings {
+            maped_ratings
+                .entry(rating.user_id)
+                .or_insert_with(HashMap::new)
+                .insert(rating.movie_id, rating.score);
+        }
+
+        Ok(maped_ratings)
+    }
+
+    fn create_partial_users(
+        &self,
+        user_ids: &[eid!(Self::User)],
+    ) -> Result<Vec<Self::User>, Error> {
         user_ids
             .iter()
             .map(|id| -> Result<User, Error> { Ok(User { id: *id }) })
             .collect()
     }
 
-    fn create_partial_items(&self, item_ids: &[i32]) -> Result<Vec<Movie>, Error> {
+    fn create_partial_items(
+        &self,
+        item_ids: &[eid!(Self::Item)],
+    ) -> Result<Vec<Self::Item>, Error> {
         item_ids
             .iter()
             .map(|id| -> Result<Movie, Error> {
@@ -200,7 +214,11 @@ impl Controller<User, i32, Movie, i32> for MovieLensSmallController {
             .collect()
     }
 
-    fn maped_ratings_by(&self, users: &[User]) -> Result<MapedRatings<i32, i32>, Error> {
+    #[allow(clippy::type_complexity)]
+    fn maped_ratings_by(
+        &self,
+        users: &[Self::User],
+    ) -> Result<maped_ratings!(Self::User => Self::Item), Error> {
         let ratings = Rating::belonging_to(users).load::<Rating>(&self.pg_conn)?;
 
         let mut maped_ratings = HashMap::new();
@@ -214,7 +232,11 @@ impl Controller<User, i32, Movie, i32> for MovieLensSmallController {
         Ok(maped_ratings)
     }
 
-    fn maped_ratings_except(&self, user: &User) -> Result<MapedRatings<i32, i32>, Error> {
+    #[allow(clippy::type_complexity)]
+    fn maped_ratings_except(
+        &self,
+        user: &Self::User,
+    ) -> Result<maped_ratings!(Self::User => Self::Item), Error> {
         let ratings = ratings::table
             .filter(ratings::user_id.is_distinct_from(user.id))
             .load::<Rating>(&self.pg_conn)?;
@@ -230,7 +252,7 @@ impl Controller<User, i32, Movie, i32> for MovieLensSmallController {
         Ok(maped_ratings)
     }
 
-    fn means_for(&self, users: &[User]) -> Result<HashMap<i32, f64>, Error> {
+    fn means_for(&self, users: &[Self::User]) -> Result<means!(Self::User), Error> {
         let means = Mean::belonging_to(users).load::<Mean>(&self.pg_conn)?;
 
         let means_by_user = means
