@@ -266,6 +266,24 @@ impl Controller for MovieLensController {
     fn score_range(&self) -> (f64, f64) {
         (0.5, 5.)
     }
+    fn fields_for_users(&self) -> Vec<controller::Field> {
+        todo!()
+    }
+    fn fields_for_items(&self) -> Vec<controller::Field> {
+        todo!()
+    }
+    fn insert_user<'a>(
+        &self,
+        proto: HashMap<&'a str, controller::Value>,
+    ) -> controller::Result<Self::User> {
+        todo!()
+    }
+    fn insert_item<'a>(
+        &self,
+        proto: HashMap<&'a str, controller::Value>,
+    ) -> controller::Result<Self::Item> {
+        todo!()
+    }
 }
 
 #[cfg(feature = "test-controller")]

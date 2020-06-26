@@ -287,6 +287,18 @@ impl Controller for BooksController {
             Field::Required("publisher", Type::String),
         ]
     }
+    fn insert_user<'a>(
+        &self,
+        proto: HashMap<&'a str, controller::Value>,
+    ) -> controller::Result<Self::User> {
+        todo!()
+    }
+    fn insert_item<'a>(
+        &self,
+        proto: HashMap<&'a str, controller::Value>,
+    ) -> controller::Result<Self::Item> {
+        todo!()
+    }
 }
 
 #[cfg(feature = "test-controller")]
