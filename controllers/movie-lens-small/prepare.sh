@@ -10,6 +10,9 @@ pushd "$DIR" &> /dev/null
 echo "=> Preparing things for movie-lens-small!"
 diesel setup
 
+echo "=> Creating main tables"
+diesel migration --migration-dir migrations run
+
 echo "=> Loading main data"
 cargo run --release --bin load_data
 
