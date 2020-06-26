@@ -16,7 +16,9 @@ use crate::models::{
 };
 use crate::schema::{books, ratings, users};
 use anyhow::Error;
-use controller::{eid, error::ErrorKind, maped_ratings, means, ratings, Controller, SearchBy};
+use controller::{
+    eid, error::ErrorKind, maped_ratings, means, ratings, Controller, Field, SearchBy, Type,
+};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use mongodb::bson::doc;
@@ -268,6 +270,22 @@ impl Controller for BooksController {
 
     fn score_range(&self) -> (f64, f64) {
         (0., 10.)
+    }
+
+    fn fields_for_users(&self) -> Vec<Field> {
+        vec![
+            Field::Required("location", Type::String),
+            Field::Optional("age", Type::Int16),
+        ]
+    }
+
+    fn fields_for_items(&self) -> Vec<Field> {
+        vec![
+            Field::Required("title", Type::String),
+            Field::Required("author", Type::String),
+            Field::Required("year", Type::Int16),
+            Field::Required("publisher", Type::String),
+        ]
     }
 }
 

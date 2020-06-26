@@ -7,6 +7,35 @@ pub mod entity;
 pub mod error;
 pub mod lazy;
 pub mod searchby;
+pub mod values;
+
+#[macro_export]
+macro_rules! eid {
+    ($e:ty) => {
+        <$e as $crate::entity::Entity>::Id
+    };
+}
+
+#[macro_export]
+macro_rules! maped_ratings {
+    ($u:ty => $v:ty) => {
+        $crate::MapedRatings<$crate::eid!($u), $crate::eid!($v)>
+    };
+}
+
+#[macro_export]
+macro_rules! ratings {
+    ($e:ty) => {
+        $crate::Ratings<$crate::eid!($e)>
+    }
+}
+
+#[macro_export]
+macro_rules! means {
+    ($e:ty) => {
+        $crate::Means<$crate::eid!($e)>
+    }
+}
 
 #[macro_export]
 macro_rules! eid {
@@ -42,6 +71,7 @@ use std::collections::HashMap;
 pub use entity::{Entity, ToTable};
 pub use lazy::{LazyItemChunks, LazyUserChunks};
 pub use searchby::SearchBy;
+pub use values::{Field, Type, Value};
 
 pub type Result<T> = std::result::Result<T, Error>;
 pub type Means<K, Value = f64> = HashMap<K, Value>;
@@ -133,4 +163,16 @@ pub trait Controller {
 
     /// The controller score range, ex. (0.0, 5.0) is (min_rating, max_rating)
     fn score_range(&self) -> (f64, f64);
+
+    /// Return a list of fields required to insert a new user
+    fn fields_for_users(&self) -> Vec<Field>;
+
+    /// Return a list of fields required to insert a new item
+    fn fields_for_items(&self) -> Vec<Field>;
+
+    /// Insert a new user frow a prototype
+    fn insert_user<'a>(&self, proto: HashMap<&'a str, Value>) -> Result<Self::User>;
+
+    /// Insert a new item frow a prototype
+    fn insert_item<'a>(&self, proto: HashMap<&'a str, Value>) -> Result<Self::Item>;
 }

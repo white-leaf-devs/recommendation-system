@@ -21,4 +21,10 @@ pub enum ErrorKind {
 
     #[error("Failed to cast bson value")]
     BsonConvert,
+
+    #[error("Failed to cast to some value ({0})")]
+    ValueConvert(String),
+
+    #[error("Couldn't cast value to {0}")]
+    CastingValue(&'static str),
 }

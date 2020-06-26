@@ -45,9 +45,9 @@ pub struct NewMean {
 }
 
 #[derive(Debug, Clone, Identifiable, Queryable, Associations)]
+#[primary_key(user_id)]
 #[belongs_to(User)]
 pub struct Mean {
-    pub id: i32,
     pub user_id: i32,
     pub val: f64,
     pub score_number: i32,
