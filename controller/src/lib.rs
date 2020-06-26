@@ -46,17 +46,25 @@ pub use searchby::SearchBy;
 pub use values::{Field, Type, Value};
 
 pub type Result<T> = std::result::Result<T, Error>;
-pub type Ratings<ItemId, Value = f64> = HashMap<ItemId, Value>;
-pub type MapedRatings<UserId, ItemId, Value = f64> = HashMap<UserId, Ratings<ItemId, Value>>;
+pub type Means<K, Value = f64> = HashMap<K, Value>;
+pub type Ratings<I, Value = f64> = HashMap<I, Value>;
+pub type MapedRatings<K, I, Value = f64> = HashMap<K, Ratings<I, Value>>;
 
-pub trait Controller<User, UserId, Item, ItemId>
-where
-    User: Entity<Id = UserId>,
-    Item: Entity<Id = ItemId>,
-{
-    fn users(&self) -> Result<Vec<User>>;
-    fn users_by(&self, by: &SearchBy) -> Result<Vec<User>>;
-    fn users_by_chunks(&self, chunk_size: usize) -> LazyUserChunks<User, UserId, Item, ItemId>
+pub trait Controller {
+    type User: Entity;
+    type Item: Entity;
+
+    /// Get all users
+    fn users(&self) -> Result<Vec<Self::User>>;
+
+    /// Get users that matched the search criteria by id, name or custom (if implemented)
+    fn users_by(&self, by: &SearchBy) -> Result<Vec<Self::User>>;
+
+    /// Get a chunk of users specified by certain offset and limit
+    fn users_offset_limit(&self, offset: usize, limit: usize) -> Result<Vec<Self::User>>;
+
+    /// Build an iterator that returns all users by chunks
+    fn users_by_chunks(&self, chunk_size: usize) -> LazyUserChunks<Self, Self::User>
     where
         Self: Sized,
     {
@@ -67,14 +75,17 @@ where
         }
     }
 
-    #[allow(unused_variables)]
-    fn users_offset_limit(&self, offset: usize, limit: usize) -> Result<Vec<User>> {
-        Err(error::ErrorKind::NotImplemented.into())
-    }
+    /// Get all items
+    fn items(&self) -> Result<Vec<Self::Item>>;
 
-    fn items(&self) -> Result<Vec<Item>>;
-    fn items_by(&self, by: &SearchBy) -> Result<Vec<Item>>;
-    fn items_by_chunks(&self, chunk_size: usize) -> LazyItemChunks<User, UserId, Item, ItemId>
+    /// Get items that matched the search criteria by id, name or custom (if implemented)
+    fn items_by(&self, by: &SearchBy) -> Result<Vec<Self::Item>>;
+
+    /// Get a chunk of items specified by certain offset and limit
+    fn items_offset_limit(&self, offset: usize, limit: usize) -> Result<Vec<Self::Item>>;
+
+    /// Build an iterator that returns all items by chunks
+    fn items_by_chunks(&self, chunk_size: usize) -> LazyItemChunks<Self, Self::Item>
     where
         Self: Sized,
     {
@@ -85,21 +96,44 @@ where
         }
     }
 
-    #[allow(unused_variables)]
-    fn items_offset_limit(&self, offset: usize, limit: usize) -> Result<Vec<Item>> {
-        Err(error::ErrorKind::NotImplemented.into())
-    }
+    /// Build skeleton/partial users, useful to use in other queries
+    fn create_partial_users(&self, user_ids: &[eid!(Self::User)]) -> Result<Vec<Self::User>>;
 
-    fn create_partial_users(&self, user_ids: &[UserId]) -> Result<Vec<User>>;
-    fn create_partial_items(&self, item_ids: &[ItemId]) -> Result<Vec<Item>>;
+    /// Build skeleton/partial items, useful to use in other queries
+    fn create_partial_items(&self, item_ids: &[eid!(Self::Item)]) -> Result<Vec<Self::Item>>;
 
-    fn users_who_rated(&self, items: &[Item]) -> Result<MapedRatings<ItemId, UserId>>;
-    fn ratings_by(&self, user: &User) -> Result<Ratings<ItemId>>;
-    fn maped_ratings(&self) -> Result<MapedRatings<UserId, ItemId>>;
-    fn maped_ratings_by(&self, users: &[User]) -> Result<MapedRatings<UserId, ItemId>>;
-    fn maped_ratings_except(&self, user: &User) -> Result<MapedRatings<UserId, ItemId>>;
-    fn means_for(&self, users: &[User]) -> Result<HashMap<UserId, f64>>;
+    /// Get an "inverted" MapedRatings, i.e. maps Item::Id => User::Id
+    #[allow(clippy::type_complexity)]
+    fn users_who_rated(
+        &self,
+        items: &[Self::Item],
+    ) -> Result<maped_ratings!(Self::Item => Self::User)>;
 
+    /// Get the ratings for the specified user
+    fn ratings_by(&self, user: &Self::User) -> Result<ratings!(Self::Item)>;
+
+    /// Get all normal MapedRatings, i.e. maps User::Id => Item::Id
+    #[allow(clippy::type_complexity)]
+    fn maped_ratings(&self) -> Result<maped_ratings!(Self::User => Self::Item)>;
+
+    /// Get some normal MapedRatings for the specified users, i.e. maps User::Id => Item::Id
+    #[allow(clippy::type_complexity)]
+    fn maped_ratings_by(
+        &self,
+        users: &[Self::User],
+    ) -> Result<maped_ratings!(Self::User => Self::Item)>;
+
+    /// Get all normal MapedRatings except for the specified user, i.e. maps User::Id => Item::Id
+    #[allow(clippy::type_complexity)]
+    fn maped_ratings_except(
+        &self,
+        user: &Self::User,
+    ) -> Result<maped_ratings!(Self::User => Self::Item)>;
+
+    /// Get means for the specified users, returns a map of User::Id => f64
+    fn means_for(&self, users: &[Self::User]) -> Result<means!(Self::User)>;
+
+    /// The controller score range, ex. (0.0, 5.0) is (min_rating, max_rating)
     fn score_range(&self) -> (f64, f64);
 
     fn fields_for_users(&self) -> Vec<Field>;
