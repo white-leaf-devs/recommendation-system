@@ -13,9 +13,9 @@ use std::collections::HashMap;
 fn main() -> Result<(), Error> {
     let vars: HashMap<String, String> = dotenv::vars().collect();
 
+    let psql_url = &vars["DATABASE_URL"];
     let mongo_url = &vars["MONGO_URL"];
     let mongo_db = &vars["MONGO_DB"];
-    let psql_url = &vars["DATABASE_URL"];
 
     let client = Client::with_uri_str(mongo_url)?;
     let db = client.database(mongo_db);

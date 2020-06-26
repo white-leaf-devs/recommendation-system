@@ -45,10 +45,12 @@ fn compute_mean(ratings: &HashMap<i32, f64>) -> f64 {
 fn main() -> Result<(), Error> {
     let vars: HashMap<String, String> = dotenv::vars().collect();
 
-    let url = &vars["DATABASE_URL"];
-    let conn = establish_connection(url)?;
+    let psql_url = &vars["DATABASE_URL"];
+    let mongo_url = &vars["MONGO_URL"];
+    let mongo_db = &vars["MONGO_DB"];
+    let conn = establish_connection(psql_url)?;
 
-    let controller = SimpleMovieController::with_url(url, "", "")?;
+    let controller = SimpleMovieController::with_url(psql_url, mongo_url, mongo_db)?;
 
     let users_iterator = controller.users_by_chunks(10000);
     for user_chunk in users_iterator {
