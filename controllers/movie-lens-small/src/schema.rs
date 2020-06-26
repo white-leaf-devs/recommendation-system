@@ -1,6 +1,5 @@
 table! {
-    means (id) {
-        id -> Int4,
+    means (user_id) {
         user_id -> Int4,
         val -> Float8,
         score_number -> Int4,
