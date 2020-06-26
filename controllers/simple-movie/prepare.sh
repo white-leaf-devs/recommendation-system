@@ -16,14 +16,17 @@ diesel migration --migration-dir migrations run
 echo "=> Loading main data"
 cargo run --release --bin load_data
 
+echo "=> Creating indexes on relations"
+diesel migration --migration-dir indexes run
+
 echo "=> Loading means"
 cargo run --release --bin load_means
 
+echo "=> Create triggers for CRUD operations on means"
+diesel migration --migration-dir triggers run
+
 echo "=> Loading users who rated"
 cargo run --release --bin load_users_who_rated
-
-echo "=> Creating indexes on relations"
-diesel migration --migration-dir indexes run
 
 source ".env"
 MONGO_CONN="${MONGO_URL}/${MONGO_DB}"

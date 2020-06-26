@@ -17,7 +17,7 @@ use crate::models::{
 use crate::schema::{movies, ratings, users};
 use anyhow::Error;
 use controller::{
-    eid, error::ErrorKind, maped_ratings, ratings, Controller, Field, SearchBy, Type, Value,
+    eid, error::ErrorKind, maped_ratings, means, ratings, Controller, Field, SearchBy, Type, Value,
 };
 use diesel::pg::PgConnection;
 use diesel::{insert_into, prelude::*};
