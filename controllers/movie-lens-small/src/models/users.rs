@@ -21,6 +21,12 @@ impl Entity for User {
     }
 }
 
+#[derive(Debug, Clone, Insertable)]
+#[table_name = "users"]
+pub struct NewUser {
+    pub id: i32,
+}
+
 #[derive(Debug, Clone, Identifiable, Queryable, Associations)]
 #[belongs_to(User)]
 pub struct Mean {
