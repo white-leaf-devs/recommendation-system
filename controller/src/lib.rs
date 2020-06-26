@@ -7,6 +7,7 @@ pub mod entity;
 pub mod error;
 pub mod lazy;
 pub mod searchby;
+pub mod values;
 
 use anyhow::Error;
 use std::collections::HashMap;
