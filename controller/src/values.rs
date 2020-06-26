@@ -10,6 +10,7 @@ use std::str::FromStr;
 pub enum Type {
     String,
     Bool,
+    Int16,
     Int32,
     Int64,
     Double,
@@ -25,6 +26,7 @@ pub enum Field<'a> {
 pub enum Value {
     String(String),
     Bool(bool),
+    Int16(i16),
     Int32(i32),
     Int64(i64),
     Double(f64),
@@ -42,6 +44,13 @@ impl Value {
                 };
 
                 Self::Bool(value)
+            }
+
+            Type::Int16 => {
+                let value: i16 = value
+                    .parse()
+                    .map_err(|e: <i16 as FromStr>::Err| ErrorKind::ValueConvert(e.to_string()))?;
+                Self::Int16(value)
             }
 
             Type::Int32 => {
@@ -80,6 +89,13 @@ impl Value {
         match self {
             Self::Bool(v) => Ok(*v),
             _ => Err(ErrorKind::CastingValue("bool")),
+        }
+    }
+
+    pub fn as_i16(&self) -> Result<i16, ErrorKind> {
+        match self {
+            Self::Int16(v) => Ok(*v),
+            _ => Err(ErrorKind::CastingValue("i16")),
         }
     }
 
@@ -127,6 +143,16 @@ mod tests {
         let value = value.as_bool()?;
 
         assert!(value);
+
+        Ok(())
+    }
+
+    #[test]
+    fn casting_i16() -> Result<(), Error> {
+        let value = Value::from_str("123", Type::Int16)?;
+        let value = value.as_i16()?;
+
+        assert_eq!(value, 123);
 
         Ok(())
     }
