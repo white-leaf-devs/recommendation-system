@@ -15,14 +15,9 @@ use movie_lens_small::MovieLensSmallController;
 use std::collections::HashMap;
 
 fn insert_users(conn: &PgConnection) -> Result<(), Error> {
-    let mut users = Vec::new();
     println!("Collecting records for users...");
 
-    for id in 1..=610 {
-        users.push(NewUser { id });
-    }
-
-    println!("Pushing into the database");
+    let users: Vec<_> = (1..=610).map(|id| NewUser { id }).collect();
     insert_into(users::table).values(&users).execute(conn)?;
 
     Ok(())
@@ -57,7 +52,12 @@ fn insert_movies(conn: &PgConnection) -> Result<(), Error> {
     Ok(())
 }
 
-fn insert_ratings(conn: &PgConnection, url: &str) -> Result<(), Error> {
+fn insert_ratings(
+    conn: &PgConnection,
+    psql_url: &str,
+    mongo_url: &str,
+    mongo_db: &str,
+) -> Result<(), Error> {
     let mut csv = csv::ReaderBuilder::new()
         .has_headers(true)
         .delimiter(b',')
@@ -67,7 +67,7 @@ fn insert_ratings(conn: &PgConnection, url: &str) -> Result<(), Error> {
     println!("Collecting records for ratings...");
     let records: Vec<_> = csv.records().collect();
 
-    let controller = MovieLensSmallController::with_url(url, "", "")?;
+    let controller = MovieLensSmallController::with_url(psql_url, mongo_url, mongo_db)?;
     for record in records.iter().progress() {
         if let Ok(record) = record {
             let user_id: i32 = record[0].parse()?;
@@ -99,11 +99,13 @@ fn insert_ratings(conn: &PgConnection, url: &str) -> Result<(), Error> {
 fn main() -> Result<(), Error> {
     let vars: HashMap<String, String> = dotenv::vars().collect();
 
-    let url = &vars["DATABASE_URL"];
-    let conn = establish_connection(url)?;
+    let psql_url = &vars["DATABASE_URL"];
+    let mongo_url = &vars["MONGO_URL"];
+    let mongo_db = &vars["MONGO_DB"];
+    let conn = establish_connection(psql_url)?;
 
     insert_users(&conn)?;
     insert_movies(&conn)?;
-    insert_ratings(&conn, url)?;
+    insert_ratings(&conn, psql_url, mongo_url, mongo_db)?;
     Ok(())
 }
