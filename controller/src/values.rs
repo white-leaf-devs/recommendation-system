@@ -16,9 +16,9 @@ pub enum Type {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum Field {
-    Required(String, Type),
-    Optional(String, Type),
+pub enum Field<'a> {
+    Required(&'a str, Type),
+    Optional(&'a str, Type),
 }
 
 #[derive(Debug, Clone, PartialEq)]

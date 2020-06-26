@@ -15,6 +15,7 @@ use std::collections::HashMap;
 pub use entity::{Entity, ToTable};
 pub use lazy::{LazyItemChunks, LazyUserChunks};
 pub use searchby::SearchBy;
+pub use values::{Field, Type, Value};
 
 pub type Result<T> = std::result::Result<T, Error>;
 pub type Ratings<ItemId, Value = f64> = HashMap<ItemId, Value>;
@@ -72,4 +73,10 @@ where
     fn means_for(&self, users: &[User]) -> Result<HashMap<UserId, f64>>;
 
     fn score_range(&self) -> (f64, f64);
+
+    fn fields_for_users(&self) -> Vec<Field>;
+    fn fields_for_items(&self) -> Vec<Field>;
+
+    fn insert_user<'a>(&self, proto: HashMap<&'a str, Value>) -> Result<User>;
+    fn insert_item<'a>(&self, proto: HashMap<&'a str, Value>) -> Result<Item>;
 }

@@ -16,9 +16,12 @@ use crate::models::{
 };
 use crate::schema::{movies, ratings, users};
 use anyhow::Error;
-use controller::{error::ErrorKind, Controller, MapedRatings, Ratings, SearchBy};
+use controller::{
+    error::ErrorKind, Controller, Field, MapedRatings, Ratings, SearchBy, Type, Value,
+};
 use diesel::pg::PgConnection;
-use diesel::prelude::*;
+use diesel::{insert_into, prelude::*};
+use models::{movies::NewMovie, users::NewUser};
 use mongodb::bson::doc;
 use mongodb::sync::{Client, Database};
 use std::collections::HashMap;
@@ -262,6 +265,34 @@ impl Controller<User, i32, Movie, i32> for SimpleMovieController {
 
     fn score_range(&self) -> (f64, f64) {
         (1., 5.)
+    }
+
+    fn fields_for_users(&self) -> Vec<Field> {
+        vec![Field::Required("name", Type::String)]
+    }
+
+    fn fields_for_items(&self) -> Vec<Field> {
+        vec![Field::Required("name", Type::String)]
+    }
+
+    fn insert_user<'a>(&self, proto: HashMap<&'a str, Value>) -> Result<User, Error> {
+        let user = NewUser {
+            name: proto["name"].as_string()?,
+        };
+
+        Ok(insert_into(users::table)
+            .values(&user)
+            .get_result(&self.pg_conn)?)
+    }
+
+    fn insert_item<'a>(&self, proto: HashMap<&'a str, Value>) -> Result<Movie, Error> {
+        let movie = NewMovie {
+            name: proto["name"].as_string()?,
+        };
+
+        Ok(insert_into(movies::table)
+            .values(&movie)
+            .get_result(&self.pg_conn)?)
     }
 }
 
