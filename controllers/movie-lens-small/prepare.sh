@@ -7,7 +7,7 @@ command -v "cargo" || ( echo "!! 'cargo' not found in path, aborting" && exit 1 
 DIR="$(dirname "$(readlink -f "$0")")"
 pushd "$DIR" &> /dev/null
 
-echo "=> Preparing things for simple-movie!"
+echo "=> Preparing things for movie-lens-small!"
 diesel setup
 
 echo "=> Loading main data"
@@ -21,6 +21,9 @@ cargo run --release --bin load_users_who_rated
 
 echo "=> Creating indexes on relations"
 diesel migration --migration-dir indexes run
+
+echo "=> Altering sequence on movies table"
+diesel migration --migration-dir sequence run
 
 source ".env"
 MONGO_CONN="${MONGO_URL}/${MONGO_DB}"
