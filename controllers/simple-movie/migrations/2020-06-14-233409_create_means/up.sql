@@ -2,8 +2,8 @@
 
 CREATE TABLE means
 (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(id),
+    user_id INTEGER REFERENCES users(id),
     val FLOAT NOT NULL,
-    score_number INTEGER NOT NULL
+    score_number INTEGER NOT NULL,
+    PRIMARY KEY (user_id)
 )
