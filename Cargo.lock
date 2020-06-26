@@ -358,6 +358,7 @@ name = "controller"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "assert_approx_eq",
  "prettytable-rs",
  "thiserror",
 ]

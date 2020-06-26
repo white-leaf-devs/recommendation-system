@@ -11,3 +11,6 @@ workspace = ".."
 anyhow = "1"
 thiserror = "1"
 prettytable-rs = "0.8"
+
+[dev-dependencies]
+assert_approx_eq = "1.1.0"

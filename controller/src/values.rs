@@ -109,6 +109,7 @@ impl Value {
 mod tests {
     use super::*;
     use anyhow::Error;
+    use assert_approx_eq::*;
 
     #[test]
     fn casting_string() -> Result<(), Error> {
@@ -126,6 +127,36 @@ mod tests {
         let value = value.as_bool()?;
 
         assert!(value);
+
+        Ok(())
+    }
+
+    #[test]
+    fn casting_i32() -> Result<(), Error> {
+        let value = Value::from_str("1234", Type::Int32)?;
+        let value = value.as_i32()?;
+
+        assert_eq!(value, 1234);
+
+        Ok(())
+    }
+
+    #[test]
+    fn casting_i64() -> Result<(), Error> {
+        let value = Value::from_str("1234", Type::Int64)?;
+        let value = value.as_i64()?;
+
+        assert_eq!(value, 1234);
+
+        Ok(())
+    }
+
+    #[test]
+    fn casting_f64() -> Result<(), Error> {
+        let value = Value::from_str("1234.12", Type::Double)?;
+        let value = value.as_f64()?;
+
+        assert_approx_eq!(value, 1234.12);
 
         Ok(())
     }
