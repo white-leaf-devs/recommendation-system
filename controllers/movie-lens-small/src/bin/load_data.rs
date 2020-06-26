@@ -9,7 +9,7 @@ use diesel::pg::PgConnection;
 use diesel::{insert_into, prelude::*};
 use indicatif::ProgressIterator;
 use movie_lens_small::establish_connection;
-use movie_lens_small::models::{movies::NewMovie, ratings::NewRating};
+use movie_lens_small::models::{movies::NewMovie, ratings::NewRating, users::NewUser};
 use movie_lens_small::schema::{movies, ratings, users};
 use movie_lens_small::MovieLensSmallController;
 use std::collections::HashMap;
@@ -17,9 +17,8 @@ use std::collections::HashMap;
 fn insert_users(conn: &PgConnection) -> Result<(), Error> {
     println!("Collecting records for users...");
 
-    for _ in 1..=610 {
-        insert_into(users::table).default_values().execute(conn)?;
-    }
+    let users: Vec<_> = (1..=610).map(|id| NewUser { id }).collect();
+    insert_into(users::table).values(&users).execute(conn)?;
 
     Ok(())
 }
