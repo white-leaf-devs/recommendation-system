@@ -136,9 +136,15 @@ pub trait Controller {
     /// The controller score range, ex. (0.0, 5.0) is (min_rating, max_rating)
     fn score_range(&self) -> (f64, f64);
 
+    /// Return a list of fields required to insert a new user
     fn fields_for_users(&self) -> Vec<Field>;
+
+    /// Return a list of fields required to insert a new item
     fn fields_for_items(&self) -> Vec<Field>;
 
-    fn insert_user<'a>(&self, proto: HashMap<&'a str, Value>) -> Result<User>;
-    fn insert_item<'a>(&self, proto: HashMap<&'a str, Value>) -> Result<Item>;
+    /// Insert a new user frow a prototype
+    fn insert_user<'a>(&self, proto: HashMap<&'a str, Value>) -> Result<Self::User>;
+
+    /// Insert a new item frow a prototype
+    fn insert_item<'a>(&self, proto: HashMap<&'a str, Value>) -> Result<Self::Item>;
 }
