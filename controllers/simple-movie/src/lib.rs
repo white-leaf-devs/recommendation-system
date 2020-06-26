@@ -17,7 +17,7 @@ use crate::models::{
 use crate::schema::{movies, ratings, users};
 use anyhow::Error;
 use controller::{
-    error::ErrorKind, Controller, Field, MapedRatings, Ratings, SearchBy, Type, Value,
+    eid, error::ErrorKind, maped_ratings, ratings, Controller, Field, SearchBy, Type, Value,
 };
 use diesel::pg::PgConnection;
 use diesel::{insert_into, prelude::*};
@@ -53,13 +53,16 @@ impl SimpleMovieController {
     }
 }
 
-impl Controller<User, i32, Movie, i32> for SimpleMovieController {
-    fn users(&self) -> Result<Vec<User>, Error> {
+impl Controller for SimpleMovieController {
+    type User = User;
+    type Item = Movie;
+
+    fn users(&self) -> Result<Vec<Self::User>, Error> {
         let users = users::table.load::<User>(&self.pg_conn)?;
         Ok(users)
     }
 
-    fn users_by(&self, by: &SearchBy) -> Result<Vec<User>, Error> {
+    fn users_by(&self, by: &SearchBy) -> Result<Vec<Self::User>, Error> {
         match by {
             SearchBy::Id(id) => {
                 let id: i32 = id.parse()?;
@@ -89,7 +92,7 @@ impl Controller<User, i32, Movie, i32> for SimpleMovieController {
         }
     }
 
-    fn users_offset_limit(&self, offset: usize, limit: usize) -> Result<Vec<User>, Error> {
+    fn users_offset_limit(&self, offset: usize, limit: usize) -> Result<Vec<Self::User>, Error> {
         let users = users::table
             .limit(limit as i64)
             .offset(offset as i64)
@@ -98,12 +101,12 @@ impl Controller<User, i32, Movie, i32> for SimpleMovieController {
         Ok(users)
     }
 
-    fn items(&self) -> Result<Vec<Movie>, Error> {
+    fn items(&self) -> Result<Vec<Self::Item>, Error> {
         let movies = movies::table.load::<Movie>(&self.pg_conn)?;
         Ok(movies)
     }
 
-    fn items_by(&self, by: &SearchBy) -> Result<Vec<Movie>, Error> {
+    fn items_by(&self, by: &SearchBy) -> Result<Vec<Self::Item>, Error> {
         match by {
             SearchBy::Id(id) => {
                 let id: i32 = id.parse()?;
@@ -135,7 +138,7 @@ impl Controller<User, i32, Movie, i32> for SimpleMovieController {
         }
     }
 
-    fn items_offset_limit(&self, offset: usize, limit: usize) -> Result<Vec<Movie>, Error> {
+    fn items_offset_limit(&self, offset: usize, limit: usize) -> Result<Vec<Self::Item>, Error> {
         let items = movies::table
             .limit(limit as i64)
             .offset(offset as i64)
@@ -144,7 +147,41 @@ impl Controller<User, i32, Movie, i32> for SimpleMovieController {
         Ok(items)
     }
 
-    fn users_who_rated(&self, items: &[Movie]) -> Result<MapedRatings<i32, i32>, Error> {
+    fn create_partial_users(
+        &self,
+        user_ids: &[eid!(Self::User)],
+    ) -> Result<Vec<Self::User>, Error> {
+        user_ids
+            .iter()
+            .map(|id| -> Result<User, Error> {
+                Ok(User {
+                    id: *id,
+                    ..Default::default()
+                })
+            })
+            .collect()
+    }
+
+    fn create_partial_items(
+        &self,
+        item_ids: &[eid!(Self::Item)],
+    ) -> Result<Vec<Self::Item>, Error> {
+        item_ids
+            .iter()
+            .map(|id| -> Result<Movie, Error> {
+                Ok(Movie {
+                    id: *id,
+                    ..Default::default()
+                })
+            })
+            .collect()
+    }
+
+    #[allow(clippy::type_complexity)]
+    fn users_who_rated(
+        &self,
+        items: &[Self::Item],
+    ) -> Result<maped_ratings!(Self::Item => Self::User), Error> {
         let collection = self.mongo_db.collection("users_who_rated");
         let ids: Vec<_> = items.iter().map(|m| m.id).collect();
 
@@ -174,31 +211,7 @@ impl Controller<User, i32, Movie, i32> for SimpleMovieController {
         Ok(items_users)
     }
 
-    fn create_partial_users(&self, user_ids: &[i32]) -> Result<Vec<User>, Error> {
-        user_ids
-            .iter()
-            .map(|id| -> Result<User, Error> {
-                Ok(User {
-                    id: *id,
-                    ..Default::default()
-                })
-            })
-            .collect()
-    }
-
-    fn create_partial_items(&self, item_ids: &[i32]) -> Result<Vec<Movie>, Error> {
-        item_ids
-            .iter()
-            .map(|id| -> Result<Movie, Error> {
-                Ok(Movie {
-                    id: *id,
-                    ..Default::default()
-                })
-            })
-            .collect()
-    }
-
-    fn ratings_by(&self, user: &User) -> Result<Ratings<i32>, Error> {
+    fn ratings_by(&self, user: &Self::User) -> Result<ratings!(Self::Item), Error> {
         let ratings = Rating::belonging_to(user)
             .load::<Rating>(&self.pg_conn)?
             .into_iter()
@@ -208,7 +221,8 @@ impl Controller<User, i32, Movie, i32> for SimpleMovieController {
         Ok(ratings)
     }
 
-    fn maped_ratings(&self) -> Result<MapedRatings<i32, i32>, Error> {
+    #[allow(clippy::type_complexity)]
+    fn maped_ratings(&self) -> Result<maped_ratings!(Self::User => Self::Item), Error> {
         let ratings = ratings::table.load::<Rating>(&self.pg_conn)?;
 
         let mut maped_ratings = HashMap::new();
@@ -222,7 +236,11 @@ impl Controller<User, i32, Movie, i32> for SimpleMovieController {
         Ok(maped_ratings)
     }
 
-    fn maped_ratings_by(&self, users: &[User]) -> Result<MapedRatings<i32, i32>, Error> {
+    #[allow(clippy::type_complexity)]
+    fn maped_ratings_by(
+        &self,
+        users: &[Self::User],
+    ) -> Result<maped_ratings!(Self::User => Self::Item), Error> {
         let ratings = Rating::belonging_to(users).load::<Rating>(&self.pg_conn)?;
 
         let mut maped_ratings = HashMap::new();
@@ -236,7 +254,11 @@ impl Controller<User, i32, Movie, i32> for SimpleMovieController {
         Ok(maped_ratings)
     }
 
-    fn maped_ratings_except(&self, user: &User) -> Result<MapedRatings<i32, i32>, Error> {
+    #[allow(clippy::type_complexity)]
+    fn maped_ratings_except(
+        &self,
+        user: &Self::User,
+    ) -> Result<maped_ratings!(Self::User => Self::Item), Error> {
         let ratings = ratings::table
             .filter(ratings::user_id.is_distinct_from(user.id))
             .load::<Rating>(&self.pg_conn)?;
@@ -252,7 +274,7 @@ impl Controller<User, i32, Movie, i32> for SimpleMovieController {
         Ok(maped_ratings)
     }
 
-    fn means_for(&self, users: &[User]) -> Result<HashMap<i32, f64>, Error> {
+    fn means_for(&self, users: &[Self::User]) -> Result<means!(Self::User), Error> {
         let means = Mean::belonging_to(users).load::<Mean>(&self.pg_conn)?;
 
         let means_by_user = means
