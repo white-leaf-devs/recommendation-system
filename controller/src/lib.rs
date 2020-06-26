@@ -8,6 +8,34 @@ pub mod error;
 pub mod lazy;
 pub mod searchby;
 
+#[macro_export]
+macro_rules! eid {
+    ($e:ty) => {
+        <$e as $crate::entity::Entity>::Id
+    };
+}
+
+#[macro_export]
+macro_rules! maped_ratings {
+    ($u:ty => $v:ty) => {
+        $crate::MapedRatings<$crate::eid!($u), $crate::eid!($v)>
+    };
+}
+
+#[macro_export]
+macro_rules! ratings {
+    ($e:ty) => {
+        $crate::Ratings<$crate::eid!($e)>
+    }
+}
+
+#[macro_export]
+macro_rules! means {
+    ($e:ty) => {
+        $crate::Means<$crate::eid!($e)>
+    }
+}
+
 use anyhow::Error;
 use std::collections::HashMap;
 
