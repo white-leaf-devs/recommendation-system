@@ -19,7 +19,11 @@ pub trait ToTable {
     fn to_table(&self) -> Table;
 }
 
-impl<I: ToString, E: Entity<Id = I>> ToTable for E {
+impl<I, E> ToTable for E 
+where 
+    I: ToString,
+    E: Entity<Id = I>,
+{
     fn to_table(&self) -> Table {
         let mut table = table![["id", self.get_id()]];
 

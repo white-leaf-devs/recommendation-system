@@ -9,7 +9,7 @@ use anyhow::Error;
 use books::BooksController;
 use clap::{App, Arg};
 use config::Config;
-use controller::{Controller, Entity, ToTable};
+use controller::{eid, Controller, Entity, ToTable};
 use engine::{
     chunked_matrix::{ChunkedMatrix, DeviationMatrix, SimilarityMatrix},
     distances::items::Method as ItemMethod,
@@ -71,19 +71,19 @@ macro_rules! prompt {
     }};
 }
 
-fn chunked_matrix_prompt<'a, M, C, User, UserId, Item, ItemId>(
+fn chunked_matrix_prompt<'a, M, C, U, I>(
     controller: &C,
     mut matrix: M,
     name: &str,
     rl: &mut Editor<()>,
 ) -> Result<(), Error>
 where
-    M: ChunkedMatrix<'a, C, User, UserId, Item, ItemId>,
-    C: Controller<User, UserId, Item, ItemId>,
-    User: Entity<Id = UserId> + ToTable,
-    Item: Entity<Id = ItemId> + ToTable,
-    UserId: Hash + Eq + Display + Clone + Debug + Default,
-    ItemId: Hash + Eq + Display + Clone + Debug,
+    C: Controller<User = U, Item = I>,
+    M: ChunkedMatrix<'a, C, I>,
+    U: Entity,
+    I: Entity,
+    eid!(U): Hash + Eq + Display + Clone + Debug + Default,
+    eid!(I): Hash + Eq + Display + Clone + Debug,
 {
     let mut curr_i = 0;
     let mut curr_j = 0;
@@ -170,18 +170,18 @@ where
     Ok(())
 }
 
-fn database_connected_prompt<C, User, UserId, Item, ItemId>(
+fn database_connected_prompt<C, U, I>(
     config: &Config,
     controller: C,
     name: &str,
     rl: &mut Editor<()>,
 ) -> Result<(), Error>
 where
-    C: Controller<User, UserId, Item, ItemId>,
-    User: Entity<Id = UserId> + ToTable + Clone,
-    Item: Entity<Id = ItemId> + ToTable + Clone,
-    UserId: Hash + Eq + Display + Clone + Debug + Default,
-    ItemId: Hash + Eq + Display + Clone + Debug,
+    C: Controller<User = U, Item = I>,
+    U: Entity,
+    I: Entity,
+    eid!(U): Hash + Eq + Display + Clone + Debug + Default,
+    eid!(I): Hash + Eq + Display + Clone + Debug,
 {
     let mut engine = Engine::with_controller(&controller, config);
 

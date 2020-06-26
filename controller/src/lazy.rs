@@ -5,18 +5,22 @@
 
 use crate::{Controller, Entity};
 
-pub struct LazyUserChunks<'a, User, UserId, Item, ItemId> {
+pub struct LazyUserChunks<'a, C, U>
+where
+    C: Controller<User = U>,
+    U: Entity,
+{
     pub(crate) curr_offset: usize,
     pub(crate) chunk_size: usize,
-    pub(crate) controller: &'a dyn Controller<User, UserId, Item, ItemId>,
+    pub(crate) controller: &'a C,
 }
 
-impl<'a, User, UserId, Item, ItemId> Iterator for LazyUserChunks<'a, User, UserId, Item, ItemId>
+impl<'a, C, U> Iterator for LazyUserChunks<'a, C, U>
 where
-    User: Entity<Id = UserId>,
-    Item: Entity<Id = ItemId>,
+    C: Controller<User = U>,
+    U: Entity,
 {
-    type Item = Vec<User>;
+    type Item = Vec<U>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let users = self
@@ -43,18 +47,22 @@ where
     }
 }
 
-pub struct LazyItemChunks<'a, User, UserId, Item, ItemId> {
+pub struct LazyItemChunks<'a, C, I>
+where
+    C: Controller<Item = I>,
+    I: Entity,
+{
     pub(crate) curr_offset: usize,
     pub(crate) chunk_size: usize,
-    pub(crate) controller: &'a dyn Controller<User, UserId, Item, ItemId>,
+    pub(crate) controller: &'a C,
 }
 
-impl<'a, User, UserId, Item, ItemId> Iterator for LazyItemChunks<'a, User, UserId, Item, ItemId>
+impl<'a, C, I> Iterator for LazyItemChunks<'a, C, I>
 where
-    User: Entity<Id = UserId>,
-    Item: Entity<Id = ItemId>,
+    C: Controller<Item = I>,
+    I: Entity,
 {
-    type Item = Vec<Item>;
+    type Item = Vec<I>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let items = self

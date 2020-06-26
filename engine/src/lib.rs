@@ -16,36 +16,36 @@ use crate::{
 };
 use anyhow::Error;
 use config::Config;
-use controller::{Controller, Entity, MapedRatings, Ratings};
+use controller::{eid, maped_ratings, Controller, Entity, Ratings};
 use distances::items::{denormalize_user_rating, normalize_user_ratings, slope_one, AdjCosine};
 use error::ErrorKind;
 use knn::{Knn, MaxHeapKnn, MinHeapKnn};
 use num_traits::Zero;
 use std::{collections::HashSet, fmt::Debug, hash::Hash, marker::PhantomData, time::Instant};
 
-pub struct Engine<'a, C, User, UserId, Item, ItemId>
+pub struct Engine<'a, C, U, I>
 where
-    User: Entity<Id = UserId>,
-    Item: Entity<Id = ItemId>,
-    UserId: Hash + Eq,
-    C: Controller<User, UserId, Item, ItemId>,
+    C: Controller<User = U, Item = I>,
+    U: Entity,
+    I: Entity,
+    eid!(U): Hash + Eq,
 {
     config: &'a Config,
     controller: &'a C,
 
-    adj_cosine: AdjCosine<UserId, f64>,
+    adj_cosine: AdjCosine<eid!(U), f64>,
 
-    user_type: PhantomData<User>,
-    item_type: PhantomData<Item>,
+    user_type: PhantomData<U>,
+    item_type: PhantomData<I>,
 }
 
-impl<'a, C, User, UserId, Item, ItemId> Engine<'a, C, User, UserId, Item, ItemId>
+impl<'a, C, U, I> Engine<'a, C, U, I>
 where
-    User: Entity<Id = UserId>,
-    Item: Entity<Id = ItemId>,
-    UserId: Hash + Eq + Clone + Debug + Default,
-    ItemId: Hash + Eq + Clone + Debug,
-    C: Controller<User, UserId, Item, ItemId>,
+    C: Controller<User = U, Item = I>,
+    U: Entity,
+    I: Entity,
+    eid!(U): Hash + Eq + Clone + Debug + Default,
+    eid!(I): Hash + Eq + Clone + Debug,
 {
     pub fn with_controller(controller: &'a C, config: &'a Config) -> Self {
         Self {
@@ -57,12 +57,7 @@ where
         }
     }
 
-    pub fn user_distance(
-        &self,
-        user_a: User,
-        user_b: User,
-        method: UserMethod,
-    ) -> Result<f64, Error> {
+    pub fn user_distance(&self, user_a: U, user_b: U, method: UserMethod) -> Result<f64, Error> {
         let rating_a = self.controller.ratings_by(&user_a)?;
         let rating_b = self.controller.ratings_by(&user_b)?;
 
@@ -71,13 +66,10 @@ where
 
     pub fn item_distance(
         &mut self,
-        item_a: Item,
-        item_b: Item,
+        item_a: I,
+        item_b: I,
         method: ItemMethod,
-    ) -> Result<f64, Error>
-    where
-        UserId: Default,
-    {
+    ) -> Result<f64, Error> {
         match method {
             ItemMethod::AdjCosine => {
                 let item_a_id = item_a.get_id();
@@ -131,16 +123,16 @@ where
     pub fn user_knn(
         &self,
         k: usize,
-        user: User,
+        user: U,
         method: UserMethod,
         chunk_size: Option<usize>,
-    ) -> Result<Vec<(UserId, f64)>, Error> {
+    ) -> Result<Vec<(eid!(U), f64)>, Error> {
         if k == 0 {
             return Err(ErrorKind::EmptyKNearestNeighbors.into());
         }
 
         let user_ratings = self.controller.ratings_by(&user)?;
-        let mut knn: Box<dyn Knn<UserId, ItemId>> = if method.is_similarity() {
+        let mut knn: Box<dyn Knn<eid!(U), eid!(I)>> = if method.is_similarity() {
             Box::new(MinHeapKnn::new(k, method))
         } else {
             Box::new(MaxHeapKnn::new(k, method))
@@ -173,15 +165,15 @@ where
     pub fn user_based_predict(
         &self,
         k: usize,
-        user: User,
-        item: Item,
+        user: U,
+        item: I,
         method: UserMethod,
         chunk_size: Option<usize>,
     ) -> Result<f64, Error> {
         let item_id = item.get_id();
         let user_ratings = self.controller.ratings_by(&user)?;
 
-        let mut knn: Box<dyn Knn<UserId, ItemId>> = if method.is_similarity() {
+        let mut knn: Box<dyn Knn<eid!(U), eid!(I)>> = if method.is_similarity() {
             Box::new(MinHeapKnn::new(k, method))
         } else {
             Box::new(MaxHeapKnn::new(k, method))
@@ -210,11 +202,12 @@ where
             knn.update(&user_ratings, maped_ratings);
         }
 
+        #[allow(clippy::type_complexity)]
         let pearson_knn: Vec<_> = knn
             .into_vec()
             .into_iter()
             .filter_map(
-                |MapedDistance(id, _, ratings)| -> Option<(MapedDistance<UserId, ItemId>, f64)> {
+                |MapedDistance(id, _, ratings)| -> Option<(MapedDistance<eid!(U), eid!(I)>, f64)> {
                     let nn_ratings = ratings?;
 
                     if !nn_ratings.contains_key(&item_id) {
@@ -245,10 +238,7 @@ where
         prediction.ok_or_else(|| ErrorKind::EmptyKNearestNeighbors.into())
     }
 
-    fn adj_cosine_predict(&self, user: User, item: Item, chunk_size: usize) -> Result<f64, Error>
-    where
-        UserId: Default,
-    {
+    fn adj_cosine_predict(&self, user: U, item: I, chunk_size: usize) -> Result<f64, Error> {
         let user_id = user.get_id();
         let item_id = item.get_id();
 
@@ -301,12 +291,13 @@ where
 
             log::info!("Gathering users who rated for {} items", item_chunk.len());
             let now = Instant::now();
-            let mut users_who_rated: MapedRatings<ItemId, UserId> = self
+            let mut users_who_rated: maped_ratings!(I => U) = self
                 .controller
                 .users_who_rated(&item_chunk)?
                 .into_iter()
                 .filter(|(_, ratings)| ratings.contains_key(&user_id))
                 .collect();
+
             let uwr_time = now.elapsed().as_secs_f64();
             uwrs_time += uwr_time;
             log::info!(
@@ -386,10 +377,7 @@ where
         Ok(denormalize_user_rating(num / dem, min_rating, max_rating)?)
     }
 
-    pub fn slope_one_predict(&self, user: User, item: Item, chunk_size: usize) -> Result<f64, Error>
-    where
-        ItemId: Clone,
-    {
+    pub fn slope_one_predict(&self, user: U, item: I, chunk_size: usize) -> Result<f64, Error> {
         let target_item_id = item.get_id();
         let target_item_ratings = &self.controller.users_who_rated(&[item])?[&target_item_id];
 
@@ -425,14 +413,11 @@ where
 
     pub fn item_based_predict(
         &self,
-        user: User,
-        item: Item,
+        user: U,
+        item: I,
         method: ItemMethod,
         chunk_size: usize,
-    ) -> Result<f64, Error>
-    where
-        UserId: Default,
-    {
+    ) -> Result<f64, Error> {
         match method {
             ItemMethod::AdjCosine => self.adj_cosine_predict(user, item, chunk_size),
             ItemMethod::SlopeOne => self.slope_one_predict(user, item, chunk_size),

@@ -9,30 +9,29 @@ use crate::{
 };
 use anyhow::Error;
 use config::Config;
-use controller::{Controller, Entity, LazyItemChunks, MapedRatings};
+use controller::{eid, maped_ratings, Controller, Entity, LazyItemChunks};
 use std::{
     collections::{HashMap, HashSet},
     hash::Hash,
 };
 
-pub trait ChunkedMatrix<'a, C, User, UserId, Item, ItemId>
+pub trait ChunkedMatrix<'a, C, I>
 where
-    User: Entity<Id = UserId>,
-    Item: Entity<Id = ItemId>,
-    C: Controller<User, UserId, Item, ItemId>,
+    C: Controller<Item = I>,
+    I: Entity,
 {
     fn approximate_chunk_size(&self) -> usize;
     fn optimize_chunks_size(&mut self);
     fn calculate_chunk(&mut self, i: usize, j: usize) -> Result<(), Error>;
-    fn get_value(&self, id_a: &ItemId, id_b: &ItemId) -> Option<f64>;
+    fn get_value(&self, id_a: &eid!(I), id_b: &eid!(I)) -> Option<f64>;
 }
 
-pub struct SimilarityMatrix<'a, C, User, UserId, Item, ItemId>
+pub struct SimilarityMatrix<'a, C, U, I>
 where
-    User: Entity<Id = UserId>,
-    Item: Entity<Id = ItemId>,
-    UserId: Hash + Eq,
-    C: Controller<User, UserId, Item, ItemId>,
+    C: Controller<User = U, Item = I>,
+    U: Entity,
+    I: Entity,
+    eid!(U): Hash + Eq,
 {
     config: &'a Config,
     controller: &'a C,
@@ -40,25 +39,22 @@ where
     ver_chunk_size: usize,
     hor_chunk_size: usize,
 
-    adj_cosine: AdjCosine<UserId, f64>,
+    adj_cosine: AdjCosine<eid!(U), f64>,
 
-    ver_iter: LazyItemChunks<'a, User, UserId, Item, ItemId>,
-    hor_iter: LazyItemChunks<'a, User, UserId, Item, ItemId>,
+    ver_iter: LazyItemChunks<'a, C, I>,
+    hor_iter: LazyItemChunks<'a, C, I>,
 
-    matrix_chunk: HashMap<ItemId, HashMap<ItemId, f64>>,
+    matrix_chunk: HashMap<eid!(I), HashMap<eid!(I), f64>>,
 }
 
-impl<'a, C, User, UserId, Item, ItemId> SimilarityMatrix<'a, C, User, UserId, Item, ItemId>
+impl<'a, C, U, I> SimilarityMatrix<'a, C, U, I>
 where
-    User: Entity<Id = UserId>,
-    Item: Entity<Id = ItemId>,
-    UserId: Hash + Eq,
-    C: Controller<User, UserId, Item, ItemId>,
+    C: Controller<User = U, Item = I>,
+    U: Entity,
+    I: Entity,
+    eid!(U): Hash + Eq + Default,
 {
-    pub fn new(controller: &'a C, config: &'a Config, m: usize, n: usize) -> Self
-    where
-        UserId: Default,
-    {
+    pub fn new(controller: &'a C, config: &'a Config, m: usize, n: usize) -> Self {
         Self {
             config,
             controller,
@@ -72,14 +68,13 @@ where
     }
 }
 
-impl<'a, C, User, UserId, Item, ItemId> ChunkedMatrix<'a, C, User, UserId, Item, ItemId>
-    for SimilarityMatrix<'a, C, User, UserId, Item, ItemId>
+impl<'a, C, U, I> ChunkedMatrix<'a, C, I> for SimilarityMatrix<'a, C, U, I>
 where
-    User: Entity<Id = UserId>,
-    Item: Entity<Id = ItemId>,
-    ItemId: Hash + Eq + Clone,
-    UserId: Hash + Eq + Clone + Default,
-    C: Controller<User, UserId, Item, ItemId>,
+    C: Controller<User = U, Item = I>,
+    U: Entity,
+    I: Entity,
+    eid!(U): Hash + Eq + Clone + Default,
+    eid!(I): Hash + Eq + Clone,
 {
     fn approximate_chunk_size(&self) -> usize {
         todo!("Implement for each controller a 'counter' method for ratings")
@@ -114,14 +109,14 @@ where
             .nth(j)
             .ok_or_else(|| ErrorKind::IndexOutOfBound)?;
 
-        let ver_items_users: MapedRatings<ItemId, UserId> = self
+        let ver_items_users: maped_ratings!(I => U) = self
             .controller
             .users_who_rated(&ver_items)?
             .into_iter()
             .filter(|(_, ratings)| !ratings.is_empty())
             .collect();
 
-        let hor_items_users: MapedRatings<ItemId, UserId> = self
+        let hor_items_users: maped_ratings!(I => U) = self
             .controller
             .users_who_rated(&hor_items)?
             .into_iter()
@@ -179,7 +174,7 @@ where
         Ok(())
     }
 
-    fn get_value(&self, id_a: &ItemId, id_b: &ItemId) -> Option<f64> {
+    fn get_value(&self, id_a: &eid!(I), id_b: &eid!(I)) -> Option<f64> {
         if let Some(row_a) = self.matrix_chunk.get(id_a) {
             let maybe_val = row_a.get(id_b);
             if let Some(val) = maybe_val {
@@ -198,12 +193,10 @@ where
     }
 }
 
-pub struct DeviationMatrix<'a, C, User, UserId, Item, ItemId>
+pub struct DeviationMatrix<'a, C, I>
 where
-    User: Entity<Id = UserId>,
-    Item: Entity<Id = ItemId>,
-    UserId: Hash + Eq,
-    C: Controller<User, UserId, Item, ItemId>,
+    C: Controller<Item = I>,
+    I: Entity,
 {
     config: &'a Config,
     controller: &'a C,
@@ -211,23 +204,18 @@ where
     ver_chunk_size: usize,
     hor_chunk_size: usize,
 
-    ver_iter: LazyItemChunks<'a, User, UserId, Item, ItemId>,
-    hor_iter: LazyItemChunks<'a, User, UserId, Item, ItemId>,
+    ver_iter: LazyItemChunks<'a, C, I>,
+    hor_iter: LazyItemChunks<'a, C, I>,
 
-    matrix_chunk: HashMap<ItemId, HashMap<ItemId, f64>>,
+    matrix_chunk: HashMap<eid!(I), HashMap<eid!(I), f64>>,
 }
 
-impl<'a, C, User, UserId, Item, ItemId> DeviationMatrix<'a, C, User, UserId, Item, ItemId>
+impl<'a, C, I> DeviationMatrix<'a, C, I>
 where
-    User: Entity<Id = UserId>,
-    Item: Entity<Id = ItemId>,
-    UserId: Hash + Eq,
-    C: Controller<User, UserId, Item, ItemId>,
+    C: Controller<Item = I>,
+    I: Entity,
 {
-    pub fn new(controller: &'a C, config: &'a Config, m: usize, n: usize) -> Self
-    where
-        UserId: Default,
-    {
+    pub fn new(controller: &'a C, config: &'a Config, m: usize, n: usize) -> Self {
         Self {
             config,
             controller,
@@ -240,14 +228,13 @@ where
     }
 }
 
-impl<'a, C, User, UserId, Item, ItemId> ChunkedMatrix<'a, C, User, UserId, Item, ItemId>
-    for DeviationMatrix<'a, C, User, UserId, Item, ItemId>
+impl<'a, C, U, I> ChunkedMatrix<'a, C, I> for DeviationMatrix<'a, C, I>
 where
-    User: Entity<Id = UserId>,
-    Item: Entity<Id = ItemId>,
-    ItemId: Hash + Eq + Clone,
-    UserId: Hash + Eq + Clone,
-    C: Controller<User, UserId, Item, ItemId>,
+    C: Controller<User = U, Item = I>,
+    U: Entity,
+    I: Entity,
+    eid!(U): Hash + Eq,
+    eid!(I): Hash + Eq + Clone,
 {
     fn approximate_chunk_size(&self) -> usize {
         todo!("Implement for each controller a 'counter' method for ratings")
@@ -282,14 +269,14 @@ where
             .nth(j)
             .ok_or_else(|| ErrorKind::IndexOutOfBound)?;
 
-        let ver_items_users: MapedRatings<ItemId, UserId> = self
+        let ver_items_users: maped_ratings!(I => U) = self
             .controller
             .users_who_rated(&ver_items)?
             .into_iter()
             .filter(|(_, ratings)| !ratings.is_empty())
             .collect();
 
-        let hor_items_users: MapedRatings<ItemId, UserId> = self
+        let hor_items_users: maped_ratings!(I => U) = self
             .controller
             .users_who_rated(&hor_items)?
             .into_iter()
@@ -322,7 +309,7 @@ where
         Ok(())
     }
 
-    fn get_value(&self, id_a: &ItemId, id_b: &ItemId) -> Option<f64> {
+    fn get_value(&self, id_a: &eid!(I), id_b: &eid!(I)) -> Option<f64> {
         if let Some(row_a) = self.matrix_chunk.get(id_a) {
             let maybe_val = row_a.get(id_b);
             if let Some(val) = maybe_val {
