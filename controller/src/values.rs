@@ -72,35 +72,35 @@ impl Value {
     pub fn as_string(&self) -> Result<&str, ErrorKind> {
         match self {
             Self::String(s) => Ok(s),
-            _ => Err(ErrorKind::CastingValue("String".into())),
+            _ => Err(ErrorKind::CastingValue("String")),
         }
     }
 
     pub fn as_bool(&self) -> Result<bool, ErrorKind> {
         match self {
             Self::Bool(v) => Ok(*v),
-            _ => Err(ErrorKind::CastingValue("bool".into())),
+            _ => Err(ErrorKind::CastingValue("bool")),
         }
     }
 
     pub fn as_i32(&self) -> Result<i32, ErrorKind> {
         match self {
             Self::Int32(v) => Ok(*v),
-            _ => Err(ErrorKind::CastingValue("i32".into())),
+            _ => Err(ErrorKind::CastingValue("i32")),
         }
     }
 
     pub fn as_i64(&self) -> Result<i64, ErrorKind> {
         match self {
             Self::Int64(v) => Ok(*v),
-            _ => Err(ErrorKind::CastingValue("i64".into())),
+            _ => Err(ErrorKind::CastingValue("i64")),
         }
     }
 
     pub fn as_f64(&self) -> Result<f64, ErrorKind> {
         match self {
             Self::Double(v) => Ok(*v),
-            _ => Err(ErrorKind::CastingValue("f64".into())),
+            _ => Err(ErrorKind::CastingValue("f64")),
         }
     }
 }

@@ -26,5 +26,5 @@ pub enum ErrorKind {
     ValueConvert(String),
 
     #[error("Couldn't cast value to {0}")]
-    CastingValue(String),
+    CastingValue(&'static str),
 }
