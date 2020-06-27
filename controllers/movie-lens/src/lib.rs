@@ -23,7 +23,10 @@ use diesel::pg::PgConnection;
 use diesel::{insert_into, prelude::*};
 use models::movies::NewUnseenMovie;
 use mongodb::bson::doc;
-use mongodb::sync::{Client, Database};
+use mongodb::{
+    options::UpdateOptions,
+    sync::{Client, Database},
+};
 use std::collections::HashMap;
 
 pub fn establish_connection(url: &str) -> Result<PgConnection, Error> {
@@ -311,6 +314,14 @@ impl Controller for MovieLensController {
         item: &eid!(Self::Item),
         score: f64,
     ) -> Result<Self::Rating, Error> {
+        let collection = self.mongo_db.collection("users_who_rated");
+
+        let query = doc! { "item_id": item.to_string() };
+        let update = doc! { "$set": doc!{ format!("scores.{}", user): score }};
+        let options = UpdateOptions::builder().upsert(true).build();
+
+        collection.update_one(query, update, options)?;
+
         todo!()
     }
 
