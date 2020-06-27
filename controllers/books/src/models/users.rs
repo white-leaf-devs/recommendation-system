@@ -44,6 +44,13 @@ pub struct NewUser<'a> {
     pub age: Option<i16>,
 }
 
+#[derive(Debug, Clone, Insertable)]
+#[table_name = "users"]
+pub struct NewUnseenUser<'a> {
+    pub location: &'a str,
+    pub age: Option<i16>,
+}
+
 #[derive(Debug, Clone, Identifiable, Queryable, Associations)]
 #[primary_key(user_id)]
 #[belongs_to(User)]
