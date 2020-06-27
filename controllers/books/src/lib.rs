@@ -20,7 +20,8 @@ use controller::{
     eid, error::ErrorKind, maped_ratings, means, ratings, Controller, Field, SearchBy, Type,
 };
 use diesel::pg::PgConnection;
-use diesel::prelude::*;
+use diesel::{insert_into, prelude::*};
+use models::{books::NewUnseenBook, users::NewUnseenUser};
 use mongodb::bson::doc;
 use mongodb::sync::{Client, Database};
 use std::collections::HashMap;
@@ -287,17 +288,35 @@ impl Controller for BooksController {
             Field::Required("publisher", Type::String),
         ]
     }
+
     fn insert_user<'a>(
         &self,
         proto: HashMap<&'a str, controller::Value>,
     ) -> controller::Result<Self::User> {
-        todo!()
+        let user = NewUnseenUser {
+            location: proto["location"].as_string()?,
+            age: proto.get("age").map(|v| v.as_i16()).transpose()?,
+        };
+
+        Ok(insert_into(users::table)
+            .values(&user)
+            .get_result(&self.pg_conn)?)
     }
+
     fn insert_item<'a>(
         &self,
         proto: HashMap<&'a str, controller::Value>,
     ) -> controller::Result<Self::Item> {
-        todo!()
+        let book = NewUnseenBook {
+            title: proto["title"].as_string()?,
+            author: proto["author"].as_string()?,
+            year: proto["year"].as_i16()?,
+            publisher: proto["publisher"].as_string()?,
+        };
+
+        Ok(insert_into(books::table)
+            .values(&book)
+            .get_result(&self.pg_conn)?)
     }
 }
 

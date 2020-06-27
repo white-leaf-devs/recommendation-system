@@ -37,3 +37,10 @@ pub struct NewMovie<'a> {
     pub title: &'a str,
     pub genres: &'a str,
 }
+
+#[derive(Debug, Clone, Insertable)]
+#[table_name = "movies"]
+pub struct NewUnseenMovie<'a> {
+    pub title: &'a str,
+    pub genres: &'a str,
+}

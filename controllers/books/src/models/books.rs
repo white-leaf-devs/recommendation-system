@@ -29,6 +29,15 @@ pub struct NewBook<'a> {
     pub publisher: &'a str,
 }
 
+#[derive(Debug, Clone, Insertable)]
+#[table_name = "books"]
+pub struct NewUnseenBook<'a> {
+    pub title: &'a str,
+    pub author: &'a str,
+    pub year: i16,
+    pub publisher: &'a str,
+}
+
 impl Entity for Book {
     type Id = String;
     fn get_id(&self) -> Self::Id {

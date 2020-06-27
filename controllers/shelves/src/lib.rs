@@ -18,7 +18,7 @@ use crate::schema::{books, ratings, users};
 use anyhow::Error;
 use controller::{eid, error::ErrorKind, maped_ratings, means, ratings, Controller, SearchBy};
 use diesel::pg::PgConnection;
-use diesel::prelude::*;
+use diesel::{insert_into, prelude::*};
 use mongodb::bson::doc;
 use mongodb::sync::{Client, Database};
 use std::collections::HashMap;
@@ -248,23 +248,31 @@ impl Controller for ShelvesController {
     fn score_range(&self) -> (f64, f64) {
         (0., 5.)
     }
+
     fn fields_for_users(&self) -> Vec<controller::Field> {
-        todo!()
+        vec![]
     }
+
     fn fields_for_items(&self) -> Vec<controller::Field> {
-        todo!()
+        vec![]
     }
+
     fn insert_user<'a>(
         &self,
-        proto: HashMap<&'a str, controller::Value>,
+        _: HashMap<&'a str, controller::Value>,
     ) -> controller::Result<Self::User> {
-        todo!()
+        Ok(insert_into(users::table)
+            .default_values()
+            .get_result(&self.pg_conn)?)
     }
+
     fn insert_item<'a>(
         &self,
-        proto: HashMap<&'a str, controller::Value>,
+        _: HashMap<&'a str, controller::Value>,
     ) -> controller::Result<Self::Item> {
-        todo!()
+        Ok(insert_into(books::table)
+            .default_values()
+            .get_result(&self.pg_conn)?)
     }
 }
 
