@@ -37,12 +37,11 @@ cargo install diesel_cli --no-default-features --features postgres
 #### Running migrations and loading data
 
 Supported controllers are defined in `controllers` folder, to setup the database 
-run `diesel setup` on each controller directory, this should create the database 
-and create the tables. After that you just need to load data into the database by using 
-the following command on each controller directory:
+For your convenience we created a single bash script to create, load and index the databases for each controller. You just need to:
 
 ```bash
-cargo run --release --bin load_data
+cd controllers/{controller_folder}
+./prepare.sh
 ```
 
 **Note:**  If you don't have Git LFS  you need to download `data.zip` for `books` and `movie-lens` controllers manually from the repository as stated above, if you already have both zips you only need to unzip them and you're ready to go.
