@@ -16,7 +16,9 @@ use crate::models::{
 };
 use crate::schema::{movies, ratings, users};
 use anyhow::Error;
-use controller::{eid, error::ErrorKind, maped_ratings, means, ratings, Controller, SearchBy};
+use controller::{
+    eid, error::ErrorKind, maped_ratings, means, ratings, Controller, Field, SearchBy, Type,
+};
 use diesel::pg::PgConnection;
 use diesel::{insert_into, prelude::*};
 use models::movies::NewUnseenMovie;
@@ -268,10 +270,13 @@ impl Controller for MovieLensSmallController {
         (0.5, 5.)
     }
     fn fields_for_users(&self) -> Vec<controller::Field> {
-        todo!()
+        vec![]
     }
     fn fields_for_items(&self) -> Vec<controller::Field> {
-        todo!()
+        vec![
+            Field::Required("title", Type::String),
+            Field::Required("genres", Type::String),
+        ]
     }
     fn insert_user<'a>(
         &self,
