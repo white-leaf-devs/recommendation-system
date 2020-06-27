@@ -326,6 +326,23 @@ impl Controller for SimpleMovieController {
     ) -> Result<Self::Rating, Error> {
         todo!()
     }
+
+    fn remove_rating(
+        &self,
+        user: &eid!(Self::User),
+        item: &eid!(Self::Item),
+    ) -> Result<Self::Rating, Error> {
+        todo!()
+    }
+
+    fn update_rating(
+        &self,
+        user: &eid!(Self::User),
+        item: &eid!(Self::Item),
+        score: f64,
+    ) -> Result<Self::Rating, Error> {
+        todo!()
+    }
 }
 
 #[cfg(feature = "test-controller")]

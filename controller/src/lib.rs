@@ -149,8 +149,23 @@ pub trait Controller {
     /// Insert a new item frow a prototype
     fn insert_item<'a>(&self, proto: HashMap<&'a str, Value>) -> Result<Self::Item>;
 
-    /// Rate an item by a user
+    /// Createa a rating in user for an item
     fn insert_rating(
+        &self,
+        user: &eid!(Self::User),
+        item: &eid!(Self::Item),
+        score: f64,
+    ) -> Result<Self::Rating>;
+
+    /// Remove a rating in user for an item
+    fn remove_rating(
+        &self,
+        user: &eid!(Self::User),
+        item: &eid!(Self::Item),
+    ) -> Result<Self::Rating>;
+
+    /// Update a rating in user for an item
+    fn update_rating(
         &self,
         user: &eid!(Self::User),
         item: &eid!(Self::Item),
