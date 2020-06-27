@@ -22,6 +22,21 @@ pub enum Field<'a> {
     Optional(&'a str, Type),
 }
 
+impl<'a> Field<'a> {
+    pub fn is_optional(&self) -> bool {
+        match self {
+            Field::Optional(_, _) => true,
+            _ => false,
+        }
+    }
+
+    pub fn into_tuple(self) -> (&'a str, Type) {
+        match self {
+            Field::Required(name, ty) | Field::Optional(name, ty) => (name, ty),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     String(String),
