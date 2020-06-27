@@ -1,5 +1,5 @@
 // Copyright (c) 2020 White Leaf
-// 
+//
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
@@ -17,7 +17,7 @@ fn insert_users(conn: &PgConnection) -> Result<(), Error> {
     let mut users = Vec::new();
     println!("Collecting records for users...");
 
-    for id in 1..=283_228 {
+    for id in (1..=283_228).progress() {
         users.push(NewUser { id });
     }
 
@@ -52,7 +52,7 @@ fn insert_movies(conn: &PgConnection) -> Result<(), Error> {
         }
     }
 
-    println!("Pushing ratings by chunks");
+    println!("Pushing movies by chunks");
     for chunk in movies.chunks(10_000).progress() {
         insert_into(movies::table).values(chunk).execute(conn)?;
     }
