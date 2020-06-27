@@ -21,9 +21,12 @@ use controller::{
 };
 use diesel::pg::PgConnection;
 use diesel::{insert_into, prelude::*};
-use models::{movies::NewMovie, users::NewUser};
+use models::{movies::NewMovie, ratings::NewRating, users::NewUser};
 use mongodb::bson::doc;
-use mongodb::sync::{Client, Database};
+use mongodb::{
+    options::UpdateOptions,
+    sync::{Client, Database},
+};
 use std::collections::HashMap;
 
 pub fn establish_connection(url: &str) -> Result<PgConnection, Error> {
@@ -320,11 +323,32 @@ impl Controller for SimpleMovieController {
 
     fn insert_rating(
         &self,
-        user: &eid!(Self::User),
-        item: &eid!(Self::Item),
+        user_id: &eid!(Self::User),
+        item_id: &eid!(Self::Item),
         score: f64,
     ) -> Result<Self::Rating, Error> {
-        todo!()
+        let collection = self.mongo_db.collection("users_who_rated");
+
+        let query = doc! { "item_id": item_id.to_string() };
+        let update = doc! { "$set": doc!{ format!("scores.{}", user_id): score }};
+        let options = UpdateOptions::builder().upsert(true).build();
+
+        collection.update_one(query, update, options)?;
+
+        let score = NewRating {
+            user_id: *user_id,
+            movie_id: *item_id,
+            score,
+        };
+
+        let psql_result = insert_into(ratings::table)
+            .values(score)
+            .get_result(&self.pg_conn);
+
+        if psql_result.is_err() {
+            todo!()
+        }
+        Ok(psql_result.unwrap())
     }
 
     fn remove_rating(
