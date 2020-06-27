@@ -1,11 +1,12 @@
 // Copyright (c) 2020 White Leaf
-// 
+//
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
 pub mod basics;
 
-use crate::parser::basics::{parse_ident, parse_number, parse_separator, parse_string};
+use crate::parser::basics::{parse_ident, parse_int, parse_separator, parse_string};
+use basics::parse_float;
 use controller::SearchBy;
 use engine::distances::items::Method as ItemMethod;
 use engine::distances::users::Method as UserMethod;
@@ -51,7 +52,7 @@ impl Display for Database {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     Connect(Database),
     QueryUser(SearchBy),
@@ -67,6 +68,11 @@ pub enum Statement {
     EnterMatrix(usize, usize, ItemMethod),
     MatrixGet(SearchBy, SearchBy),
     MatrixMoveTo(usize, usize),
+
+    // Specific for insertion
+    InsertUser,
+    InsertItem,
+    InsertRating(SearchBy, SearchBy, f64),
 }
 
 fn parse_user_method(input: &str) -> IResult<&str, UserMethod> {
@@ -88,7 +94,7 @@ fn parse_user_method(input: &str) -> IResult<&str, UserMethod> {
         "euclidean" => (input, UserMethod::Euclidean),
         "manhattan" => (input, UserMethod::Manhattan),
         "minkowski" => {
-            let (input, number) = delimited(char('('), parse_number, char(')'))(input)?;
+            let (input, number) = delimited(char('('), parse_int, char(')'))(input)?;
             (input, UserMethod::Minkowski(number as usize))
         }
         "jacc_index" => (input, UserMethod::JaccardIndex),
@@ -132,7 +138,10 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
         tag("user_knn"),
         tag("query_user"),
         tag("query_item"),
+        tag("insert_user"),
+        tag("insert_item"),
         tag("enter_matrix"),
+        tag("insert_rating"),
         tag("query_ratings"),
         tag("user_distance"),
         tag("item_distance"),
@@ -205,12 +214,12 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
             let (input, (k, _, user_searchby, _, user_method, chunks_opt)) = delimited(
                 char('('),
                 tuple((
-                    parse_number,
+                    parse_int,
                     parse_separator,
                     parse_searchby,
                     parse_separator,
                     parse_user_method,
-                    opt(tuple((parse_separator, parse_number))),
+                    opt(tuple((parse_separator, parse_int))),
                 )),
                 char(')'),
             )(input)?;
@@ -230,9 +239,9 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
             let (input, (m, _, n, _, item_method)) = delimited(
                 char('('),
                 tuple((
-                    parse_number,
+                    parse_int,
                     parse_separator,
-                    parse_number,
+                    parse_int,
                     parse_separator,
                     parse_item_method,
                 )),
@@ -261,7 +270,7 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
         "move_to" => {
             let (input, (i, _, j)) = delimited(
                 char('('),
-                tuple((parse_number, parse_separator, parse_number)),
+                tuple((parse_int, parse_separator, parse_int)),
                 char(')'),
             )(input)?;
 
@@ -273,14 +282,14 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
                 delimited(
                     char('('),
                     tuple((
-                        parse_number,
+                        parse_int,
                         parse_separator,
                         parse_searchby,
                         parse_separator,
                         parse_searchby,
                         parse_separator,
                         parse_user_method,
-                        opt(tuple((parse_separator, parse_number))),
+                        opt(tuple((parse_separator, parse_int))),
                     )),
                     char(')'),
                 )(input)?;
@@ -308,7 +317,7 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
                         parse_separator,
                         parse_item_method,
                         parse_separator,
-                        parse_number,
+                        parse_int,
                     )),
                     char(')'),
                 )(input)?;
@@ -321,6 +330,27 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
                     item_method,
                     chunk_size as usize,
                 ),
+            )
+        }
+
+        "insert_user" => (input, Statement::InsertUser),
+        "insert_item" => (input, Statement::InsertItem),
+        "insert_rating" => {
+            let (input, (searchby_user, _, searchby_item, _, score)) = delimited(
+                char('('),
+                tuple((
+                    parse_searchby,
+                    parse_separator,
+                    parse_searchby,
+                    parse_separator,
+                    parse_float,
+                )),
+                char(')'),
+            )(input)?;
+
+            (
+                input,
+                Statement::InsertRating(searchby_user, searchby_item, score),
             )
         }
 
