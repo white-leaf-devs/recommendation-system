@@ -4,6 +4,7 @@
 // https://opensource.org/licenses/MIT
 
 pub mod parser;
+pub mod utils;
 
 use anyhow::Error;
 use books::BooksController;
@@ -31,6 +32,7 @@ use std::{
     hash::Hash,
     time::Instant,
 };
+use utils::build_prototype;
 
 macro_rules! prompt {
     ($ed:ident) => {{
@@ -41,9 +43,9 @@ macro_rules! prompt {
         use rustyline::error::ReadlineError;
 
         let msg = if $db.is_empty() {
-            format!("{}", PROMPT)
+            format!("{}", $crate::PROMPT)
         } else {
-            format!("({}) {}", $db, PROMPT)
+            format!("({}) {}", $db, $crate::PROMPT)
         };
 
         match $ed.readline(&msg) {
@@ -245,6 +247,60 @@ where
                         }
                         Err(e) => log::error!("{}", e),
                     },
+
+                    Statement::InsertUser => {
+                        let fields = controller.fields_for_users();
+                        let prototype = build_prototype(rl, fields);
+
+                        let prototype = match prototype {
+                            Ok(p) => p,
+                            Err(e) => {
+                                log::error!("Error creating prototype");
+                                log::error!("Reason: {}", e);
+                                continue;
+                            }
+                        };
+
+                        match controller.insert_user(prototype) {
+                            Ok(user) => {
+                                println!("Successfully inserted! Yay!");
+                                println!("{}", user.to_table());
+                            }
+
+                            Err(e) => {
+                                log::error!("Failed to insert user!");
+                                log::error!("Reason: {}", e);
+                            }
+                        }
+                    }
+
+                    Statement::InsertItem => {
+                        let fields = controller.fields_for_items();
+                        let prototype = build_prototype(rl, fields);
+
+                        let prototype = match prototype {
+                            Ok(p) => p,
+                            Err(e) => {
+                                log::error!("Error creating prototype");
+                                log::error!("Reason: {}", e);
+                                continue;
+                            }
+                        };
+
+                        match controller.insert_item(prototype) {
+                            Ok(item) => {
+                                println!("Successfully inserted! Yay!");
+                                println!("{}", item.to_table());
+                            }
+
+                            Err(e) => {
+                                log::error!("Failed to insert item!");
+                                log::error!("Reason: {}", e);
+                            }
+                        }
+                    }
+
+                    Statement::InsertRating(_, _, _) => {}
 
                     Statement::ItemDistance(searchby_a, searchby_b, method) => {
                         let item_a = match controller
