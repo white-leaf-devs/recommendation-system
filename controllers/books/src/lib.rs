@@ -17,11 +17,11 @@ use crate::models::{
 use crate::schema::{books, ratings, users};
 use anyhow::Error;
 use controller::{
-    eid, error::ErrorKind, maped_ratings, means, ratings, Controller, Field, SearchBy, Type,
+    eid, error::ErrorKind, maped_ratings, means, ratings, Controller, Field, SearchBy, Type, Value,
 };
 use diesel::pg::PgConnection;
 use diesel::{insert_into, prelude::*};
-use models::books::NewUnseenBook;
+use models::{books::NewUnseenBook, users::NewUnseenUser};
 use mongodb::bson::doc;
 use mongodb::sync::{Client, Database};
 use std::collections::HashMap;
@@ -288,14 +288,26 @@ impl Controller for BooksController {
             Field::Required("publisher", Type::String),
         ]
     }
+
     fn insert_user<'a>(
         &self,
-        _: HashMap<&'a str, controller::Value>,
+        proto: HashMap<&'a str, controller::Value>,
     ) -> controller::Result<Self::User> {
+        let age = if proto.contains_key("age") {
+            Some(proto["age"].as_i16()?)
+        } else {
+            None
+        };
+
+        let user = NewUnseenUser {
+            location: proto["location"].as_string()?,
+            age,
+        };
         Ok(insert_into(users::table)
-            .default_values()
+            .values(&user)
             .get_result(&self.pg_conn)?)
     }
+
     fn insert_item<'a>(
         &self,
         proto: HashMap<&'a str, controller::Value>,
