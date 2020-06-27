@@ -4,7 +4,7 @@
 // https://opensource.org/licenses/MIT
 
 use anyhow::Error;
-use controller::{Controller};
+use controller::Controller;
 use diesel::{insert_into, prelude::*};
 use movie_lens::establish_connection;
 use movie_lens::models::users::NewMean;
