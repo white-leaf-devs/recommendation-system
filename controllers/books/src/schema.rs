@@ -37,4 +37,9 @@ joinable!(means -> users (user_id));
 joinable!(ratings -> books (book_id));
 joinable!(ratings -> users (user_id));
 
-allow_tables_to_appear_in_same_query!(books, means, ratings, users,);
+allow_tables_to_appear_in_same_query!(
+    books,
+    means,
+    ratings,
+    users,
+);
