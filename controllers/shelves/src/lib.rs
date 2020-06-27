@@ -248,12 +248,15 @@ impl Controller for ShelvesController {
     fn score_range(&self) -> (f64, f64) {
         (0., 5.)
     }
+
     fn fields_for_users(&self) -> Vec<controller::Field> {
         vec![]
     }
+
     fn fields_for_items(&self) -> Vec<controller::Field> {
         vec![]
     }
+
     fn insert_user<'a>(
         &self,
         _: HashMap<&'a str, controller::Value>,
@@ -262,6 +265,7 @@ impl Controller for ShelvesController {
             .default_values()
             .get_result(&self.pg_conn)?)
     }
+
     fn insert_item<'a>(
         &self,
         _: HashMap<&'a str, controller::Value>,

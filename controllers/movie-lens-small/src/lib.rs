@@ -269,15 +269,18 @@ impl Controller for MovieLensSmallController {
     fn score_range(&self) -> (f64, f64) {
         (0.5, 5.)
     }
+
     fn fields_for_users(&self) -> Vec<controller::Field> {
         vec![]
     }
+
     fn fields_for_items(&self) -> Vec<controller::Field> {
         vec![
             Field::Required("title", Type::String),
             Field::Required("genres", Type::String),
         ]
     }
+
     fn insert_user<'a>(
         &self,
         _: HashMap<&'a str, controller::Value>,
@@ -286,6 +289,7 @@ impl Controller for MovieLensSmallController {
             .default_values()
             .get_result(&self.pg_conn)?)
     }
+
     fn insert_item<'a>(
         &self,
         proto: HashMap<&'a str, controller::Value>,
