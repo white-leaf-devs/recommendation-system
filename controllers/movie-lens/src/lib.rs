@@ -56,6 +56,7 @@ impl MovieLensController {
 impl Controller for MovieLensController {
     type User = User;
     type Item = Movie;
+    type Rating = Rating;
 
     fn users(&self) -> Result<Vec<Self::User>, Error> {
         let users = users::table.load::<User>(&self.pg_conn)?;
@@ -302,6 +303,15 @@ impl Controller for MovieLensController {
         Ok(insert_into(movies::table)
             .values(&movie)
             .get_result(&self.pg_conn)?)
+    }
+
+    fn insert_rating(
+        &self,
+        user: &SearchBy,
+        item: &SearchBy,
+        score: f64,
+    ) -> Result<Self::Rating, Error> {
+        todo!()
     }
 }
 

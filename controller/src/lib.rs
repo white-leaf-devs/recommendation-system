@@ -53,6 +53,7 @@ pub type MapedRatings<K, I, Value = f64> = HashMap<K, Ratings<I, Value>>;
 pub trait Controller {
     type User: Entity;
     type Item: Entity;
+    type Rating: Entity;
 
     /// Get all users
     fn users(&self) -> Result<Vec<Self::User>>;
@@ -147,4 +148,7 @@ pub trait Controller {
 
     /// Insert a new item frow a prototype
     fn insert_item<'a>(&self, proto: HashMap<&'a str, Value>) -> Result<Self::Item>;
+
+    /// Rate an item by a user
+    fn insert_rating(&self, user: &SearchBy, item: &SearchBy, score: f64) -> Result<Self::Rating>;
 }

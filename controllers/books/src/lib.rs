@@ -56,6 +56,7 @@ impl BooksController {
 impl Controller for BooksController {
     type User = User;
     type Item = Book;
+    type Rating = Rating;
 
     fn users(&self) -> Result<Vec<Self::User>, Error> {
         let users = users::table.load::<User>(&self.pg_conn)?;
@@ -317,6 +318,15 @@ impl Controller for BooksController {
         Ok(insert_into(books::table)
             .values(&book)
             .get_result(&self.pg_conn)?)
+    }
+
+    fn insert_rating(
+        &self,
+        user: &SearchBy,
+        item: &SearchBy,
+        score: f64,
+    ) -> Result<Self::Rating, Error> {
+        todo!()
     }
 }
 
