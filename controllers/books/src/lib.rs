@@ -322,8 +322,8 @@ impl Controller for BooksController {
 
     fn insert_rating(
         &self,
-        user: &SearchBy,
-        item: &SearchBy,
+        user: &eid!(Self::User),
+        item: &eid!(Self::Item),
         score: f64,
     ) -> Result<Self::Rating, Error> {
         todo!()

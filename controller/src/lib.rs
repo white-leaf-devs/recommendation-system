@@ -150,5 +150,10 @@ pub trait Controller {
     fn insert_item<'a>(&self, proto: HashMap<&'a str, Value>) -> Result<Self::Item>;
 
     /// Rate an item by a user
-    fn insert_rating(&self, user: &SearchBy, item: &SearchBy, score: f64) -> Result<Self::Rating>;
+    fn insert_rating(
+        &self,
+        user: &eid!(Self::User),
+        item: &eid!(Self::Item),
+        score: f64,
+    ) -> Result<Self::Rating>;
 }
