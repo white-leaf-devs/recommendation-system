@@ -17,7 +17,7 @@ use crate::models::{
 use crate::schema::{books, ratings, users};
 use anyhow::Error;
 use controller::{
-    eid, error::ErrorKind, maped_ratings, means, ratings, Controller, Field, SearchBy, Type, Value,
+    eid, error::ErrorKind, maped_ratings, means, ratings, Controller, Field, SearchBy, Type,
 };
 use diesel::pg::PgConnection;
 use diesel::{insert_into, prelude::*};
@@ -293,16 +293,11 @@ impl Controller for BooksController {
         &self,
         proto: HashMap<&'a str, controller::Value>,
     ) -> controller::Result<Self::User> {
-        let age = if proto.contains_key("age") {
-            Some(proto["age"].as_i16()?)
-        } else {
-            None
-        };
-
         let user = NewUnseenUser {
             location: proto["location"].as_string()?,
-            age,
+            age: proto.get("age").map(|v| v.as_i16()).transpose()?,
         };
+
         Ok(insert_into(users::table)
             .values(&user)
             .get_result(&self.pg_conn)?)
