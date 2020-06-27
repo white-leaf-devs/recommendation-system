@@ -249,10 +249,10 @@ impl Controller for ShelvesController {
         (0., 5.)
     }
     fn fields_for_users(&self) -> Vec<controller::Field> {
-        todo!()
+        vec![]
     }
     fn fields_for_items(&self) -> Vec<controller::Field> {
-        todo!()
+        vec![]
     }
     fn insert_user<'a>(
         &self,
