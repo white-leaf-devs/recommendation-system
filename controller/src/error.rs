@@ -27,4 +27,7 @@ pub enum ErrorKind {
 
     #[error("Couldn't cast value to {0}")]
     CastingValue(&'static str),
+
+    #[error("Couldn't update rating for item({0}) on user({1})")]
+    UpdateRatingFailed(String, String),
 }

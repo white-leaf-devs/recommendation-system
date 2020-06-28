@@ -152,23 +152,23 @@ pub trait Controller {
     /// Createa a rating in user for an item
     fn insert_rating(
         &self,
-        user: &eid!(Self::User),
-        item: &eid!(Self::Item),
+        user_id: &eid!(Self::User),
+        item_id: &eid!(Self::Item),
         score: f64,
     ) -> Result<Self::Rating>;
 
     /// Remove a rating in user for an item
     fn remove_rating(
         &self,
-        user: &eid!(Self::User),
-        item: &eid!(Self::Item),
+        user_id: &eid!(Self::User),
+        item_id: &eid!(Self::Item),
     ) -> Result<Self::Rating>;
 
     /// Update a rating in user for an item
     fn update_rating(
         &self,
-        user: &eid!(Self::User),
-        item: &eid!(Self::Item),
+        user_id: &eid!(Self::User),
+        item_id: &eid!(Self::Item),
         score: f64,
     ) -> Result<Self::Rating>;
 }
