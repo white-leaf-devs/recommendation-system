@@ -331,26 +331,43 @@ impl Controller for SimpleMovieController {
         let collection = self.mongo_db.collection("users_who_rated");
 
         let query = doc! { "item_id": item_id.to_string() };
-        let update = doc! { "$set": doc!{ format!("scores.{}", user_id): score }};
+        let update = doc! {
+            "$set": doc!{
+                format!("scores.{}",user_id): score
+            }
+        };
         let options = UpdateOptions::builder().upsert(true).build();
 
-        collection.update_one(query, update, options)?;
+        let mongo_result = collection.update_one(query, update, options)?;
 
-        let score = NewRating {
+        if mongo_result.matched_count.is_zero() || mongo_result.modified_count.is_zero() {
+            return Err(
+                ErrorKind::InsertRatingFailed(user_id.to_string(), item_id.to_string()).into(),
+            );
+        }
+
+        let new_rating = NewRating {
             user_id: *user_id,
             movie_id: *item_id,
             score,
         };
 
         let psql_result = insert_into(ratings::table)
-            .values(score)
+            .values(new_rating)
             .get_result(&self.pg_conn);
 
-        if psql_result.is_err() {
-            todo!()
+        match psql_result {
+            Ok(rating) => Ok(rating),
+            Err(e) => {
+                let delete = doc! {
+                    "$unset": doc!{
+                        format!("scores.{}", user_id): ""
+                    }
+                };
+                collection.update_one(doc! {"item_id": item_id}, delete, None)?;
+                Err(e.into())
+            }
         }
-
-        Ok(psql_result.unwrap())
     }
 
     fn remove_rating(
