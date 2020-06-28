@@ -36,8 +36,7 @@ cargo install diesel_cli --no-default-features --features postgres
 
 #### Running migrations and loading data
 
-Supported controllers are defined in `controllers` folder, to setup the database 
-For your convenience we created a single bash script to create, load and index the databases for each controller. You just need to:
+Supported controllers are defined in `controllers` folder, to setup the database for your convenience we created a single bash script to create, load and index the databases for each controller. You just need to:
 
 ```bash
 cd controllers/{controller_folder}
@@ -125,6 +124,15 @@ query_user(searchby)
 query_user(id('243'))
 ```
 
+###### `insert_user`
+
+Create a new user on the connected database, this will prompt you to insert values for each field.
+
+```python
+# Syntax 
+insert_user
+```
+
 ###### `query_item`
 
 Query an item by its `id` or `name`
@@ -137,6 +145,15 @@ query_item(searchby)
 query_item(name('The Great Gatsby'))
 ```
 
+###### `insert_item`
+
+Create a new item on the connected database, this will prompt you to insert values for each field.
+
+```python
+# Syntax 
+insert_item
+```
+
 ###### `query_ratings`
 
 Query the ratings for an user by its `id` or `name`
@@ -147,6 +164,42 @@ query_ratings(searchby)
 
 # Example
 query_ratings(id('12'))
+```
+
+###### `insert_rating`
+
+Create a rating for a user and an item, the score must no exist
+
+```python
+# Syntax 
+insert_rating(searchby, searchby, double)
+
+# Example
+insert_rating(name('Patrick C'), name('Alien'), 3.5)
+```
+
+###### `update_rating`
+
+Update a rating for a user and an item, the score must be different from the actual and exist
+
+```python
+# Syntax
+update_rating(searchby, searchby, double)
+
+# Example
+update_rating(name('Patrick C'), name('Alien'), 2.0)
+```
+
+###### `remove_rating`
+
+Remove a rating for a user and an item, the score must exist
+
+```python
+# Syntax 
+remove_rating(searchby, searchby)
+
+# Example
+remove_rating(name('Patrick C'), name('Alien'))
 ```
 
 ###### `user_distance`
