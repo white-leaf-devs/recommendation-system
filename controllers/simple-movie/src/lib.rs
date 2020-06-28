@@ -400,7 +400,7 @@ impl Controller for SimpleMovieController {
             .select(ratings::score)
             .first(&self.pg_conn)?;
 
-        let psql_result: Result<Rating, _> = delete(ratings::table)
+        let psql_result = delete(ratings::table)
             .filter(ratings::user_id.eq(user_id))
             .filter(ratings::movie_id.eq(item_id))
             .get_result(&self.pg_conn);
