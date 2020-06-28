@@ -73,6 +73,8 @@ pub enum Statement {
     InsertUser,
     InsertItem,
     InsertRating(SearchBy, SearchBy, f64),
+    UpdateRating(SearchBy, SearchBy, f64),
+    RemoveRating(SearchBy, SearchBy),
 }
 
 fn parse_user_method(input: &str) -> IResult<&str, UserMethod> {
@@ -142,6 +144,8 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
         tag("insert_item"),
         tag("enter_matrix"),
         tag("insert_rating"),
+        tag("update_rating"),
+        tag("remove_rating"),
         tag("query_ratings"),
         tag("user_distance"),
         tag("item_distance"),
@@ -335,6 +339,7 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
 
         "insert_user" => (input, Statement::InsertUser),
         "insert_item" => (input, Statement::InsertItem),
+
         "insert_rating" => {
             let (input, (searchby_user, _, searchby_item, _, score)) = delimited(
                 char('('),
@@ -352,6 +357,35 @@ fn parse_statement(input: &str) -> IResult<&str, Statement> {
                 input,
                 Statement::InsertRating(searchby_user, searchby_item, score),
             )
+        }
+
+        "update_rating" => {
+            let (input, (searchby_user, _, searchby_item, _, score)) = delimited(
+                char('('),
+                tuple((
+                    parse_searchby,
+                    parse_separator,
+                    parse_searchby,
+                    parse_separator,
+                    parse_float,
+                )),
+                char(')'),
+            )(input)?;
+
+            (
+                input,
+                Statement::UpdateRating(searchby_user, searchby_item, score),
+            )
+        }
+
+        "remove_rating" => {
+            let (input, (searchby_user, _, searchby_item)) = delimited(
+                char('('),
+                tuple((parse_searchby, parse_separator, parse_searchby)),
+                char(')'),
+            )(input)?;
+
+            (input, Statement::RemoveRating(searchby_user, searchby_item))
         }
 
         function => unimplemented!("Unimplemented parser for {}", function),

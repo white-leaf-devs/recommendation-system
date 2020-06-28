@@ -172,18 +172,20 @@ where
     Ok(())
 }
 
-fn database_connected_prompt<C, U, I>(
+fn database_connected_prompt<C, U, I, R>(
     config: &Config,
     controller: C,
     name: &str,
     rl: &mut Editor<()>,
 ) -> Result<(), Error>
 where
-    C: Controller<User = U, Item = I>,
+    C: Controller<User = U, Item = I, Rating = R>,
     U: Entity,
     I: Entity,
+    R: Entity,
     eid!(U): Hash + Eq + Display + Clone + Debug + Default,
     eid!(I): Hash + Eq + Display + Clone + Debug,
+    eid!(R): Display,
 {
     let mut engine = Engine::with_controller(&controller, config);
 
@@ -300,7 +302,122 @@ where
                         }
                     }
 
-                    Statement::InsertRating(_, _, _) => {}
+                    Statement::InsertRating(searchby_user, searchby_item, score) => {
+                        let user = match controller
+                            .users_by(&searchby_user)
+                            .map(|mut users| users.drain(..1).next().unwrap())
+                        {
+                            Ok(user) => user,
+                            Err(e) => {
+                                log::error!("{}", e);
+                                continue;
+                            }
+                        };
+
+                        let item = match controller
+                            .items_by(&searchby_item)
+                            .map(|mut items| items.drain(..1).next().unwrap())
+                        {
+                            Ok(item) => item,
+                            Err(e) => {
+                                log::error!("{}", e);
+                                continue;
+                            }
+                        };
+
+                        let user_id = user.get_id();
+                        let item_id = item.get_id();
+
+                        match controller.insert_rating(&user_id, &item_id, score) {
+                            Ok(rating) => {
+                                println!("Successfully inserted! Yay!");
+                                println!("{}", rating.to_table());
+                            }
+
+                            Err(e) => {
+                                log::error!("Failed to insert rating!");
+                                log::error!("Reason: {}", e);
+                            }
+                        }
+                    }
+
+                    Statement::UpdateRating(searchby_user, searchby_item, score) => {
+                        let user = match controller
+                            .users_by(&searchby_user)
+                            .map(|mut users| users.drain(..1).next().unwrap())
+                        {
+                            Ok(user) => user,
+                            Err(e) => {
+                                log::error!("{}", e);
+                                continue;
+                            }
+                        };
+
+                        let item = match controller
+                            .items_by(&searchby_item)
+                            .map(|mut items| items.drain(..1).next().unwrap())
+                        {
+                            Ok(item) => item,
+                            Err(e) => {
+                                log::error!("{}", e);
+                                continue;
+                            }
+                        };
+
+                        let user_id = user.get_id();
+                        let item_id = item.get_id();
+
+                        match controller.update_rating(&user_id, &item_id, score) {
+                            Ok(rating) => {
+                                println!("Successfully updated! Yay!");
+                                println!("{}", rating.to_table());
+                            }
+
+                            Err(e) => {
+                                log::error!("Failed to update rating!");
+                                log::error!("Reason: {}", e);
+                            }
+                        }
+                    }
+
+                    Statement::RemoveRating(searchby_user, searchby_item) => {
+                        let user = match controller
+                            .users_by(&searchby_user)
+                            .map(|mut users| users.drain(..1).next().unwrap())
+                        {
+                            Ok(user) => user,
+                            Err(e) => {
+                                log::error!("{}", e);
+                                continue;
+                            }
+                        };
+
+                        let item = match controller
+                            .items_by(&searchby_item)
+                            .map(|mut items| items.drain(..1).next().unwrap())
+                        {
+                            Ok(item) => item,
+                            Err(e) => {
+                                log::error!("{}", e);
+                                continue;
+                            }
+                        };
+
+                        let user_id = user.get_id();
+                        let item_id = item.get_id();
+
+                        match controller.remove_rating(&user_id, &item_id) {
+                            Ok(rating) => {
+                                println!("Successfully removed! Yay?");
+                                println!("{}", rating.to_table());
+                            }
+
+                            Err(e) => {
+                                log::error!("Failed to remove rating!");
+                                log::error!("Reason: {}", e);
+                            }
+                        }
+                    }
 
                     Statement::ItemDistance(searchby_a, searchby_b, method) => {
                         let item_a = match controller
