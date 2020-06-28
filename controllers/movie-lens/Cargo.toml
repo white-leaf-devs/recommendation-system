@@ -16,6 +16,7 @@ diesel = { version = "1", features = [ "postgres" ] }
 dotenv = "0.15.0"
 indicatif = "0.15"
 mongodb = { version = "1.0.0", default-features = false, features = [ "sync" ] }
+num-traits = "0.2.12"
 
 [features]
 default = []

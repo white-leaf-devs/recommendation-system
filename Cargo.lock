@@ -198,6 +198,7 @@ dependencies = [
  "dotenv",
  "indicatif 0.15.0",
  "mongodb",
+ "num-traits",
 ]
 
 [[package]]
@@ -1192,6 +1193,7 @@ dependencies = [
  "dotenv",
  "indicatif 0.15.0",
  "mongodb",
+ "num-traits",
 ]
 
 [[package]]
@@ -1206,6 +1208,7 @@ dependencies = [
  "dotenv",
  "indicatif 0.15.0",
  "mongodb",
+ "num-traits",
 ]
 
 [[package]]
@@ -1868,6 +1871,7 @@ dependencies = [
  "dotenv",
  "indicatif 0.15.0",
  "mongodb",
+ "num-traits",
 ]
 
 [[package]]
@@ -1882,6 +1886,7 @@ dependencies = [
  "dotenv",
  "indicatif 0.14.0",
  "mongodb",
+ "num-traits",
 ]
 
 [[package]]
