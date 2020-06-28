@@ -9,13 +9,13 @@ use rustyline::Editor;
 use std::collections::HashMap;
 
 macro_rules! field {
-    ($ed:ident, $name:expr, $opt:expr) => {{
+    ($ed:ident, $name:expr, $opt:expr, $ty:expr) => {{
         use rustyline::error::ReadlineError;
 
         let msg = if $opt {
-            format!("{}{} (optional): ", $crate::PROMPT, $name)
+            format!("{}{} (optional, {}): ", $crate::PROMPT, $name, $ty)
         } else {
-            format!("{}{} (required): ", $crate::PROMPT, $name)
+            format!("{}{} (required, {}): ", $crate::PROMPT, $name, $ty)
         };
 
         match $ed.readline(&msg) {
@@ -42,7 +42,7 @@ pub(crate) fn build_prototype<'a>(
         let (name, ty) = field.into_tuple();
 
         loop {
-            let input: Option<String> = field!(rl, name, is_optional)?;
+            let input: Option<String> = field!(rl, name, is_optional, ty)?;
 
             match input {
                 Some(input) => {

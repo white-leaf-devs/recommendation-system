@@ -4,6 +4,7 @@
 // https://opensource.org/licenses/MIT
 
 use crate::error::ErrorKind;
+use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -14,6 +15,21 @@ pub enum Type {
     Int32,
     Int64,
     Double,
+}
+
+impl Display for Type {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        let o = match self {
+            Type::String => "string",
+            Type::Bool => "bool",
+            Type::Int16 => "int16",
+            Type::Int32 => "int32",
+            Type::Int64 => "int64",
+            Type::Double => "double",
+        };
+
+        write!(f, "{}", o)
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
