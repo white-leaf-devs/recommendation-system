@@ -20,13 +20,14 @@ use controller::{
     eid, error::ErrorKind, maped_ratings, means, ratings, Controller, Field, SearchBy, Type,
 };
 use diesel::pg::PgConnection;
-use diesel::{insert_into, prelude::*};
+use diesel::{insert_into, prelude::*, update};
 use models::movies::NewUnseenMovie;
 use mongodb::bson::doc;
 use mongodb::{
     options::UpdateOptions,
     sync::{Client, Database},
 };
+use num_traits::Zero;
 use std::collections::HashMap;
 
 pub fn establish_connection(url: &str) -> Result<PgConnection, Error> {
@@ -310,14 +311,14 @@ impl Controller for MovieLensController {
 
     fn insert_rating(
         &self,
-        user: &eid!(Self::User),
-        item: &eid!(Self::Item),
+        user_id: &eid!(Self::User),
+        item_id: &eid!(Self::Item),
         score: f64,
     ) -> Result<Self::Rating, Error> {
         let collection = self.mongo_db.collection("users_who_rated");
 
-        let query = doc! { "item_id": item.to_string() };
-        let update = doc! { "$set": doc!{ format!("scores.{}", user): score }};
+        let query = doc! { "item_id": item_id.to_string() };
+        let update = doc! { "$set": doc!{ format!("scores.{}", user_id): score }};
         let options = UpdateOptions::builder().upsert(true).build();
 
         collection.update_one(query, update, options)?;
@@ -327,19 +328,70 @@ impl Controller for MovieLensController {
 
     fn remove_rating(
         &self,
-        user: &eid!(Self::User),
-        item: &eid!(Self::Item),
+        user_id: &eid!(Self::User),
+        item_id: &eid!(Self::Item),
     ) -> Result<Self::Rating, Error> {
         todo!()
     }
 
     fn update_rating(
         &self,
-        user: &eid!(Self::User),
-        item: &eid!(Self::Item),
+        user_id: &eid!(Self::User),
+        item_id: &eid!(Self::Item),
         score: f64,
     ) -> Result<Self::Rating, Error> {
-        todo!()
+        let collection = self.mongo_db.collection("users_who_rated");
+
+        let query_doc = doc! {
+            "item_id": item_id,
+        };
+
+        let update_doc = doc! {
+            "$set": doc!{
+                format!("scores.{}", user_id): score
+            }
+        };
+
+        let result = collection.update_one(query_doc, update_doc, None)?;
+
+        if result.modified_count.is_zero() || result.matched_count.is_zero() {
+            return Err(
+                ErrorKind::UpdateRatingFailed(user_id.to_string(), item_id.to_string()).into(),
+            );
+        }
+
+        let old_score: f64 = ratings::table
+            .filter(ratings::user_id.eq(user_id))
+            .filter(ratings::movie_id.eq(item_id))
+            .select(ratings::score)
+            .first(&self.pg_conn)?;
+
+        let psql_res = update(
+            ratings::table
+                .filter(ratings::user_id.eq(user_id))
+                .filter(ratings::movie_id.eq(item_id)),
+        )
+        .set(ratings::score.eq(score))
+        .get_result::<Rating>(&self.pg_conn);
+
+        match psql_res {
+            Ok(rating) => Ok(rating),
+            Err(e) => {
+                let query_doc = doc! {
+                    "item_id": item_id,
+                };
+
+                let update_doc = doc! {
+                    "$set": doc! {
+                        format!("score.{}", user_id): old_score
+                    }
+                };
+
+                collection.update_one(query_doc, update_doc, None)?;
+
+                Err(e.into())
+            }
+        }
     }
 }
 
