@@ -18,9 +18,15 @@ use crate::schema::{books, ratings, users};
 use anyhow::Error;
 use controller::{eid, error::ErrorKind, maped_ratings, means, ratings, Controller, SearchBy};
 use diesel::pg::PgConnection;
-use diesel::{insert_into, prelude::*};
+use diesel::{delete, insert_into, prelude::*, update};
+use models::{ratings::NewRating};
 use mongodb::bson::doc;
-use mongodb::sync::{Client, Database};
+use mongodb::{
+    options::UpdateOptions,
+    sync::{Client, Database}
+};
+
+use num_traits::Zero;
 use std::collections::HashMap;
 
 pub fn establish_connection(url: &str) -> Result<PgConnection, Error> {
@@ -282,7 +288,62 @@ impl Controller for ShelvesController {
         item_id: &eid!(Self::Item),
         score: f64,
     ) -> Result<Self::Rating, Error> {
-        todo!()
+        let collection = self.mongo_db.collection("users_who_rated");
+
+        let query = doc! {
+            "item_id": item_id,
+            format!("scores.{}", user_id) : doc!{
+                "$exists": true
+            }
+        };
+
+        let rating = collection.find_one(query, None)?;
+        if rating.is_some() {
+            return Err(
+                ErrorKind::InsertRatingFailed(user_id.to_string(), item_id.to_string()).into(),
+            );
+        }
+
+        let query = doc! {
+            "item_id": item_id
+        };
+
+        let update = doc! {
+            "$set": doc!{
+                format!("scores.{}",user_id): score
+            }
+        };
+
+        let options = UpdateOptions::builder().upsert(true).build();
+        collection.update_one(query, update, options)?;
+
+        let new_rating = NewRating {
+            user_id: *user_id,
+            book_id: *item_id,
+            score,
+        };
+
+        let psql_result = insert_into(ratings::table)
+            .values(new_rating)
+            .get_result(&self.pg_conn);
+
+        match psql_result {
+            Ok(rating) => Ok(rating),
+            Err(e) => {
+                let query_doc = doc! {
+                    "item_id": item_id.to_string()
+                };
+
+                let delete_doc = doc! {
+                    "$unset": doc!{
+                        format!("scores.{}", user_id): ""
+                    }
+                };
+
+                collection.update_one(query_doc, delete_doc, None)?;
+                Err(e.into())
+            }
+        }
     }
 
     fn remove_rating(
@@ -290,7 +351,55 @@ impl Controller for ShelvesController {
         user_id: &eid!(Self::User),
         item_id: &eid!(Self::Item),
     ) -> Result<Self::Rating, Error> {
-        todo!()
+        let collection = self.mongo_db.collection("users_who_rated");
+
+        let query_doc = doc! {
+            "item_id": item_id
+        };
+
+        let delete_doc = doc! {
+            "$unset": doc!{
+                format!("scores.{}", user_id): ""
+            }
+        };
+
+        let result = collection.update_one(query_doc, delete_doc, None)?;
+        if result.matched_count.is_zero() || result.modified_count.is_zero() {
+            return Err(
+                ErrorKind::InsertRatingFailed(user_id.to_string(), item_id.to_string()).into(),
+            );
+        }
+
+        let old_score: f64 = ratings::table
+            .filter(ratings::user_id.eq(user_id))
+            .filter(ratings::book_id.eq(item_id))
+            .select(ratings::score)
+            .first(&self.pg_conn)?;
+
+        let psql_result = delete(ratings::table)
+            .filter(ratings::user_id.eq(user_id))
+            .filter(ratings::book_id.eq(item_id))
+            .get_result(&self.pg_conn);
+
+        match psql_result {
+            Ok(rating) => Ok(rating),
+            Err(e) => {
+                let query_doc = doc! {
+                    "item_id": item_id.to_string()
+                };
+
+                let update_doc = doc! {
+                    "$set": doc!{
+                        format!("scores.{}",user_id): old_score
+                    }
+                };
+
+                let options = UpdateOptions::builder().upsert(true).build();
+                collection.update_one(query_doc, update_doc, options)?;
+
+                Err(e.into())
+            }
+        }
     }
 
     fn update_rating(
@@ -299,7 +408,55 @@ impl Controller for ShelvesController {
         item_id: &eid!(Self::Item),
         score: f64,
     ) -> Result<Self::Rating, Error> {
-        todo!()
+        let collection = self.mongo_db.collection("users_who_rated");
+
+        let query_doc = doc! {
+            "item_id": item_id,
+        };
+
+        let update_doc = doc! {
+            "$set": doc!{
+                format!("scores.{}", user_id): score
+            }
+        };
+
+        let result = collection.update_one(query_doc, update_doc, None)?;
+        if result.modified_count.is_zero() || result.matched_count.is_zero() {
+            return Err(
+                ErrorKind::UpdateRatingFailed(user_id.to_string(), item_id.to_string()).into(),
+            );
+        }
+
+        let old_score: f64 = ratings::table
+            .filter(ratings::user_id.eq(user_id))
+            .filter(ratings::book_id.eq(item_id))
+            .select(ratings::score)
+            .first(&self.pg_conn)?;
+
+        let psql_res = update(ratings::table)
+            .filter(ratings::user_id.eq(user_id))
+            .filter(ratings::book_id.eq(item_id))
+            .set(ratings::score.eq(score))
+            .get_result::<Rating>(&self.pg_conn);
+
+        match psql_res {
+            Ok(rating) => Ok(rating),
+            Err(e) => {
+                let query_doc = doc! {
+                    "item_id": item_id,
+                };
+
+                let update_doc = doc! {
+                    "$set": doc! {
+                        format!("score.{}", user_id): old_score
+                    }
+                };
+
+                collection.update_one(query_doc, update_doc, None)?;
+
+                Err(e.into())
+            }
+        }
     }
 }
 
