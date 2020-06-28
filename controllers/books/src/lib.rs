@@ -322,8 +322,8 @@ impl Controller for BooksController {
 
     fn insert_rating(
         &self,
-        user: &eid!(Self::User),
-        item: &eid!(Self::Item),
+        user_id: &eid!(Self::User),
+        item_id: &eid!(Self::Item),
         score: f64,
     ) -> Result<Self::Rating, Error> {
         todo!()
@@ -331,16 +331,16 @@ impl Controller for BooksController {
 
     fn remove_rating(
         &self,
-        user: &eid!(Self::User),
-        item: &eid!(Self::Item),
+        user_id: &eid!(Self::User),
+        item_id: &eid!(Self::Item),
     ) -> Result<Self::Rating, Error> {
         todo!()
     }
 
     fn update_rating(
         &self,
-        user: &eid!(Self::User),
-        item: &eid!(Self::Item),
+        user_id: &eid!(Self::User),
+        item_id: &eid!(Self::Item),
         score: f64,
     ) -> Result<Self::Rating, Error> {
         todo!()
