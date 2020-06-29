@@ -303,6 +303,13 @@ where
                     }
 
                     Statement::InsertRating(searchby_user, searchby_item, score) => {
+                        let (lower_limit, upper_limit) = controller.score_range();
+
+                        if score < lower_limit || score > upper_limit {
+                            log::error!("Given score is not between database bounds");
+                            continue;
+                        }
+
                         let user = match controller
                             .users_by(&searchby_user)
                             .map(|mut users| users.drain(..1).next().unwrap())
@@ -342,6 +349,12 @@ where
                     }
 
                     Statement::UpdateRating(searchby_user, searchby_item, score) => {
+                        let (lower_limit, upper_limit) = controller.score_range();
+                        if score < lower_limit || score > upper_limit {
+                            log::error!("Given score is not between database bounds");
+                            continue;
+                        }
+
                         let user = match controller
                             .users_by(&searchby_user)
                             .map(|mut users| users.drain(..1).next().unwrap())
