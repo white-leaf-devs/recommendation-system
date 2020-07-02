@@ -21,6 +21,8 @@ use distances::items::{denormalize_user_rating, normalize_user_ratings, slope_on
 use error::ErrorKind;
 use knn::{Knn, MaxHeapKnn, MinHeapKnn};
 use num_traits::Zero;
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::{collections::HashSet, fmt::Debug, hash::Hash, marker::PhantomData, time::Instant};
 
 pub struct Engine<'a, C, U, I>
@@ -33,7 +35,7 @@ where
     config: &'a Config,
     controller: &'a C,
 
-    adj_cosine: AdjCosine<eid!(U), f64>,
+    adj_cosine: Rc<RefCell<AdjCosine<eid!(U), f64>>>,
 
     user_type: PhantomData<U>,
     item_type: PhantomData<I>,
@@ -51,10 +53,22 @@ where
         Self {
             config,
             controller,
-            adj_cosine: AdjCosine::new(),
+            adj_cosine: Rc::new(RefCell::new(AdjCosine::new())),
             user_type: PhantomData,
             item_type: PhantomData,
         }
+    }
+
+    pub fn maybe_update_mean_for(&self, user_id: &eid!(U), new: f64) {
+        self.adj_cosine.borrow_mut().set_mean_for(user_id, new);
+    }
+
+    pub fn maybe_delete_mean_for(&self, user_id: &eid!(U)) {
+        self.adj_cosine.borrow_mut().del_mean_for(user_id);
+    }
+
+    pub fn clone_rc_adj_cosine(&self) -> Rc<RefCell<AdjCosine<eid!(U), f64>>> {
+        Rc::clone(&self.adj_cosine)
     }
 
     pub fn user_distance(&self, user_a: U, user_b: U, method: UserMethod) -> Result<f64, Error> {
@@ -86,11 +100,11 @@ where
                     }
                 }
 
-                self.adj_cosine.shrink_means();
+                self.adj_cosine.borrow_mut().shrink_means();
 
                 let all_users: Vec<_> = all_users
                     .into_iter()
-                    .filter(|uid| !self.adj_cosine.has_mean_for(uid))
+                    .filter(|uid| !self.adj_cosine.borrow().has_mean_for(uid))
                     .collect();
 
                 let all_partial_users = self.controller.create_partial_users(&all_users)?;
@@ -98,11 +112,12 @@ where
                 let partial_users_chunk_size = self.config.engine.partial_users_chunk_size;
                 for partial_users_chunk in all_partial_users.chunks(partial_users_chunk_size) {
                     let mean_chunk = self.controller.means_for(partial_users_chunk)?;
-                    self.adj_cosine.push_means(&mean_chunk);
+                    self.adj_cosine.borrow_mut().push_means(&mean_chunk);
                 }
 
                 let sim = self
                     .adj_cosine
+                    .borrow_mut()
                     .calculate(&users_who_rated[&item_a_id], &users_who_rated[&item_b_id])?;
 
                 Ok(sim)
