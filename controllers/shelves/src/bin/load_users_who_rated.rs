@@ -24,7 +24,7 @@ fn main() -> Result<(), Error> {
     let file = File::open("data/ratings.csv")?;
     let reader = BufReader::new(file);
     let mut csv = csv::ReaderBuilder::new()
-        .has_headers(true)
+        .has_headers(false)
         .delimiter(b',')
         .from_reader(reader);
 
