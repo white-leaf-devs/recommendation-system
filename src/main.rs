@@ -115,6 +115,8 @@ where
                 println!("version: {}", VERSION);
             }
 
+            empty if empty.is_empty() => {}
+
             line => match parser::parse_line(line) {
                 Some(stmt) => match stmt {
                     Statement::MatrixGet(searchby_a, searchby_b) => {
@@ -201,6 +203,8 @@ where
             "v" | "version" => {
                 println!("version: {}", VERSION);
             }
+
+            empty if empty.is_empty() => {}
 
             line => match parser::parse_line(line) {
                 Some(stmt) => match stmt {
