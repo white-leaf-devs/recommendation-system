@@ -98,7 +98,7 @@ where
                 let partial_users_chunk_size = self.config.engine.partial_users_chunk_size;
                 for partial_users_chunk in all_partial_users.chunks(partial_users_chunk_size) {
                     let mean_chunk = self.controller.means_for(partial_users_chunk)?;
-                    self.adj_cosine.add_new_means(&mean_chunk);
+                    self.adj_cosine.push_means(&mean_chunk);
                 }
 
                 let sim = self
@@ -335,7 +335,7 @@ where
             let partial_users_chunk_size = self.config.engine.partial_users_chunk_size;
             for partial_users_chunk in all_partial_users.chunks(partial_users_chunk_size) {
                 let mean_chunk = self.controller.means_for(partial_users_chunk)?;
-                adj_cosine.add_new_means(&mean_chunk);
+                adj_cosine.push_means(&mean_chunk);
             }
             let mean_time = now.elapsed().as_secs_f64();
             log::info!("Obtaining took {} seconds", mean_time);

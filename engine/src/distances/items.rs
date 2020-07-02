@@ -136,7 +136,7 @@ where
         }
     }
 
-    pub fn add_new_means(&mut self, new_means: &HashMap<UserId, Value>)
+    pub fn push_means(&mut self, new_means: &HashMap<UserId, Value>)
     where
         UserId: Clone,
         Value: Float,
