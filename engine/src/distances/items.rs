@@ -93,6 +93,24 @@ where
         self.means.contains_key(user_id)
     }
 
+    pub fn get_mean_for(&mut self, user_id: &UserId) -> Option<Value>
+    where
+        Value: Float,
+    {
+        if let Some(mean) = self.means.get(user_id) {
+            let (freq, _) = self
+                .mfreq
+                .get_mut(user_id)
+                .expect("Broken invariant: mfreq doesn't contain an already stored mean");
+
+            *freq += 1;
+
+            Some(*mean)
+        } else {
+            None
+        }
+    }
+
     pub fn shrink_means(&mut self)
     where
         UserId: Clone,
@@ -160,14 +178,8 @@ where
         let mut dev_b = None;
 
         for (user_id, (val_a, val_b)) in common_keys_iter(item_a_ratings, item_b_ratings) {
-            let mean = if let Some(mean) = self.means.get(user_id) {
-                let (freq, _) = self
-                    .mfreq
-                    .get_mut(user_id)
-                    .expect("Broken invariant: mfreq doesn't contain an already stored mean");
-
-                *freq += 1;
-                *mean
+            let mean = if let Some(mean) = self.get_mean_for(user_id) {
+                mean
             } else {
                 continue;
             };
