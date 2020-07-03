@@ -11,8 +11,10 @@ use anyhow::Error;
 use config::Config;
 use controller::{eid, maped_ratings, Controller, Entity, LazyItemChunks};
 use std::{
+    cell::RefCell,
     collections::{HashMap, HashSet},
     hash::Hash,
+    rc::Rc,
 };
 
 pub trait ChunkedMatrix<'a, C, I>
@@ -39,7 +41,7 @@ where
     ver_chunk_size: usize,
     hor_chunk_size: usize,
 
-    adj_cosine: AdjCosine<eid!(U), f64>,
+    adj_cosine: Rc<RefCell<AdjCosine<eid!(U), f64>>>,
 
     ver_iter: LazyItemChunks<'a, C, I>,
     hor_iter: LazyItemChunks<'a, C, I>,
@@ -60,7 +62,26 @@ where
             controller,
             ver_chunk_size: m,
             hor_chunk_size: n,
-            adj_cosine: AdjCosine::new(),
+            adj_cosine: Rc::new(RefCell::new(AdjCosine::new())),
+            ver_iter: controller.items_by_chunks(m),
+            hor_iter: controller.items_by_chunks(n),
+            matrix_chunk: Default::default(),
+        }
+    }
+
+    pub fn with_cache(
+        controller: &'a C,
+        config: &'a Config,
+        adj_cosine: Rc<RefCell<AdjCosine<eid!(U), f64>>>,
+        m: usize,
+        n: usize,
+    ) -> Self {
+        Self {
+            config,
+            controller,
+            ver_chunk_size: m,
+            hor_chunk_size: n,
+            adj_cosine,
             ver_iter: controller.items_by_chunks(m),
             hor_iter: controller.items_by_chunks(n),
             matrix_chunk: Default::default(),
@@ -133,19 +154,19 @@ where
         }
 
         // Shrink some means by their usage frequency
-        self.adj_cosine.shrink_means();
+        self.adj_cosine.borrow_mut().shrink_means();
 
         // Collect all the users that doesn't have a calculated mean
         let all_users: Vec<_> = all_users
             .into_iter()
-            .filter(|user_id| !self.adj_cosine.has_mean_for(user_id))
+            .filter(|user_id| !self.adj_cosine.borrow().has_mean_for(user_id))
             .collect();
         let all_partial_users = self.controller.create_partial_users(&all_users)?;
 
         let partial_users_chunk_size = self.config.matrix.partial_users_chunk_size;
         for partial_users_chunk in all_partial_users.chunks(partial_users_chunk_size) {
             let mean_chunk = self.controller.means_for(partial_users_chunk)?;
-            self.adj_cosine.push_means(&mean_chunk);
+            self.adj_cosine.borrow_mut().push_means(&mean_chunk);
         }
 
         let mut matrix = HashMap::new();
@@ -155,7 +176,11 @@ where
                     continue;
                 }
 
-                if let Ok(similarity) = self.adj_cosine.calculate(&item_a_ratings, item_b_ratings) {
+                if let Ok(similarity) = self
+                    .adj_cosine
+                    .borrow_mut()
+                    .calculate(&item_a_ratings, item_b_ratings)
+                {
                     matrix
                         .entry(item_a.clone())
                         .or_insert_with(HashMap::new)

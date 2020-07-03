@@ -111,6 +111,17 @@ where
         }
     }
 
+    pub fn set_mean_for(&mut self, user_id: &UserId, new: Value) {
+        if let Some(mean) = self.means.get_mut(user_id) {
+            *mean = new;
+        }
+    }
+
+    pub fn del_mean_for(&mut self, user_id: &UserId) {
+        self.means.remove(user_id);
+        self.mfreq.remove(user_id);
+    }
+
     pub fn shrink_means(&mut self)
     where
         UserId: Clone,
