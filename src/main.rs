@@ -641,7 +641,14 @@ where
 
                     Statement::EnterMatrix(m, n, method) => match method {
                         ItemMethod::AdjCosine => {
-                            let matrix = SimilarityMatrix::new(&controller, &config, m, n);
+                            let adj_cosine = engine.clone_rc_adj_cosine();
+                            let matrix = SimilarityMatrix::with_cache(
+                                &controller,
+                                &config,
+                                adj_cosine,
+                                m,
+                                n,
+                            );
                             chunked_matrix_prompt(&controller, matrix, name, rl)?;
                         }
 
