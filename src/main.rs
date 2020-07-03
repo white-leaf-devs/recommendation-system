@@ -343,6 +343,32 @@ where
                             Ok(rating) => {
                                 println!("Successfully inserted! Yay!");
                                 println!("{}", rating.to_table());
+
+                                match controller.means_for(&[user]) {
+                                    Ok(means) => {
+                                        if let Some(mean) = means.get(&user_id) {
+                                            engine.maybe_update_mean_for(&user_id, *mean);
+                                        } else {
+                                            log::error!(
+                                                "Expected a calculated mean value for user({})",
+                                                user_id
+                                            );
+                                            log::error!("Got nothing instead");
+                                            panic!(
+                                                "No calculated mean for user({}), broken invariant on insertion of rating",
+                                                user_id
+                                            );
+                                        }
+                                    }
+
+                                    Err(e) => {
+                                        log::error!("Couldn't get mean for user({})", user_id);
+                                        log::error!("Got error: {}", e);
+                                        log::error!("Maybe check the database");
+                                        log::error!("Deleting cached mean on adj_cosine");
+                                        engine.maybe_delete_mean_for(&user_id);
+                                    }
+                                }
                             }
 
                             Err(e) => {
@@ -388,6 +414,32 @@ where
                             Ok(rating) => {
                                 println!("Successfully updated! Yay!");
                                 println!("{}", rating.to_table());
+
+                                match controller.means_for(&[user]) {
+                                    Ok(means) => {
+                                        if let Some(mean) = means.get(&user_id) {
+                                            engine.maybe_update_mean_for(&user_id, *mean);
+                                        } else {
+                                            log::error!(
+                                                "Expected a calculated mean value for user({})",
+                                                user_id
+                                            );
+                                            log::error!("Got nothing instead");
+                                            panic!(
+                                                "No calculated mean for user({}), broken invariant on update of rating",
+                                                user_id
+                                            );
+                                        }
+                                    }
+
+                                    Err(e) => {
+                                        log::error!("Couldn't get mean for user({})", user_id);
+                                        log::error!("Got error: {}", e);
+                                        log::error!("Maybe check the database");
+                                        log::error!("Deleting cached mean on adj_cosine");
+                                        engine.maybe_delete_mean_for(&user_id);
+                                    }
+                                }
                             }
 
                             Err(e) => {
@@ -427,6 +479,24 @@ where
                             Ok(rating) => {
                                 println!("Successfully removed! Yay?");
                                 println!("{}", rating.to_table());
+
+                                match controller.means_for(&[user]) {
+                                    Ok(means) => {
+                                        if let Some(mean) = means.get(&user_id) {
+                                            engine.maybe_update_mean_for(&user_id, *mean);
+                                        } else {
+                                            engine.maybe_delete_mean_for(&user_id);
+                                        }
+                                    }
+
+                                    Err(e) => {
+                                        log::error!("Couldn't get mean for user({})", user_id);
+                                        log::error!("Got error: {}", e);
+                                        log::error!("Maybe check the database");
+                                        log::error!("Deleting cached mean on adj_cosine");
+                                        engine.maybe_delete_mean_for(&user_id);
+                                    }
+                                }
                             }
 
                             Err(e) => {
