@@ -22,7 +22,8 @@ fn main() -> Result<(), Error> {
     db.mongo_db = vars["MONGO_DB"].clone();
 
     let client = Client::with_uri_str(&db.mongo_url)?;
-    let collection = client.database(&db.mongo_db).collection("users_who_rated");
+    let users_who_rated = client.database(&db.mongo_db).collection("users_who_rated");
+    let users_ratings = client.database(&db.mongo_db).collection("users_ratings");
 
     let controller = BooksController::from_config(&config, "books")?;
     let mut item_ids = HashSet::new();
@@ -69,7 +70,7 @@ fn main() -> Result<(), Error> {
     let chunk_size = docs.len() / 8;
     for chunk in docs.chunks(chunk_size) {
         let chunk = chunk.to_owned();
-        collection.insert_many(chunk, None)?;
+        users_who_rated.insert_many(chunk, None)?;
     }
 
     let mut csv = csv::ReaderBuilder::new()
@@ -80,7 +81,6 @@ fn main() -> Result<(), Error> {
     println!("Collecting records for ratings...");
     let records: Vec<_> = csv.records().collect();
 
-    let collection = db.collection("user_ratings");
     let mut docs = HashMap::new();
     for record in records.into_iter().progress() {
         if let Ok(record) = record {
@@ -105,7 +105,7 @@ fn main() -> Result<(), Error> {
     let chunk_size = docs.len() / 8;
     for chunk in docs.chunks(chunk_size) {
         let chunk = chunk.to_owned();
-        collection.insert_many(chunk, None)?;
+        users_ratings.insert_many(chunk, None)?;
     }
 
     Ok(())
