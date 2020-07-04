@@ -1865,6 +1865,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "common_macros",
+ "config",
  "controller",
  "csv",
  "diesel",

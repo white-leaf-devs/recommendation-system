@@ -1,8 +1,8 @@
 [package]
-name = "shelves"
-version = "0.1.0"
 authors = ["Maria <mb.lev17@gmail.com>"]
 edition = "2018"
+name = "shelves"
+version = "0.1.0"
 workspace = "../.."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -10,12 +10,13 @@ workspace = "../.."
 [dependencies]
 anyhow = "1"
 common_macros = "0.1"
-controller = { version = "*", path = "../../controller" }
+config = {version = "*", path = "../../config"}
+controller = {version = "*", path = "../../controller"}
 csv = "1"
-diesel = { version = "1", features = [ "postgres" ] }
+diesel = {version = "1", features = ["postgres"]}
 dotenv = "0.15.0"
 indicatif = "0.15"
-mongodb = { version = "1.0.0", default-features = false, features = [ "sync" ] }
+mongodb = {version = "1.0.0", default-features = false, features = ["sync"]}
 num-traits = "0.2.12"
 
 [features]
