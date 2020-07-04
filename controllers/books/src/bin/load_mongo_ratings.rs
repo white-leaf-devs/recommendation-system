@@ -88,6 +88,10 @@ fn main() -> Result<(), Error> {
             let book_id = &record[1];
             let score: f64 = record[2].parse()?;
 
+            if !item_ids.contains(book_id) {
+                continue;
+            }
+
             docs.entry(user_id)
                 .or_insert_with(HashMap::new)
                 .insert(book_id.to_string(), Bson::Double(score));
