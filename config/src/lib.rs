@@ -13,7 +13,8 @@ pub struct DatabaseEntry {
     pub psql_url: String,
     pub mongo_url: String,
     pub mongo_db: String,
-    pub use_postgres: bool,
+    pub users_ratings_mongo: bool,
+    pub users_who_rated_mongo: bool,
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
@@ -61,31 +62,36 @@ impl Default for Config {
             },
             databases: hash_map! {
                 "simple-movie".into() => DatabaseEntry {
-                    use_postgres: false,
+                    users_ratings_mongo: false,
+                    users_who_rated_mongo: true,
                     psql_url: "postgres://postgres:@localhost/simple-movie".into(),
                     mongo_url: "mongodb://localhost:27017".into(),
                     mongo_db: "simple-movie".into()
                 },
                 "books".into() => DatabaseEntry {
-                    use_postgres: false,
+                    users_ratings_mongo: false,
+                    users_who_rated_mongo: true,
                     psql_url: "postgres://postgres:@localhost/books".into(),
                     mongo_url: "mongodb://localhost:27017".into(),
                     mongo_db: "books".into()
                 },
                 "shelves".into() => DatabaseEntry {
-                    use_postgres: false,
+                    users_ratings_mongo: false,
+                    users_who_rated_mongo: true,
                     psql_url: "postgres://postgres:@localhost/shelves".into(),
                     mongo_url: "mongodb://localhost:27017".into(),
                     mongo_db: "shelves".into(),
                 },
                 "movie-lens".into() => DatabaseEntry {
-                    use_postgres: false,
+                    users_ratings_mongo: false,
+                    users_who_rated_mongo: true,
                     psql_url: "postgres://postgres:@localhost/movie-lens".into(),
                     mongo_url: "mongodb://localhost:27017".into(),
                     mongo_db: "movie-lens".into(),
                 },
                 "movie-lens-small".into() => DatabaseEntry {
-                    use_postgres: false,
+                    users_ratings_mongo: false,
+                    users_who_rated_mongo: true,
                     psql_url: "postgres://postgres:@localhost/movie-lens-small".into(),
                     mongo_url: "mongodb://localhost:27017".into(),
                     mongo_db: "movie-lens-small".into(),
@@ -127,7 +133,8 @@ mod tests {
             },
             databases: hash_map! {
                 "some-database".into() => DatabaseEntry {
-                    use_postgres: false,
+                    users_ratings_mongo: false,
+                    users_who_rated_mongo: true,
                     psql_url: "postgres://postgres:@localhost/some-database".into(),
                     mongo_url: "mongodb://localhost:27017".into(),
                     mongo_db: "some-database".into(),

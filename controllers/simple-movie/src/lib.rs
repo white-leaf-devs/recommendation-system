@@ -36,7 +36,8 @@ pub fn establish_connection(url: &str) -> Result<PgConnection, Error> {
 }
 
 pub struct SimpleMovieController {
-    use_postgres: bool,
+    users_ratings_mongo: bool,
+    users_who_rated_mongo: bool,
     pg_conn: PgConnection,
     mongo_db: Database,
 }
@@ -54,7 +55,8 @@ impl SimpleMovieController {
             .get(name)
             .ok_or_else(|| ErrorKind::DbConfigError(name.into()))?;
 
-        let use_postgres = db.use_postgres;
+        let users_ratings_mongo = db.users_ratings_mongo;
+        let users_who_rated_mongo = db.users_who_rated_mongo;
         let psql_url = &db.psql_url;
         let mongo_url = &db.mongo_url;
         let mongo_db = &db.mongo_db;
@@ -64,7 +66,8 @@ impl SimpleMovieController {
         let mongo_db = client.database(mongo_db);
 
         Ok(Self {
-            use_postgres,
+            users_ratings_mongo,
+            users_who_rated_mongo,
             pg_conn,
             mongo_db,
         })
@@ -201,7 +204,7 @@ impl Controller for SimpleMovieController {
         &self,
         items: &[Self::Item],
     ) -> Result<maped_ratings!(Self::Item => Self::User), Error> {
-        if self.use_postgres {
+        if !self.users_who_rated_mongo {
             let ratings = Rating::belonging_to(items).load::<Rating>(&self.pg_conn)?;
 
             let mut items_users = HashMap::new();
@@ -246,7 +249,7 @@ impl Controller for SimpleMovieController {
     }
 
     fn user_ratings(&self, user: &Self::User) -> Result<ratings!(Self::Item), Error> {
-        if self.use_postgres {
+        if !self.users_ratings_mongo {
             let ratings = Rating::belonging_to(user)
                 .load::<Rating>(&self.pg_conn)?
                 .into_iter()
@@ -283,7 +286,7 @@ impl Controller for SimpleMovieController {
 
     #[allow(clippy::type_complexity)]
     fn all_users_ratings(&self) -> Result<maped_ratings!(Self::User => Self::Item), Error> {
-        if self.use_postgres {
+        if !self.users_ratings_mongo {
             let ratings = ratings::table.load::<Rating>(&self.pg_conn)?;
 
             let mut maped_ratings = HashMap::new();
@@ -325,7 +328,7 @@ impl Controller for SimpleMovieController {
         &self,
         users: &[Self::User],
     ) -> Result<maped_ratings!(Self::User => Self::Item), Error> {
-        if self.use_postgres {
+        if !self.users_ratings_mongo {
             let ratings = Rating::belonging_to(users).load::<Rating>(&self.pg_conn)?;
 
             let mut maped_ratings = HashMap::new();
@@ -374,7 +377,7 @@ impl Controller for SimpleMovieController {
         &self,
         user: &Self::User,
     ) -> Result<maped_ratings!(Self::User => Self::Item), Error> {
-        if self.use_postgres {
+        if !self.users_ratings_mongo {
             let ratings = ratings::table
                 .filter(ratings::user_id.is_distinct_from(user.id))
                 .load::<Rating>(&self.pg_conn)?;

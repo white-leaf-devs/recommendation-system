@@ -35,7 +35,7 @@ pub fn establish_connection(url: &str) -> Result<PgConnection, Error> {
 }
 
 pub struct ShelvesController {
-    use_postgres: bool,
+    users_who_rated_mongo: bool,
     pg_conn: PgConnection,
     mongo_db: Database,
 }
@@ -53,7 +53,7 @@ impl ShelvesController {
             .get(name)
             .ok_or_else(|| ErrorKind::DbConfigError(name.into()))?;
 
-        let use_postgres = db.use_postgres;
+        let users_who_rated_mongo = db.users_who_rated_mongo;
         let psql_url = &db.psql_url;
         let mongo_url = &db.mongo_url;
         let mongo_db = &db.mongo_db;
@@ -63,7 +63,7 @@ impl ShelvesController {
         let mongo_db = client.database(mongo_db);
 
         Ok(Self {
-            use_postgres,
+            users_who_rated_mongo,
             pg_conn,
             mongo_db,
         })
@@ -164,7 +164,7 @@ impl Controller for ShelvesController {
         &self,
         items: &[Self::Item],
     ) -> Result<maped_ratings!(Self::Item => Self::User), Error> {
-        if self.use_postgres {
+        if !self.users_who_rated_mongo {
             let ratings = Rating::belonging_to(items).load::<Rating>(&self.pg_conn)?;
 
             let mut items_users = HashMap::new();
