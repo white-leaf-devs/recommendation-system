@@ -19,13 +19,7 @@ cargo run --release --bin load_data
 echo "=> Creating indexes on relations"
 diesel migration --migration-dir indexes run
 
-echo "=> Loading means"
-cargo run --release --bin load_means
-
-echo "=> Create triggers for CRUD operations on means"
-diesel migration --migration-dir triggers run
-
-echo "=> Loading users who rated"
+echo "=> Loading mongo ratings"
 cargo run --release --bin load_mongo_ratings
 
 source ".env"
@@ -34,5 +28,13 @@ MONGO_CONN="${MONGO_URL}/${MONGO_DB}"
 echo "=> Creating indexes on mongodb"
 mongo "${MONGO_CONN}" --eval "db.users_who_rated.createIndex({ 'item_id': 'hashed' })"
 mongo "${MONGO_CONN}" --eval "db.users_ratings.createIndex({ 'user_id': 'hashed' })"
+
+echo "=> Loading means"
+cargo run --release --bin load_means
+
+echo "=> Create triggers for CRUD operations on means"
+diesel migration --migration-dir triggers run
+
+
 
 popd &> /dev/null
