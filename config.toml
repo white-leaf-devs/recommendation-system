@@ -31,11 +31,11 @@ users_ratings_mongo = false
 users_who_rated_mongo = true
 
 [databases.shelves]
-mongo_db = "shelves"
-mongo_url = "mongodb://localhost:27017"
-psql_url = "postgres://postgres:@localhost/shelves"
-users_ratings_mongo = false
-users_who_rated_mongo = true
+mongo_db = "shelves" 
+mongo_url = "mongodb://localhost:27017" 
+psql_url = "postgres://postgres:@localhost/shelves" 
+users_ratings_mongo = false # no effect
+users_who_rated_mongo = true 
 
 [databases.movie-lens]
 mongo_db = "movie-lens"
