@@ -41,7 +41,7 @@ fn main() -> Result<(), Error> {
     let mut means = Vec::new();
 
     let users = controller.users()?;
-    let maped_ratings = controller.maped_ratings_by(&users)?;
+    let maped_ratings = controller.users_ratings(&users)?;
     for (user_id, ratings) in maped_ratings {
         let mean = compute_mean(&ratings);
 

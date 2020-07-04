@@ -41,7 +41,7 @@ fn main() -> Result<(), Error> {
     let users_iterator = controller.users_by_chunks(10000);
     for user_chunk in users_iterator {
         let mut means = Vec::new();
-        let maped_ratings = controller.maped_ratings_by(&user_chunk)?;
+        let maped_ratings = controller.users_ratings(&user_chunk)?;
 
         for (user_id, ratings) in maped_ratings {
             let mean = compute_mean(&ratings);

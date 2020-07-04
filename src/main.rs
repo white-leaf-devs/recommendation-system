@@ -239,7 +239,7 @@ where
                     Statement::QueryRatings(searchby) => match controller.users_by(&searchby) {
                         Ok(users) => {
                             for user in users {
-                                if let Ok(ratings) = controller.ratings_by(&user) {
+                                if let Ok(ratings) = controller.user_ratings(&user) {
                                     if !ratings.is_empty() {
                                         println!("{}", ratings.to_table());
                                     } else {
@@ -344,7 +344,7 @@ where
                                 println!("Successfully inserted! Yay!");
                                 println!("{}", rating.to_table());
 
-                                match controller.means_for(&[user]) {
+                                match controller.users_means(&[user]) {
                                     Ok(means) => {
                                         if let Some(mean) = means.get(&user_id) {
                                             engine.maybe_update_mean_for(&user_id, *mean);
@@ -415,7 +415,7 @@ where
                                 println!("Successfully updated! Yay!");
                                 println!("{}", rating.to_table());
 
-                                match controller.means_for(&[user]) {
+                                match controller.users_means(&[user]) {
                                     Ok(means) => {
                                         if let Some(mean) = means.get(&user_id) {
                                             engine.maybe_update_mean_for(&user_id, *mean);
@@ -480,7 +480,7 @@ where
                                 println!("Successfully removed! Yay?");
                                 println!("{}", rating.to_table());
 
-                                match controller.means_for(&[user]) {
+                                match controller.users_means(&[user]) {
                                     Ok(means) => {
                                         if let Some(mean) = means.get(&user_id) {
                                             engine.maybe_update_mean_for(&user_id, *mean);

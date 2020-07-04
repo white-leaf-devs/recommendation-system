@@ -228,7 +228,7 @@ impl Controller for BooksController {
         }
     }
 
-    fn ratings_by(&self, user: &Self::User) -> Result<ratings!(Self::Item), Error> {
+    fn user_ratings(&self, user: &Self::User) -> Result<ratings!(Self::Item), Error> {
         let ratings = Rating::belonging_to(user)
             .load::<Rating>(&self.pg_conn)?
             .into_iter()
@@ -239,7 +239,7 @@ impl Controller for BooksController {
     }
 
     #[allow(clippy::type_complexity)]
-    fn maped_ratings(&self) -> Result<maped_ratings!(Self::User => Self::Item), Error> {
+    fn all_users_ratings(&self) -> Result<maped_ratings!(Self::User => Self::Item), Error> {
         let ratings = ratings::table.load::<Rating>(&self.pg_conn)?;
 
         let mut maped_ratings = HashMap::new();
@@ -254,7 +254,7 @@ impl Controller for BooksController {
     }
 
     #[allow(clippy::type_complexity)]
-    fn maped_ratings_by(
+    fn users_ratings(
         &self,
         users: &[Self::User],
     ) -> Result<maped_ratings!(Self::User => Self::Item), Error> {
@@ -272,7 +272,7 @@ impl Controller for BooksController {
     }
 
     #[allow(clippy::type_complexity)]
-    fn maped_ratings_except(
+    fn users_ratings_except(
         &self,
         user: &Self::User,
     ) -> Result<maped_ratings!(Self::User => Self::Item), Error> {
@@ -291,7 +291,7 @@ impl Controller for BooksController {
         Ok(maped_ratings)
     }
 
-    fn means_for(&self, users: &[Self::User]) -> Result<means!(Self::User), Error> {
+    fn users_means(&self, users: &[Self::User]) -> Result<means!(Self::User), Error> {
         let means = Mean::belonging_to(users).load::<Mean>(&self.pg_conn)?;
 
         let means_by_user = means

@@ -111,28 +111,28 @@ pub trait Controller {
     ) -> Result<maped_ratings!(Self::Item => Self::User)>;
 
     /// Get the ratings for the specified user
-    fn ratings_by(&self, user: &Self::User) -> Result<ratings!(Self::Item)>;
+    fn user_ratings(&self, user: &Self::User) -> Result<ratings!(Self::Item)>;
 
     /// Get all normal MapedRatings, i.e. maps User::Id => Item::Id
     #[allow(clippy::type_complexity)]
-    fn maped_ratings(&self) -> Result<maped_ratings!(Self::User => Self::Item)>;
+    fn all_users_ratings(&self) -> Result<maped_ratings!(Self::User => Self::Item)>;
 
     /// Get some normal MapedRatings for the specified users, i.e. maps User::Id => Item::Id
     #[allow(clippy::type_complexity)]
-    fn maped_ratings_by(
+    fn users_ratings(
         &self,
         users: &[Self::User],
     ) -> Result<maped_ratings!(Self::User => Self::Item)>;
 
     /// Get all normal MapedRatings except for the specified user, i.e. maps User::Id => Item::Id
     #[allow(clippy::type_complexity)]
-    fn maped_ratings_except(
+    fn users_ratings_except(
         &self,
         user: &Self::User,
     ) -> Result<maped_ratings!(Self::User => Self::Item)>;
 
     /// Get means for the specified users, returns a map of User::Id => f64
-    fn means_for(&self, users: &[Self::User]) -> Result<means!(Self::User)>;
+    fn users_means(&self, users: &[Self::User]) -> Result<means!(Self::User)>;
 
     /// The controller score range, ex. (0.0, 5.0) is (min_rating, max_rating)
     fn score_range(&self) -> (f64, f64);

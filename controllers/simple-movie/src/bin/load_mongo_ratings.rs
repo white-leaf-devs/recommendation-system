@@ -27,7 +27,7 @@ fn main() -> Result<(), Error> {
     let controller = SimpleMovieController::from_config(&config, "simple-movie")?;
 
     let mut docs = HashMap::new();
-    for (user_id, ratings) in controller.maped_ratings()? {
+    for (user_id, ratings) in controller.all_users_ratings()? {
         for (item_id, score) in ratings {
             docs.entry(item_id)
                 .or_insert_with(HashMap::new)
@@ -48,7 +48,7 @@ fn main() -> Result<(), Error> {
     // Inserting the inverse of above (It was item_id=>user_id now is user_id=>item_id)
 
     let mut docs = HashMap::new();
-    for (user_id, ratings) in controller.maped_ratings()? {
+    for (user_id, ratings) in controller.all_users_ratings()? {
         for (item_id, score) in ratings {
             docs.entry(user_id)
                 .or_insert_with(HashMap::new)
