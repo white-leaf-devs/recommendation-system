@@ -16,14 +16,15 @@ use crate::models::{
 };
 use crate::schema::{books, ratings, users};
 use anyhow::Error;
+use config::Config;
 use controller::{eid, error::ErrorKind, maped_ratings, means, ratings, Controller, SearchBy};
 use diesel::pg::PgConnection;
 use diesel::{delete, insert_into, prelude::*, update};
-use models::{ratings::NewRating};
+use models::ratings::NewRating;
 use mongodb::bson::doc;
 use mongodb::{
-    options::UpdateOptions,
-    sync::{Client, Database}
+    options::{FindOptions, UpdateOptions},
+    sync::{Client, Database},
 };
 
 use num_traits::Zero;
@@ -34,25 +35,38 @@ pub fn establish_connection(url: &str) -> Result<PgConnection, Error> {
 }
 
 pub struct ShelvesController {
+    users_who_rated_mongo: bool,
     pg_conn: PgConnection,
     mongo_db: Database,
 }
 
 impl ShelvesController {
     pub fn new() -> Result<Self, Error> {
-        Self::with_url(
-            "postgres://postgres:@localhost/shelves",
-            "mongodb://localhost:27017",
-            "shelves",
-        )
+        let cfg = Config::default();
+
+        Self::from_config(&cfg, "shelves")
     }
 
-    pub fn with_url(psql_url: &str, mongo_url: &str, mongo_db: &str) -> Result<Self, Error> {
+    pub fn from_config(config: &Config, name: &str) -> Result<Self, Error> {
+        let db = config
+            .databases
+            .get(name)
+            .ok_or_else(|| ErrorKind::DbConfigError(name.into()))?;
+
+        let users_who_rated_mongo = db.users_who_rated_mongo;
+        let psql_url = &db.psql_url;
+        let mongo_url = &db.mongo_url;
+        let mongo_db = &db.mongo_db;
+
         let pg_conn = establish_connection(psql_url)?;
         let client = Client::with_uri_str(mongo_url)?;
         let mongo_db = client.database(mongo_db);
 
-        Ok(Self { pg_conn, mongo_db })
+        Ok(Self {
+            users_who_rated_mongo,
+            pg_conn,
+            mongo_db,
+        })
     }
 }
 
@@ -150,35 +164,50 @@ impl Controller for ShelvesController {
         &self,
         items: &[Self::Item],
     ) -> Result<maped_ratings!(Self::Item => Self::User), Error> {
-        let collection = self.mongo_db.collection("users_who_rated");
-        let ids: Vec<_> = items.iter().map(|m| m.id).collect();
+        if !self.users_who_rated_mongo {
+            let ratings = Rating::belonging_to(items).load::<Rating>(&self.pg_conn)?;
 
-        let cursor = collection.find(
-            doc! {
-                "item_id": { "$in": ids }
-            },
-            None,
-        )?;
-
-        let mut items_users = HashMap::new();
-        for doc in cursor {
-            let doc = doc?;
-            let item_id = doc.get_i32("item_id")?;
-
-            for (user_id, score) in doc.get_document("scores")? {
-                let user_id: i32 = user_id.parse()?;
-                let score = score.as_f64().ok_or_else(|| ErrorKind::BsonConvert)?;
+            let mut items_users = HashMap::new();
+            for rating in ratings {
                 items_users
-                    .entry(item_id)
+                    .entry(rating.book_id)
                     .or_insert_with(HashMap::new)
-                    .insert(user_id, score);
+                    .insert(rating.user_id, rating.score);
             }
-        }
 
-        Ok(items_users)
+            Ok(items_users)
+        } else {
+            let collection = self.mongo_db.collection("users_who_rated");
+            let ids: Vec<_> = items.iter().map(|m| m.id).collect();
+            let options = FindOptions::builder().show_record_id(false).build();
+
+            let cursor = collection.find(
+                doc! {
+                    "item_id": { "$in": ids }
+                },
+                options,
+            )?;
+
+            let mut items_users = HashMap::new();
+            for doc in cursor {
+                let doc = doc?;
+                let item_id = doc.get_i32("item_id")?;
+
+                for (user_id, score) in doc.get_document("scores")? {
+                    let user_id: i32 = user_id.parse()?;
+                    let score = score.as_f64().ok_or_else(|| ErrorKind::BsonConvert)?;
+                    items_users
+                        .entry(item_id)
+                        .or_insert_with(HashMap::new)
+                        .insert(user_id, score);
+                }
+            }
+
+            Ok(items_users)
+        }
     }
 
-    fn ratings_by(&self, user: &Self::User) -> Result<ratings!(Self::Item), Error> {
+    fn user_ratings(&self, user: &Self::User) -> Result<ratings!(Self::Item), Error> {
         let ratings = Rating::belonging_to(user)
             .load::<Rating>(&self.pg_conn)?
             .into_iter()
@@ -189,7 +218,7 @@ impl Controller for ShelvesController {
     }
 
     #[allow(clippy::type_complexity)]
-    fn maped_ratings(&self) -> Result<maped_ratings!(Self::User => Self::Item), Error> {
+    fn all_users_ratings(&self) -> Result<maped_ratings!(Self::User => Self::Item), Error> {
         let ratings = ratings::table.load::<Rating>(&self.pg_conn)?;
 
         let mut maped_ratings = HashMap::new();
@@ -204,7 +233,7 @@ impl Controller for ShelvesController {
     }
 
     #[allow(clippy::type_complexity)]
-    fn maped_ratings_by(
+    fn users_ratings(
         &self,
         users: &[Self::User],
     ) -> Result<maped_ratings!(Self::User => Self::Item), Error> {
@@ -222,7 +251,7 @@ impl Controller for ShelvesController {
     }
 
     #[allow(clippy::type_complexity)]
-    fn maped_ratings_except(
+    fn users_ratings_except(
         &self,
         user: &Self::User,
     ) -> Result<maped_ratings!(Self::User => Self::Item), Error> {
@@ -241,7 +270,7 @@ impl Controller for ShelvesController {
         Ok(maped_ratings)
     }
 
-    fn means_for(&self, users: &[Self::User]) -> Result<means!(Self::User), Error> {
+    fn users_means(&self, users: &[Self::User]) -> Result<means!(Self::User), Error> {
         let means = Mean::belonging_to(users).load::<Mean>(&self.pg_conn)?;
 
         let means_by_user = means
@@ -288,7 +317,7 @@ impl Controller for ShelvesController {
         item_id: &eid!(Self::Item),
         score: f64,
     ) -> Result<Self::Rating, Error> {
-        let collection = self.mongo_db.collection("users_who_rated");
+        let users_who_rated = self.mongo_db.collection("users_who_rated");
 
         let query = doc! {
             "item_id": item_id,
@@ -297,16 +326,12 @@ impl Controller for ShelvesController {
             }
         };
 
-        let rating = collection.find_one(query, None)?;
+        let rating = users_who_rated.find_one(query, None)?;
         if rating.is_some() {
             return Err(
                 ErrorKind::InsertRatingFailed(user_id.to_string(), item_id.to_string()).into(),
             );
         }
-
-        let query = doc! {
-            "item_id": item_id
-        };
 
         let update = doc! {
             "$set": doc!{
@@ -315,7 +340,7 @@ impl Controller for ShelvesController {
         };
 
         let options = UpdateOptions::builder().upsert(true).build();
-        collection.update_one(query, update, options)?;
+        users_who_rated.update_one(doc! { "item_id": item_id }, update, options)?;
 
         let new_rating = NewRating {
             user_id: *user_id,
@@ -330,17 +355,13 @@ impl Controller for ShelvesController {
         match psql_result {
             Ok(rating) => Ok(rating),
             Err(e) => {
-                let query_doc = doc! {
-                    "item_id": item_id.to_string()
-                };
-
                 let delete_doc = doc! {
                     "$unset": doc!{
                         format!("scores.{}", user_id): ""
                     }
                 };
 
-                collection.update_one(query_doc, delete_doc, None)?;
+                users_who_rated.update_one(doc! { "item_id": item_id }, delete_doc, None)?;
                 Err(e.into())
             }
         }
@@ -351,11 +372,7 @@ impl Controller for ShelvesController {
         user_id: &eid!(Self::User),
         item_id: &eid!(Self::Item),
     ) -> Result<Self::Rating, Error> {
-        let collection = self.mongo_db.collection("users_who_rated");
-
-        let query_doc = doc! {
-            "item_id": item_id
-        };
+        let users_who_rated = self.mongo_db.collection("users_who_rated");
 
         let delete_doc = doc! {
             "$unset": doc!{
@@ -363,10 +380,10 @@ impl Controller for ShelvesController {
             }
         };
 
-        let result = collection.update_one(query_doc, delete_doc, None)?;
+        let result = users_who_rated.update_one(doc! { "item_id": item_id }, delete_doc, None)?;
         if result.matched_count.is_zero() || result.modified_count.is_zero() {
             return Err(
-                ErrorKind::InsertRatingFailed(user_id.to_string(), item_id.to_string()).into(),
+                ErrorKind::RemoveRatingFailed(user_id.to_string(), item_id.to_string()).into(),
             );
         }
 
@@ -384,10 +401,6 @@ impl Controller for ShelvesController {
         match psql_result {
             Ok(rating) => Ok(rating),
             Err(e) => {
-                let query_doc = doc! {
-                    "item_id": item_id.to_string()
-                };
-
                 let update_doc = doc! {
                     "$set": doc!{
                         format!("scores.{}",user_id): old_score
@@ -395,7 +408,7 @@ impl Controller for ShelvesController {
                 };
 
                 let options = UpdateOptions::builder().upsert(true).build();
-                collection.update_one(query_doc, update_doc, options)?;
+                users_who_rated.update_one(doc! { "item_id": item_id }, update_doc, options)?;
 
                 Err(e.into())
             }
@@ -408,11 +421,7 @@ impl Controller for ShelvesController {
         item_id: &eid!(Self::Item),
         score: f64,
     ) -> Result<Self::Rating, Error> {
-        let collection = self.mongo_db.collection("users_who_rated");
-
-        let query_doc = doc! {
-            "item_id": item_id,
-        };
+        let users_who_rated = self.mongo_db.collection("users_who_rated");
 
         let update_doc = doc! {
             "$set": doc!{
@@ -420,7 +429,7 @@ impl Controller for ShelvesController {
             }
         };
 
-        let result = collection.update_one(query_doc, update_doc, None)?;
+        let result = users_who_rated.update_one(doc! { "item_id": item_id }, update_doc, None)?;
         if result.modified_count.is_zero() || result.matched_count.is_zero() {
             return Err(
                 ErrorKind::UpdateRatingFailed(user_id.to_string(), item_id.to_string()).into(),
@@ -442,17 +451,13 @@ impl Controller for ShelvesController {
         match psql_res {
             Ok(rating) => Ok(rating),
             Err(e) => {
-                let query_doc = doc! {
-                    "item_id": item_id,
-                };
-
                 let update_doc = doc! {
                     "$set": doc! {
                         format!("score.{}", user_id): old_score
                     }
                 };
 
-                collection.update_one(query_doc, update_doc, None)?;
+                users_who_rated.update_one(doc! { "item_id": item_id }, update_doc, None)?;
 
                 Err(e.into())
             }

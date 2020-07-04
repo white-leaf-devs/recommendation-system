@@ -30,6 +30,13 @@ pub enum ErrorKind {
 
     #[error("Couldn't update rating for user({0}) on item({1})")]
     UpdateRatingFailed(String, String),
+
     #[error("Couldn't insert rating for user({0}) on item({1})")]
     InsertRatingFailed(String, String),
+
+    #[error("Couldn't remove rating for user({0}) on item({1})")]
+    RemoveRatingFailed(String, String),
+
+    #[error("Database config not found for {0}")]
+    DbConfigError(String),
 }

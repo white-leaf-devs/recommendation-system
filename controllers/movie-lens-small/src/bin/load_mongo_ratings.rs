@@ -61,5 +61,46 @@ fn main() -> Result<(), Error> {
         }
     }
 
+    let collection = db.collection("users_ratings");
+
+    let file = File::open("data/ratings.csv")?;
+    let reader = BufReader::new(file);
+    let mut csv = csv::ReaderBuilder::new()
+        .has_headers(true)
+        .delimiter(b',')
+        .from_reader(reader);
+
+    let mut current_user = None;
+    let mut current_ratings = HashMap::new();
+    for record in csv.records().progress() {
+        if let Ok(record) = record {
+            let user_id: i32 = record[0].parse()?;
+            let movie_id: i32 = record[1].parse()?;
+            let score: f64 = record[2].parse()?;
+
+            if let Some(current_user) = &mut current_user {
+                if *current_user != user_id {
+                    let data = to_bson(&current_ratings)?;
+                    collection
+                        .insert_one(doc! { "user_id": *current_user, "scores": data }, None)?;
+
+                    *current_user = user_id;
+                    current_ratings.clear();
+                }
+            } else {
+                current_user = Some(user_id);
+            }
+
+            current_ratings.insert(movie_id.to_string(), Bson::Double(score));
+        }
+    }
+
+    if let Some(current_user) = current_user {
+        if !current_ratings.is_empty() {
+            let data = to_bson(&current_ratings)?;
+            collection.insert_one(doc! { "user_id": current_user, "scores": data}, None)?;
+        }
+    }
+
     Ok(())
 }

@@ -239,7 +239,7 @@ where
                     Statement::QueryRatings(searchby) => match controller.users_by(&searchby) {
                         Ok(users) => {
                             for user in users {
-                                if let Ok(ratings) = controller.ratings_by(&user) {
+                                if let Ok(ratings) = controller.user_ratings(&user) {
                                     if !ratings.is_empty() {
                                         println!("{}", ratings.to_table());
                                     } else {
@@ -344,7 +344,7 @@ where
                                 println!("Successfully inserted! Yay!");
                                 println!("{}", rating.to_table());
 
-                                match controller.means_for(&[user]) {
+                                match controller.users_means(&[user]) {
                                     Ok(means) => {
                                         if let Some(mean) = means.get(&user_id) {
                                             engine.maybe_update_mean_for(&user_id, *mean);
@@ -415,7 +415,7 @@ where
                                 println!("Successfully updated! Yay!");
                                 println!("{}", rating.to_table());
 
-                                match controller.means_for(&[user]) {
+                                match controller.users_means(&[user]) {
                                     Ok(means) => {
                                         if let Some(mean) = means.get(&user_id) {
                                             engine.maybe_update_mean_for(&user_id, *mean);
@@ -480,7 +480,7 @@ where
                                 println!("Successfully removed! Yay?");
                                 println!("{}", rating.to_table());
 
-                                match controller.means_for(&[user]) {
+                                match controller.users_means(&[user]) {
                                     Ok(means) => {
                                         if let Some(mean) = means.get(&user_id) {
                                             engine.maybe_update_mean_for(&user_id, *mean);
@@ -811,42 +811,39 @@ fn main() -> Result<(), Error> {
                 Some(stmt) => {
                     if let Statement::Connect(db) = stmt {
                         let name = db.to_string();
-                        let psql_url = &config.databases[&name].psql_url;
-                        let mongo_url = &config.databases[&name].mongo_url;
-                        let mongo_db = &config.databases[&name].mongo_db;
 
                         match db {
                             Database::Books => database_connected_prompt(
                                 &config,
-                                BooksController::with_url(psql_url, mongo_url, mongo_db)?,
+                                BooksController::from_config(&config, &name)?,
                                 &name,
                                 &mut rl,
                             )?,
 
                             Database::Shelves => database_connected_prompt(
                                 &config,
-                                ShelvesController::with_url(psql_url, mongo_url, mongo_db)?,
+                                ShelvesController::from_config(&config, &name)?,
                                 &name,
                                 &mut rl,
                             )?,
 
                             Database::SimpleMovie => database_connected_prompt(
                                 &config,
-                                SimpleMovieController::with_url(psql_url, mongo_url, mongo_db)?,
+                                SimpleMovieController::from_config(&config, &name)?,
                                 &name,
                                 &mut rl,
                             )?,
 
                             Database::MovieLens => database_connected_prompt(
                                 &config,
-                                MovieLensController::with_url(psql_url, mongo_url, mongo_db)?,
+                                MovieLensController::from_config(&config, &name)?,
                                 &name,
                                 &mut rl,
                             )?,
 
                             Database::MovieLensSmall => database_connected_prompt(
                                 &config,
-                                MovieLensSmallController::with_url(psql_url, mongo_url, mongo_db)?,
+                                MovieLensSmallController::from_config(&config, &name)?,
                                 &name,
                                 &mut rl,
                             )?,

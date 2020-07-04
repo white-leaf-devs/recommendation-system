@@ -72,8 +72,8 @@ where
     }
 
     pub fn user_distance(&self, user_a: U, user_b: U, method: UserMethod) -> Result<f64, Error> {
-        let rating_a = self.controller.ratings_by(&user_a)?;
-        let rating_b = self.controller.ratings_by(&user_b)?;
+        let rating_a = self.controller.user_ratings(&user_a)?;
+        let rating_b = self.controller.user_ratings(&user_b)?;
 
         distances::users::distance(&rating_a, &rating_b, method).map_err(Into::into)
     }
@@ -111,7 +111,7 @@ where
 
                 let partial_users_chunk_size = self.config.engine.partial_users_chunk_size;
                 for partial_users_chunk in all_partial_users.chunks(partial_users_chunk_size) {
-                    let mean_chunk = self.controller.means_for(partial_users_chunk)?;
+                    let mean_chunk = self.controller.users_means(partial_users_chunk)?;
                     self.adj_cosine.borrow_mut().push_means(&mean_chunk);
                 }
 
@@ -146,7 +146,7 @@ where
             return Err(ErrorKind::EmptyKNearestNeighbors.into());
         }
 
-        let user_ratings = self.controller.ratings_by(&user)?;
+        let user_ratings = self.controller.user_ratings(&user)?;
         let mut knn: Box<dyn Knn<eid!(U), eid!(I)>> = if method.is_similarity() {
             Box::new(MinHeapKnn::new(k, method))
         } else {
@@ -156,11 +156,11 @@ where
         if let Some(chunk_size) = chunk_size {
             let users_chunks = self.controller.users_by_chunks(chunk_size);
             for users in users_chunks {
-                let maped_ratings = self.controller.maped_ratings_by(&users)?;
+                let maped_ratings = self.controller.users_ratings(&users)?;
                 knn.update(&user_ratings, maped_ratings);
             }
         } else {
-            let maped_ratings = self.controller.maped_ratings_except(&user)?;
+            let maped_ratings = self.controller.users_ratings_except(&user)?;
             knn.update(&user_ratings, maped_ratings);
         }
 
@@ -186,7 +186,7 @@ where
         chunk_size: Option<usize>,
     ) -> Result<f64, Error> {
         let item_id = item.get_id();
-        let user_ratings = self.controller.ratings_by(&user)?;
+        let user_ratings = self.controller.user_ratings(&user)?;
 
         let mut knn: Box<dyn Knn<eid!(U), eid!(I)>> = if method.is_similarity() {
             Box::new(MinHeapKnn::new(k, method))
@@ -199,7 +199,7 @@ where
             for users in users_chunks {
                 let maped_ratings = self
                     .controller
-                    .maped_ratings_by(&users)?
+                    .users_ratings(&users)?
                     .into_iter()
                     .filter(|(_, ratings)| ratings.contains_key(&item_id))
                     .collect();
@@ -209,7 +209,7 @@ where
         } else {
             let maped_ratings = self
                 .controller
-                .maped_ratings_except(&user)?
+                .users_ratings_except(&user)?
                 .into_iter()
                 .filter(|(_id, ratings)| ratings.contains_key(&item_id))
                 .collect();
@@ -264,7 +264,7 @@ where
         );
 
         log::info!("Gathering user({:?}) ratings", user_id);
-        let user_ratings = self.controller.ratings_by(&user)?;
+        let user_ratings = self.controller.user_ratings(&user)?;
         let (min_rating, max_rating) = self.controller.score_range();
         log::info!("Normalizing user({:?}) ratings", user_id);
         let normalized_ratings = normalize_user_ratings(&user_ratings, min_rating, max_rating)?;
@@ -349,7 +349,7 @@ where
             let now = Instant::now();
             let partial_users_chunk_size = self.config.engine.partial_users_chunk_size;
             for partial_users_chunk in all_partial_users.chunks(partial_users_chunk_size) {
-                let mean_chunk = self.controller.means_for(partial_users_chunk)?;
+                let mean_chunk = self.controller.users_means(partial_users_chunk)?;
                 adj_cosine.push_means(&mean_chunk);
             }
             let mean_time = now.elapsed().as_secs_f64();
@@ -398,7 +398,7 @@ where
 
         let user_ratings: Ratings<_, _> = self
             .controller
-            .ratings_by(&user)?
+            .user_ratings(&user)?
             .into_iter()
             .filter(|(id, _)| id != &target_item_id)
             .collect();
@@ -449,16 +449,15 @@ mod tests {
     use books::BooksController;
     use config::Config;
     use controller::SearchBy;
+    use movie_lens::MovieLensController;
+    use movie_lens_small::MovieLensSmallController;
     use simple_movie::SimpleMovieController;
+    use std::time::Instant;
 
     #[test]
     fn euclidean_distance() -> Result<(), Error> {
         let config = Config::default();
-        let psql_url = &config.databases["simple-movie"].psql_url;
-        let mongo_url = &config.databases["simple-movie"].mongo_url;
-        let mongo_db = &config.databases["simple-movie"].mongo_db;
-
-        let controller = SimpleMovieController::with_url(psql_url, mongo_url, mongo_db)?;
+        let controller = SimpleMovieController::from_config(&config, "simple-movie")?;
         let engine = Engine::with_controller(&controller, &config);
 
         let user_a = controller
@@ -484,11 +483,7 @@ mod tests {
     #[test]
     fn manhattan_distance() -> Result<(), Error> {
         let config = Config::default();
-        let psql_url = &config.databases["simple-movie"].psql_url;
-        let mongo_url = &config.databases["simple-movie"].mongo_url;
-        let mongo_db = &config.databases["simple-movie"].mongo_db;
-
-        let controller = SimpleMovieController::with_url(psql_url, mongo_url, mongo_db)?;
+        let controller = SimpleMovieController::from_config(&config, "simple-movie")?;
         let engine = Engine::with_controller(&controller, &config);
 
         let user_a = controller
@@ -514,11 +509,7 @@ mod tests {
     #[test]
     fn cosine_similarity_distance() -> Result<(), Error> {
         let config = Config::default();
-        let psql_url = &config.databases["simple-movie"].psql_url;
-        let mongo_url = &config.databases["simple-movie"].mongo_url;
-        let mongo_db = &config.databases["simple-movie"].mongo_db;
-
-        let controller = SimpleMovieController::with_url(psql_url, mongo_url, mongo_db)?;
+        let controller = SimpleMovieController::from_config(&config, "simple-movie")?;
         let engine = Engine::with_controller(&controller, &config);
 
         let user_a = controller
@@ -544,11 +535,7 @@ mod tests {
     #[test]
     fn knn_with_manhattan() -> Result<(), Error> {
         let config = Config::default();
-        let psql_url = &config.databases["simple-movie"].psql_url;
-        let mongo_url = &config.databases["simple-movie"].mongo_url;
-        let mongo_db = &config.databases["simple-movie"].mongo_db;
-
-        let controller = SimpleMovieController::with_url(psql_url, mongo_url, mongo_db)?;
+        let controller = SimpleMovieController::from_config(&config, "simple-movie")?;
         let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
@@ -568,11 +555,7 @@ mod tests {
     #[test]
     fn knn_with_euclidean() -> Result<(), Error> {
         let config = Config::default();
-        let psql_url = &config.databases["simple-movie"].psql_url;
-        let mongo_url = &config.databases["simple-movie"].mongo_url;
-        let mongo_db = &config.databases["simple-movie"].mongo_db;
-
-        let controller = SimpleMovieController::with_url(psql_url, mongo_url, mongo_db)?;
+        let controller = SimpleMovieController::from_config(&config, "simple-movie")?;
         let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
@@ -592,11 +575,7 @@ mod tests {
     #[test]
     fn knn_with_cosine() -> Result<(), Error> {
         let config = Config::default();
-        let psql_url = &config.databases["simple-movie"].psql_url;
-        let mongo_url = &config.databases["simple-movie"].mongo_url;
-        let mongo_db = &config.databases["simple-movie"].mongo_db;
-
-        let controller = SimpleMovieController::with_url(psql_url, mongo_url, mongo_db)?;
+        let controller = SimpleMovieController::from_config(&config, "simple-movie")?;
         let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
@@ -616,11 +595,7 @@ mod tests {
     #[test]
     fn knn_in_books() -> Result<(), Error> {
         let config = Config::default();
-        let psql_url = &config.databases["books"].psql_url;
-        let mongo_url = &config.databases["books"].mongo_url;
-        let mongo_db = &config.databases["books"].mongo_db;
-
-        let controller = BooksController::with_url(psql_url, mongo_url, mongo_db)?;
+        let controller = BooksController::from_config(&config, "books")?;
         let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
@@ -644,11 +619,8 @@ mod tests {
         use std::time::Instant;
 
         let config = Config::default();
-        let psql_url = &config.databases["movie-lens-small"].psql_url;
-        let mongo_url = &config.databases["movie-lens-small"].mongo_url;
-        let mongo_db = &config.databases["movie-lens-small"].mongo_db;
+        let controller = MovieLensSmallController::from_config(&config, "movie-lens")?;
 
-        let controller = MovieLensSmallController::with_url(psql_url, mongo_url, mongo_db)?;
         let mut sim_matrix = SimilarityMatrix::new(&controller, &config, 10000, 10000);
 
         let now = Instant::now();
@@ -660,15 +632,9 @@ mod tests {
 
     #[test]
     fn item_based_pred() -> Result<(), Error> {
-        use books::BooksController;
-        use std::time::Instant;
-
         let config = Config::default();
-        let psql_url = &config.databases["books"].psql_url;
-        let mongo_url = &config.databases["books"].mongo_url;
-        let mongo_db = &config.databases["books"].mongo_db;
 
-        let controller = BooksController::with_url(psql_url, mongo_url, mongo_db)?;
+        let controller = BooksController::from_config(&config, "books")?;
         let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
@@ -690,11 +656,7 @@ mod tests {
         );
         println!("Elapsed: {}", now.elapsed().as_secs_f64());
 
-        let psql_url = &config.databases["simple-movie"].psql_url;
-        let mongo_url = &config.databases["simple-movie"].mongo_url;
-        let mongo_db = &config.databases["simple-movie"].mongo_db;
-
-        let controller = SimpleMovieController::with_url(psql_url, mongo_url, mongo_db)?;
+        let controller = SimpleMovieController::from_config(&config, "simple-movie")?;
         let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
@@ -716,13 +678,7 @@ mod tests {
         );
         println!("Elapsed: {}", now.elapsed().as_secs_f64());
 
-        use movie_lens_small::MovieLensSmallController;
-
-        let psql_url = &config.databases["movie-lens-small"].psql_url;
-        let mongo_url = &config.databases["movie-lens-small"].mongo_url;
-        let mongo_db = &config.databases["movie-lens-small"].mongo_db;
-
-        let controller = MovieLensSmallController::with_url(psql_url, mongo_url, mongo_db)?;
+        let controller = MovieLensSmallController::from_config(&config, "movie-lens-small")?;
         let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
@@ -744,13 +700,7 @@ mod tests {
         );
         println!("Elapsed: {}", now.elapsed().as_secs_f64());
 
-        use movie_lens::MovieLensController;
-
-        let psql_url = &config.databases["movie-lens"].psql_url;
-        let mongo_url = &config.databases["movie-lens"].mongo_url;
-        let mongo_db = &config.databases["movie-lens"].mongo_db;
-
-        let controller = MovieLensController::with_url(psql_url, mongo_url, mongo_db)?;
+        let controller = MovieLensController::from_config(&config, "movie-lens")?;
         let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
@@ -782,11 +732,7 @@ mod tests {
         use std::time::Instant;
 
         let config = Config::default();
-        let psql_url = &config.databases["shelves"].psql_url;
-        let mongo_url = &config.databases["shelves"].mongo_url;
-        let mongo_db = &config.databases["shelves"].mongo_db;
-
-        let controller = ShelvesController::with_url(psql_url, mongo_url, mongo_db)?;
+        let controller = ShelvesController::from_config(&config, "shelves")?;
         let engine = Engine::with_controller(&controller, &config);
 
         let user = controller

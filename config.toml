@@ -4,39 +4,49 @@
 #   1  => Warnings (log::warning!)
 #   2  => Info (log::info!)
 #   3+ => Debug (log::debug!)
-term_verbosity_level = 0
 file_verbosity_level = 2
 log_output = "rsys.log"
+term_verbosity_level = 0
 
 [matrix]
+allow_chunk_optimization = true 
 chunk_size_threshold = 0.3 # percentage of original size
 partial_users_chunk_size = 10000 
-allow_chunk_optimization = true 
 
 [engine]
 partial_users_chunk_size = 10000
 
 [databases.simple-movie]
-psql_url = "postgres://postgres:@localhost/simple-movie"
-mongo_url = "mongodb://localhost:27017"
 mongo_db = "simple-movie"
+mongo_url = "mongodb://localhost:27017"
+psql_url = "postgres://postgres:@localhost/simple-movie"
+users_ratings_mongo = false
+users_who_rated_mongo = true
 
 [databases.books]
-psql_url = "postgres://postgres:@localhost/books"
-mongo_url = "mongodb://localhost:27017"
 mongo_db = "books"
+mongo_url = "mongodb://localhost:27017"
+psql_url = "postgres://postgres:@localhost/books"
+users_ratings_mongo = false
+users_who_rated_mongo = true
 
 [databases.shelves]
-psql_url = "postgres://postgres:@localhost/shelves"
-mongo_url = "mongodb://localhost:27017"
-mongo_db = "shelves"
+mongo_db = "shelves" 
+mongo_url = "mongodb://localhost:27017" 
+psql_url = "postgres://postgres:@localhost/shelves" 
+users_ratings_mongo = false # no effect
+users_who_rated_mongo = true 
 
 [databases.movie-lens]
-psql_url = "postgres://postgres:@localhost/movie-lens"
-mongo_url = "mongodb://localhost:27017"
 mongo_db = "movie-lens"
+mongo_url = "mongodb://localhost:27017"
+psql_url = "postgres://postgres:@localhost/movie-lens"
+users_ratings_mongo = false
+users_who_rated_mongo = true
 
 [databases.movie-lens-small]
-psql_url = "postgres://postgres:@localhost/movie-lens-small"
-mongo_url = "mongodb://localhost:27017"
 mongo_db = "movie-lens-small"
+mongo_url = "mongodb://localhost:27017"
+psql_url = "postgres://postgres:@localhost/movie-lens-small"
+users_ratings_mongo = false
+users_who_rated_mongo = true
