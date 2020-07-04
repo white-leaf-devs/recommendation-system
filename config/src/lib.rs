@@ -13,6 +13,7 @@ pub struct DatabaseEntry {
     pub psql_url: String,
     pub mongo_url: String,
     pub mongo_db: String,
+    pub use_postgres: bool,
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
@@ -29,7 +30,6 @@ pub struct EngineConfig {
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct SystemConfig {
-    pub use_postgres: bool,
     pub term_verbosity_level: usize,
     pub file_verbosity_level: usize,
     pub log_output: Option<String>,
@@ -47,7 +47,6 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             system: SystemConfig {
-                use_postgres: false,
                 term_verbosity_level: 0,
                 file_verbosity_level: 3,
                 log_output: Some("debugrs.log".to_string()),
@@ -62,26 +61,31 @@ impl Default for Config {
             },
             databases: hash_map! {
                 "simple-movie".into() => DatabaseEntry {
+                    use_postgres: false,
                     psql_url: "postgres://postgres:@localhost/simple-movie".into(),
                     mongo_url: "mongodb://localhost:27017".into(),
                     mongo_db: "simple-movie".into()
                 },
                 "books".into() => DatabaseEntry {
+                    use_postgres: false,
                     psql_url: "postgres://postgres:@localhost/books".into(),
                     mongo_url: "mongodb://localhost:27017".into(),
                     mongo_db: "books".into()
                 },
                 "shelves".into() => DatabaseEntry {
+                    use_postgres: false,
                     psql_url: "postgres://postgres:@localhost/shelves".into(),
                     mongo_url: "mongodb://localhost:27017".into(),
                     mongo_db: "shelves".into(),
                 },
                 "movie-lens".into() => DatabaseEntry {
+                    use_postgres: false,
                     psql_url: "postgres://postgres:@localhost/movie-lens".into(),
                     mongo_url: "mongodb://localhost:27017".into(),
                     mongo_db: "movie-lens".into(),
                 },
                 "movie-lens-small".into() => DatabaseEntry {
+                    use_postgres: false,
                     psql_url: "postgres://postgres:@localhost/movie-lens-small".into(),
                     mongo_url: "mongodb://localhost:27017".into(),
                     mongo_db: "movie-lens-small".into(),
@@ -109,7 +113,6 @@ mod tests {
     fn load_example_config() -> Result<(), Error> {
         let expected = Config {
             system: SystemConfig {
-                use_postgres: false,
                 log_output: Some("rs.log".to_string()),
                 term_verbosity_level: 1,
                 file_verbosity_level: 2,
@@ -124,6 +127,7 @@ mod tests {
             },
             databases: hash_map! {
                 "some-database".into() => DatabaseEntry {
+                    use_postgres: false,
                     psql_url: "postgres://postgres:@localhost/some-database".into(),
                     mongo_url: "mongodb://localhost:27017".into(),
                     mongo_db: "some-database".into(),

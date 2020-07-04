@@ -2,7 +2,6 @@
 file_verbosity_level = 2
 log_output = "rs.log"
 term_verbosity_level = 1
-use_postgres = false
 
 [matrix]
 allow_chunk_optimization = true
@@ -16,3 +15,4 @@ partial_users_chunk_size = 10000
 mongo_db = "some-database"
 mongo_url = "mongodb://localhost:27017"
 psql_url = "postgres://postgres:@localhost/some-database"
+use_postgres = false
