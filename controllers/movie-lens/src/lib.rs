@@ -459,7 +459,8 @@ impl Controller for MovieLensController {
         item_id: &eid!(Self::Item),
         score: f64,
     ) -> Result<Self::Rating, Error> {
-        let collection = self.mongo_db.collection("users_who_rated");
+        let users_who_rated = self.mongo_db.collection("users_who_rated");
+        let users_ratings = self.mongo_db.collection("users_ratings");
 
         let query = doc! {
             "item_id": item_id,
@@ -468,25 +469,30 @@ impl Controller for MovieLensController {
             }
         };
 
-        let rating = collection.find_one(query, None)?;
+        let rating = users_who_rated.find_one(query, None)?;
         if rating.is_some() {
             return Err(
                 ErrorKind::InsertRatingFailed(user_id.to_string(), item_id.to_string()).into(),
             );
         }
 
-        let query = doc! {
-            "item_id": item_id
-        };
-
+        let options = UpdateOptions::builder().upsert(true).build();
         let update = doc! {
             "$set": doc!{
-                format!("scores.{}",user_id): score
+                format!("scores.{}", user_id): score
             }
         };
 
+        users_who_rated.update_one(doc! { "item_id": item_id }, update, options)?;
+
         let options = UpdateOptions::builder().upsert(true).build();
-        collection.update_one(query, update, options)?;
+        let update = doc! {
+            "$set": doc!{
+                format!("scores.{}", item_id): score
+            }
+        };
+
+        users_ratings.update_one(doc! { "user_id": user_id }, update, options)?;
 
         let new_rating = NewRating {
             user_id: *user_id,
@@ -501,17 +507,22 @@ impl Controller for MovieLensController {
         match psql_result {
             Ok(rating) => Ok(rating),
             Err(e) => {
-                let query_doc = doc! {
-                    "item_id": item_id.to_string()
-                };
-
                 let delete_doc = doc! {
                     "$unset": doc!{
                         format!("scores.{}", user_id): ""
                     }
                 };
 
-                collection.update_one(query_doc, delete_doc, None)?;
+                users_who_rated.update_one(doc! { "item_id": item_id }, delete_doc, None)?;
+
+                let delete_doc = doc! {
+                    "$unset": doc!{
+                        format!("scores.{}", item_id): ""
+                    }
+                };
+
+                users_ratings.update_one(doc! { "user_id": user_id }, delete_doc, None)?;
+
                 Err(e.into())
             }
         }

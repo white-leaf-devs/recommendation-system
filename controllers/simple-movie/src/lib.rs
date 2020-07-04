@@ -504,6 +504,7 @@ impl Controller for SimpleMovieController {
                 format!("scores.{}", item_id): score
             }
         };
+
         users_ratings.update_one(doc! { "user_id": user_id }, update, options)?;
 
         let new_rating = NewRating {
