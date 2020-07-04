@@ -42,5 +42,26 @@ fn main() -> Result<(), Error> {
 
     collection.insert_many(docs, None)?;
 
+    // Inserting the inverse of above (It was item_id=>user_id now is user_id=>item_id)
+    let collection = db.collection("user_ratings");
+    let mut docs = HashMap::new();
+    for (user_id, ratings) in controller.maped_ratings()? {
+        for (item_id, score) in ratings {
+            docs.entry(user_id)
+                .or_insert_with(HashMap::new)
+                .insert(item_id.to_string(), Bson::Double(score));
+        }
+    }
+
+    let docs: Vec<Document> = docs
+        .into_iter()
+        .map(|(k, v)| -> Result<_, Error> {
+            let data = to_bson(&v)?;
+            Ok(doc! { "user_id": k, "scores": data  })
+        })
+        .collect::<Result<_, Error>>()?;
+
+    collection.insert_many(docs, None)?;
+
     Ok(())
 }
