@@ -70,5 +70,41 @@ fn main() -> Result<(), Error> {
         collection.insert_many(chunk, None)?;
     }
 
+    let mut csv = csv::ReaderBuilder::new()
+        .has_headers(false)
+        .delimiter(b',')
+        .from_path("data/BX-Book-Ratings.csv")?;
+
+    println!("Collecting records for ratings...");
+    let records: Vec<_> = csv.records().collect();
+
+    let collection = db.collection("user_ratings");
+    let mut docs = HashMap::new();
+    for record in records.into_iter().progress() {
+        if let Ok(record) = record {
+            let user_id: i32 = record[0].parse()?;
+            let book_id = &record[1];
+            let score: f64 = record[2].parse()?;
+
+            docs.entry(user_id)
+                .or_insert_with(HashMap::new)
+                .insert(book_id.to_string(), Bson::Double(score));
+        }
+    }
+
+    let docs: Vec<Document> = docs
+        .into_iter()
+        .map(|(k, v)| -> Result<_, Error> {
+            let data = to_bson(&v)?;
+            Ok(doc! { "user_id": k, "scores": data  })
+        })
+        .collect::<Result<_, Error>>()?;
+
+    let chunk_size = docs.len() / 8;
+    for chunk in docs.chunks(chunk_size) {
+        let chunk = chunk.to_owned();
+        collection.insert_many(chunk, None)?;
+    }
+
     Ok(())
 }
