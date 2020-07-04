@@ -463,8 +463,10 @@ impl Controller for SimpleMovieController {
         item_id: &eid!(Self::Item),
         score: f64,
     ) -> Result<Self::Rating, Error> {
-        let collection = self.mongo_db.collection("users_who_rated");
+        let users_who_rated = self.mongo_db.collection("users_who_rated");
+        let users_ratings = self.mongo_db.collection("users_ratings");
 
+        // Check that this rating doesn't exists on users_who_rated
         let query = doc! {
             "item_id": item_id,
             format!("scores.{}", user_id) : doc!{
@@ -472,25 +474,29 @@ impl Controller for SimpleMovieController {
             }
         };
 
-        let rating = collection.find_one(query, None)?;
+        let rating = users_who_rated.find_one(query, None)?;
         if rating.is_some() {
             return Err(
                 ErrorKind::InsertRatingFailed(user_id.to_string(), item_id.to_string()).into(),
             );
         }
 
-        let query = doc! {
-            "item_id": item_id
-        };
-
+        let options = UpdateOptions::builder().upsert(true).build();
         let update = doc! {
             "$set": doc!{
-                format!("scores.{}",user_id): score
+                format!("scores.{}", user_id): score
             }
         };
 
+        users_who_rated.update_one(doc! { "item_id": item_id }, update, options)?;
+
         let options = UpdateOptions::builder().upsert(true).build();
-        collection.update_one(query, update, options)?;
+        let update = doc! {
+            "$set": doc!{
+                format!("scores.{}", item_id): score
+            }
+        };
+        users_ratings.update_one(doc! { "user_id": user_id }, update, options)?;
 
         let new_rating = NewRating {
             user_id: *user_id,
@@ -505,17 +511,22 @@ impl Controller for SimpleMovieController {
         match psql_result {
             Ok(rating) => Ok(rating),
             Err(e) => {
-                let query_doc = doc! {
-                    "item_id": item_id.to_string()
-                };
-
                 let delete_doc = doc! {
                     "$unset": doc!{
                         format!("scores.{}", user_id): ""
                     }
                 };
 
-                collection.update_one(query_doc, delete_doc, None)?;
+                users_who_rated.update_one(doc! { "item_id": item_id }, delete_doc, None)?;
+
+                let delete_doc = doc! {
+                    "$unset": doc!{
+                        format!("scores.{}", item_id): ""
+                    }
+                };
+
+                users_ratings.update_one(doc! { "user_id": user_id }, delete_doc, None)?;
+
                 Err(e.into())
             }
         }
@@ -526,11 +537,8 @@ impl Controller for SimpleMovieController {
         user_id: &eid!(Self::User),
         item_id: &eid!(Self::Item),
     ) -> Result<Self::Rating, Error> {
-        let collection = self.mongo_db.collection("users_who_rated");
-
-        let query_doc = doc! {
-            "item_id": item_id
-        };
+        let users_who_rated = self.mongo_db.collection("users_who_rated");
+        let users_ratings = self.mongo_db.collection("users_ratings");
 
         let delete_doc = doc! {
             "$unset": doc!{
@@ -538,10 +546,23 @@ impl Controller for SimpleMovieController {
             }
         };
 
-        let result = collection.update_one(query_doc, delete_doc, None)?;
+        let result = users_who_rated.update_one(doc! { "item_id": item_id }, delete_doc, None)?;
         if result.matched_count.is_zero() || result.modified_count.is_zero() {
             return Err(
-                ErrorKind::InsertRatingFailed(user_id.to_string(), item_id.to_string()).into(),
+                ErrorKind::RemoveRatingFailed(user_id.to_string(), item_id.to_string()).into(),
+            );
+        }
+
+        let delete_doc = doc! {
+            "$unset": doc!{
+                format!("scores.{}", item_id): ""
+            }
+        };
+
+        let result = users_ratings.update_one(doc! { "user_id": user_id }, delete_doc, None)?;
+        if result.matched_count.is_zero() || result.modified_count.is_zero() {
+            return Err(
+                ErrorKind::RemoveRatingFailed(user_id.to_string(), item_id.to_string()).into(),
             );
         }
 
@@ -559,18 +580,23 @@ impl Controller for SimpleMovieController {
         match psql_result {
             Ok(rating) => Ok(rating),
             Err(e) => {
-                let query_doc = doc! {
-                    "item_id": item_id.to_string()
-                };
-
+                let options = UpdateOptions::builder().upsert(true).build();
                 let update_doc = doc! {
                     "$set": doc!{
-                        format!("scores.{}",user_id): old_score
+                        format!("scores.{}", user_id): old_score
                     }
                 };
 
+                users_who_rated.update_one(doc! { "item_id": item_id }, update_doc, options)?;
+
                 let options = UpdateOptions::builder().upsert(true).build();
-                collection.update_one(query_doc, update_doc, options)?;
+                let update_doc = doc! {
+                    "$set": doc!{
+                        format!("scores.{}", item_id): old_score
+                    }
+                };
+
+                users_ratings.update_one(doc! { "user_id": user_id }, update_doc, options)?;
 
                 Err(e.into())
             }
@@ -583,11 +609,8 @@ impl Controller for SimpleMovieController {
         item_id: &eid!(Self::Item),
         score: f64,
     ) -> Result<Self::Rating, Error> {
-        let collection = self.mongo_db.collection("users_who_rated");
-
-        let query_doc = doc! {
-            "item_id": item_id,
-        };
+        let users_who_rated = self.mongo_db.collection("users_who_rated");
+        let users_ratings = self.mongo_db.collection("users_ratings");
 
         let update_doc = doc! {
             "$set": doc!{
@@ -595,7 +618,20 @@ impl Controller for SimpleMovieController {
             }
         };
 
-        let result = collection.update_one(query_doc, update_doc, None)?;
+        let result = users_who_rated.update_one(doc! { "item_id": item_id }, update_doc, None)?;
+        if result.modified_count.is_zero() || result.matched_count.is_zero() {
+            return Err(
+                ErrorKind::UpdateRatingFailed(user_id.to_string(), item_id.to_string()).into(),
+            );
+        }
+
+        let update_doc = doc! {
+            "$set": doc!{
+                format!("scores.{}", item_id): score
+            }
+        };
+
+        let result = users_ratings.update_one(doc! { "user_id": user_id }, update_doc, None)?;
         if result.modified_count.is_zero() || result.matched_count.is_zero() {
             return Err(
                 ErrorKind::UpdateRatingFailed(user_id.to_string(), item_id.to_string()).into(),
@@ -617,17 +653,21 @@ impl Controller for SimpleMovieController {
         match psql_res {
             Ok(rating) => Ok(rating),
             Err(e) => {
-                let query_doc = doc! {
-                    "item_id": item_id,
-                };
-
                 let update_doc = doc! {
                     "$set": doc! {
                         format!("score.{}", user_id): old_score
                     }
                 };
 
-                collection.update_one(query_doc, update_doc, None)?;
+                users_who_rated.update_one(doc! { "item_id": item_id }, update_doc, None)?;
+
+                let update_doc = doc! {
+                    "$set": doc! {
+                        format!("score.{}", item_id): old_score
+                    }
+                };
+
+                users_ratings.update_one(doc! { "user_id": user_id }, update_doc, None)?;
 
                 Err(e.into())
             }
