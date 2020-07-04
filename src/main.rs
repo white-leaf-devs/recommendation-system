@@ -825,7 +825,7 @@ fn main() -> Result<(), Error> {
 
                             Database::Shelves => database_connected_prompt(
                                 &config,
-                                ShelvesController::with_url(psql_url, mongo_url, mongo_db)?,
+                                ShelvesController::from_config(&config, &name)?,
                                 &name,
                                 &mut rl,
                             )?,

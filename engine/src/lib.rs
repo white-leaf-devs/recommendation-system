@@ -751,11 +751,7 @@ mod tests {
         use std::time::Instant;
 
         let config = Config::default();
-        let psql_url = &config.databases["shelves"].psql_url;
-        let mongo_url = &config.databases["shelves"].mongo_url;
-        let mongo_db = &config.databases["shelves"].mongo_db;
-
-        let controller = ShelvesController::with_url(psql_url, mongo_url, mongo_db)?;
+        let controller = ShelvesController::from_config(&config, "shelves")?;
         let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
