@@ -4,6 +4,7 @@
 // https://opensource.org/licenses/MIT
 
 use anyhow::Error;
+use config::Config;
 use controller::Controller;
 use mongodb::bson::{doc, to_bson, Bson, Document};
 use mongodb::sync::Client;
@@ -12,16 +13,17 @@ use std::collections::HashMap;
 
 fn main() -> Result<(), Error> {
     let vars: HashMap<String, String> = dotenv::vars().collect();
+    let mut config = Config::default();
 
-    let psql_url = &vars["DATABASE_URL"];
-    let mongo_url = &vars["MONGO_URL"];
-    let mongo_db = &vars["MONGO_DB"];
+    let db = config.databases.get_mut("simple-movie").unwrap();
+    db.psql_url = vars["DATABASE_URL"].clone();
+    db.mongo_url = vars["MONGO_URL"].clone();
+    db.mongo_db = vars["MONGO_DB"].clone();
 
-    let client = Client::with_uri_str(mongo_url)?;
-    let db = client.database(mongo_db);
-    let collection = db.collection("users_who_rated");
+    let client = Client::with_uri_str(&db.mongo_url)?;
+    let collection = client.database(&db.mongo_db).collection("users_who_rated");
 
-    let controller = SimpleMovieController::with_url(psql_url, mongo_url, mongo_db)?;
+    let controller = SimpleMovieController::from_config(&config, "simple-movie")?;
 
     let mut docs = HashMap::new();
     for (user_id, ratings) in controller.maped_ratings()? {

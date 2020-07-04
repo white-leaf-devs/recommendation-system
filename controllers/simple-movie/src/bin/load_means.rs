@@ -4,6 +4,7 @@
 // https://opensource.org/licenses/MIT
 
 use anyhow::Error;
+use config::Config;
 use controller::Controller;
 use diesel::{insert_into, prelude::*};
 use simple_movie::establish_connection;
@@ -27,19 +28,20 @@ fn compute_mean(ratings: &HashMap<i32, f64>) -> Option<f64> {
 
 fn main() -> Result<(), Error> {
     let vars: HashMap<String, String> = dotenv::vars().collect();
+    let mut config = Config::default();
 
-    let psql_url = &vars["DATABASE_URL"];
-    let mongo_url = &vars["MONGO_URL"];
-    let mongo_db = &vars["MONGO_DB"];
-    let conn = establish_connection(psql_url)?;
+    let db = config.databases.get_mut("simple-movie").unwrap();
+    db.psql_url = vars["DATABASE_URL"].clone();
+    db.mongo_url = vars["MONGO_URL"].clone();
+    db.mongo_db = vars["MONGO_DB"].clone();
 
-    let controller = SimpleMovieController::with_url(psql_url, mongo_url, mongo_db)?;
+    let conn = establish_connection(&db.psql_url)?;
+    let controller = SimpleMovieController::from_config(&config, "simple-movie")?;
 
     let mut means = Vec::new();
 
     let users = controller.users()?;
     let maped_ratings = controller.maped_ratings_by(&users)?;
-
     for (user_id, ratings) in maped_ratings {
         let mean = compute_mean(&ratings);
 
