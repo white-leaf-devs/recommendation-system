@@ -16,7 +16,7 @@ partial_users_chunk_size = 10000
 [engine]
 partial_users_chunk_size = 10000
 
-[databases.simple-movie]}
+[databases.simple-movie]
 mongo_db = "simple-movie"
 mongo_url = "mongodb://localhost:27017"
 psql_url = "postgres://postgres:@localhost/simple-movie"
