@@ -5,7 +5,7 @@
 
 use anyhow::Error;
 use indicatif::ProgressIterator;
-use mongodb::bson::{doc, to_bson, Bson, Document};
+use mongodb::bson::{doc, to_bson, Bson};
 use mongodb::sync::Client;
 use std::collections::HashMap;
 use std::fs::File;
