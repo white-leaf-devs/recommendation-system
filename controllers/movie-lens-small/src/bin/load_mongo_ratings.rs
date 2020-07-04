@@ -70,30 +70,37 @@ fn main() -> Result<(), Error> {
         .delimiter(b',')
         .from_reader(reader);
 
-    let mut docs = HashMap::new();
+    let mut current_user = None;
+    let mut current_ratings = HashMap::new();
     for record in csv.records().progress() {
         if let Ok(record) = record {
             let user_id: i32 = record[0].parse()?;
             let movie_id: i32 = record[1].parse()?;
             let score: f64 = record[2].parse()?;
 
-            docs.entry(user_id)
-                .or_insert_with(HashMap::new)
-                .insert(movie_id.to_string(), Bson::Double(score));
+            if let Some(current_user) = &mut current_user {
+                if *current_user != user_id {
+                    let data = to_bson(&current_ratings)?;
+                    collection
+                        .insert_one(doc! { "user_id": *current_user, "scores": data }, None)?;
+
+                    *current_user = user_id;
+                    current_ratings.clear();
+                }
+            } else {
+                current_user = Some(user_id);
+            }
+
+            current_ratings.insert(user_id.to_string(), Bson::Double(score));
         }
     }
 
-    let docs: Vec<Document> = docs
-        .into_iter()
-        .map(|(k, v)| -> Result<_, Error> {
-            let data = to_bson(&v)?;
-            Ok(doc! { "user_id": k, "scores": data  })
-        })
-        .collect::<Result<_, Error>>()?;
-
-    for chunk in docs.chunks(10_000).progress() {
-        let chunk = chunk.to_owned();
-        collection.insert_many(chunk, None)?;
+    if let Some(current_user) = current_user {
+        if !current_ratings.is_empty() {
+            let data = to_bson(&current_ratings)?;
+            collection.insert_one(doc! { "user_id": current_user, "scores": data}, None)?;
+        }
     }
+
     Ok(())
 }
