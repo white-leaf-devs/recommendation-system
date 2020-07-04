@@ -61,7 +61,7 @@ fn main() -> Result<(), Error> {
         }
     }
 
-    let collection = db.collection("user_ratings");
+    let collection = db.collection("users_ratings");
 
     let file = File::open("data/ratings.csv")?;
     let reader = BufReader::new(file);
