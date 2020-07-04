@@ -811,14 +811,11 @@ fn main() -> Result<(), Error> {
                 Some(stmt) => {
                     if let Statement::Connect(db) = stmt {
                         let name = db.to_string();
-                        let psql_url = &config.databases[&name].psql_url;
-                        let mongo_url = &config.databases[&name].mongo_url;
-                        let mongo_db = &config.databases[&name].mongo_db;
 
                         match db {
                             Database::Books => database_connected_prompt(
                                 &config,
-                                BooksController::with_url(psql_url, mongo_url, mongo_db)?,
+                                BooksController::from_config(&config, &name)?,
                                 &name,
                                 &mut rl,
                             )?,
@@ -839,14 +836,14 @@ fn main() -> Result<(), Error> {
 
                             Database::MovieLens => database_connected_prompt(
                                 &config,
-                                MovieLensController::with_url(psql_url, mongo_url, mongo_db)?,
+                                MovieLensController::from_config(&config, &name)?,
                                 &name,
                                 &mut rl,
                             )?,
 
                             Database::MovieLensSmall => database_connected_prompt(
                                 &config,
-                                MovieLensSmallController::with_url(psql_url, mongo_url, mongo_db)?,
+                                MovieLensSmallController::from_config(&config, &name)?,
                                 &name,
                                 &mut rl,
                             )?,

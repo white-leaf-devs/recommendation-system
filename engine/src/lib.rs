@@ -449,7 +449,10 @@ mod tests {
     use books::BooksController;
     use config::Config;
     use controller::SearchBy;
+    use movie_lens::MovieLensController;
+    use movie_lens_small::MovieLensSmallController;
     use simple_movie::SimpleMovieController;
+    use std::time::Instant;
 
     #[test]
     fn euclidean_distance() -> Result<(), Error> {
@@ -629,15 +632,9 @@ mod tests {
 
     #[test]
     fn item_based_pred() -> Result<(), Error> {
-        use books::BooksController;
-        use std::time::Instant;
-
         let config = Config::default();
-        let psql_url = &config.databases["books"].psql_url;
-        let mongo_url = &config.databases["books"].mongo_url;
-        let mongo_db = &config.databases["books"].mongo_db;
 
-        let controller = BooksController::with_url(psql_url, mongo_url, mongo_db)?;
+        let controller = BooksController::from_config(&config, "books")?;
         let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
@@ -658,10 +655,6 @@ mod tests {
             engine.item_based_predict(user, item, ItemMethod::SlopeOne, 2500)?
         );
         println!("Elapsed: {}", now.elapsed().as_secs_f64());
-
-        let psql_url = &config.databases["simple-movie"].psql_url;
-        let mongo_url = &config.databases["simple-movie"].mongo_url;
-        let mongo_db = &config.databases["simple-movie"].mongo_db;
 
         let controller = SimpleMovieController::from_config(&config, "simple-movie")?;
         let engine = Engine::with_controller(&controller, &config);
@@ -685,13 +678,7 @@ mod tests {
         );
         println!("Elapsed: {}", now.elapsed().as_secs_f64());
 
-        use movie_lens_small::MovieLensSmallController;
-
-        let psql_url = &config.databases["movie-lens-small"].psql_url;
-        let mongo_url = &config.databases["movie-lens-small"].mongo_url;
-        let mongo_db = &config.databases["movie-lens-small"].mongo_db;
-
-        let controller = MovieLensSmallController::with_url(psql_url, mongo_url, mongo_db)?;
+        let controller = MovieLensSmallController::from_config(&config, "movie-lens-small")?;
         let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
@@ -713,13 +700,7 @@ mod tests {
         );
         println!("Elapsed: {}", now.elapsed().as_secs_f64());
 
-        use movie_lens::MovieLensController;
-
-        let psql_url = &config.databases["movie-lens"].psql_url;
-        let mongo_url = &config.databases["movie-lens"].mongo_url;
-        let mongo_db = &config.databases["movie-lens"].mongo_db;
-
-        let controller = MovieLensController::with_url(psql_url, mongo_url, mongo_db)?;
+        let controller = MovieLensController::from_config(&config, "movie-lens")?;
         let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
