@@ -5,7 +5,7 @@
 
 use anyhow::Error;
 use indicatif::ProgressIterator;
-use mongodb::bson::{doc, to_bson, Bson};
+use mongodb::bson::{doc, to_bson, Bson, Document};
 use mongodb::sync::Client;
 use std::collections::HashMap;
 use std::fs::File;
@@ -61,5 +61,39 @@ fn main() -> Result<(), Error> {
         }
     }
 
+    let collection = db.collection("user_ratings");
+
+    let file = File::open("data/ratings.csv")?;
+    let reader = BufReader::new(file);
+    let mut csv = csv::ReaderBuilder::new()
+        .has_headers(true)
+        .delimiter(b',')
+        .from_reader(reader);
+
+    let mut docs = HashMap::new();
+    for record in csv.records().progress() {
+        if let Ok(record) = record {
+            let user_id: i32 = record[0].parse()?;
+            let movie_id: i32 = record[1].parse()?;
+            let score: f64 = record[2].parse()?;
+
+            docs.entry(user_id)
+                .or_insert_with(HashMap::new)
+                .insert(movie_id.to_string(), Bson::Double(score));
+        }
+    }
+
+    let docs: Vec<Document> = docs
+        .into_iter()
+        .map(|(k, v)| -> Result<_, Error> {
+            let data = to_bson(&v)?;
+            Ok(doc! { "user_id": k, "scores": data  })
+        })
+        .collect::<Result<_, Error>>()?;
+
+    for chunk in docs.chunks(10_000).progress() {
+        let chunk = chunk.to_owned();
+        collection.insert_many(chunk, None)?;
+    }
     Ok(())
 }
