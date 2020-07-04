@@ -8,6 +8,7 @@ use books::establish_connection;
 use books::models::{books::NewBook, ratings::NewRating, users::NewUser};
 use books::schema::{books as books_sc, ratings, users};
 use books::BooksController;
+use config::Config;
 use controller::{Controller, SearchBy};
 use diesel::pg::PgConnection;
 use diesel::{insert_into, prelude::*};
@@ -82,12 +83,7 @@ fn insert_books(conn: &PgConnection) -> Result<(), Error> {
     Ok(())
 }
 
-fn insert_ratings(
-    conn: &PgConnection,
-    psql_url: &str,
-    mongo_url: &str,
-    mongo_db: &str,
-) -> Result<(), Error> {
+fn insert_ratings(conn: &PgConnection, config: &Config) -> Result<(), Error> {
     let mut csv = csv::ReaderBuilder::new()
         .has_headers(false)
         .delimiter(b',')
@@ -97,7 +93,7 @@ fn insert_ratings(
     println!("Collecting records for ratings...");
     let records: Vec<_> = csv.records().collect();
 
-    let controller = BooksController::with_url(psql_url, mongo_url, mongo_db)?;
+    let controller = BooksController::from_config(config, "books")?;
     for record in records.iter().progress() {
         if let Ok(record) = record {
             let user_id: i32 = record[0].parse()?;
@@ -128,14 +124,17 @@ fn insert_ratings(
 
 fn main() -> Result<(), Error> {
     let vars: HashMap<String, String> = dotenv::vars().collect();
+    let mut config = Config::default();
 
-    let psql_url = &vars["DATABASE_URL"];
-    let mongo_url = &vars["MONGO_URL"];
-    let mongo_db = &vars["MONGO_DB"];
-    let conn = establish_connection(psql_url)?;
+    let db = config.databases.get_mut("books").unwrap();
+    db.psql_url = vars["DATABASE_URL"].clone();
+    db.mongo_url = vars["MONGO_URL"].clone();
+    db.mongo_db = vars["MONGO_DB"].clone();
+
+    let conn = establish_connection(&db.psql_url)?;
 
     insert_users(&conn)?;
     insert_books(&conn)?;
-    insert_ratings(&conn, psql_url, mongo_url, mongo_db)?;
+    insert_ratings(&conn, &config)?;
     Ok(())
 }
