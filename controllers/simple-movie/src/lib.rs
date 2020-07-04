@@ -201,33 +201,47 @@ impl Controller for SimpleMovieController {
         &self,
         items: &[Self::Item],
     ) -> Result<maped_ratings!(Self::Item => Self::User), Error> {
-        let collection = self.mongo_db.collection("users_who_rated");
-        let ids: Vec<_> = items.iter().map(|m| m.id).collect();
+        if self.use_postgres {
+            let ratings = Rating::belonging_to(items).load::<Rating>(&self.pg_conn)?;
 
-        let cursor = collection.find(
-            doc! {
-                "item_id": { "$in": ids }
-            },
-            None,
-        )?;
-
-        let mut items_users = HashMap::new();
-        for doc in cursor {
-            let doc = doc?;
-            let item_id = doc.get_i32("item_id")?;
-
-            for (user_id, score) in doc.get_document("scores")? {
-                let user_id: i32 = user_id.parse()?;
-                let score = score.as_f64().ok_or_else(|| ErrorKind::BsonConvert)?;
-
+            let mut items_users = HashMap::new();
+            for rating in ratings {
                 items_users
-                    .entry(item_id)
+                    .entry(rating.movie_id)
                     .or_insert_with(HashMap::new)
-                    .insert(user_id, score);
+                    .insert(rating.user_id, rating.score);
             }
-        }
 
-        Ok(items_users)
+            Ok(items_users)
+        } else {
+            let collection = self.mongo_db.collection("users_who_rated");
+            let ids: Vec<_> = items.iter().map(|m| m.id).collect();
+
+            let cursor = collection.find(
+                doc! {
+                    "item_id": { "$in": ids }
+                },
+                None,
+            )?;
+
+            let mut items_users = HashMap::new();
+            for doc in cursor {
+                let doc = doc?;
+                let item_id = doc.get_i32("item_id")?;
+
+                for (user_id, score) in doc.get_document("scores")? {
+                    let user_id: i32 = user_id.parse()?;
+                    let score = score.as_f64().ok_or_else(|| ErrorKind::BsonConvert)?;
+
+                    items_users
+                        .entry(item_id)
+                        .or_insert_with(HashMap::new)
+                        .insert(user_id, score);
+                }
+            }
+
+            Ok(items_users)
+        }
     }
 
     fn ratings_by(&self, user: &Self::User) -> Result<ratings!(Self::Item), Error> {
