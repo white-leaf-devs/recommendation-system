@@ -37,7 +37,7 @@ fn main() -> Result<(), Error> {
     let vars: HashMap<String, String> = dotenv::vars().collect();
     let mut config = Config::default();
 
-    let db = config.databases.get_mut("simple-movie").unwrap();
+    let db = config.databases.get_mut("shelves").unwrap();
     db.psql_url = vars["DATABASE_URL"].clone();
     db.mongo_url = vars["MONGO_URL"].clone();
     db.mongo_db = vars["MONGO_DB"].clone();
