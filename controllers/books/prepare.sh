@@ -36,5 +36,6 @@ MONGO_CONN="${MONGO_URL}/${MONGO_DB}"
 
 echo "=> Creating indexes on mongodb"
 mongo "${MONGO_CONN}" --eval "db.users_who_rated.createIndex({ 'item_id': 'hashed' })"
+mongo "${MONGO_CONN}" --eval "db.user_ratings.createIndex({ 'user_id': 'hashed' })"
 
 popd &> /dev/null
