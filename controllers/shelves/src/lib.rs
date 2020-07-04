@@ -23,7 +23,7 @@ use diesel::{delete, insert_into, prelude::*, update};
 use models::ratings::NewRating;
 use mongodb::bson::doc;
 use mongodb::{
-    options::UpdateOptions,
+    options::{FindOptions, UpdateOptions},
     sync::{Client, Database},
 };
 
@@ -179,12 +179,13 @@ impl Controller for ShelvesController {
         } else {
             let collection = self.mongo_db.collection("users_who_rated");
             let ids: Vec<_> = items.iter().map(|m| m.id).collect();
+            let options = FindOptions::builder().show_record_id(false).build();
 
             let cursor = collection.find(
                 doc! {
                     "item_id": { "$in": ids }
                 },
-                None,
+                options,
             )?;
 
             let mut items_users = HashMap::new();

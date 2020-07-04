@@ -26,7 +26,7 @@ use models::movies::NewUnseenMovie;
 use models::ratings::NewRating;
 use mongodb::bson::doc;
 use mongodb::{
-    options::UpdateOptions,
+    options::{FindOptions, UpdateOptions},
     sync::{Client, Database},
 };
 use num_traits::Zero;
@@ -198,12 +198,13 @@ impl Controller for MovieLensController {
         } else {
             let collection = self.mongo_db.collection("users_who_rated");
             let ids: Vec<_> = items.iter().map(|m| m.id).collect();
+            let options = FindOptions::builder().show_record_id(false).build();
 
             let cursor = collection.find(
                 doc! {
                     "item_id": { "$in": ids }
                 },
-                None,
+                options,
             )?;
 
             let mut items_users = HashMap::new();
@@ -237,12 +238,13 @@ impl Controller for MovieLensController {
             Ok(ratings)
         } else {
             let collection = self.mongo_db.collection("users_ratings");
+            let options = FindOptions::builder().show_record_id(false).build();
 
             let cursor = collection.find(
                 doc! {
                     "user_id": user.id
                 },
-                None,
+                options,
             )?;
 
             let mut ratings = HashMap::new();
@@ -277,7 +279,8 @@ impl Controller for MovieLensController {
             Ok(maped_ratings)
         } else {
             let collection = self.mongo_db.collection("users_ratings");
-            let cursor = collection.find(None, None)?;
+            let options = FindOptions::builder().show_record_id(false).build();
+            let cursor = collection.find(None, options)?;
 
             let mut maped_ratings = HashMap::new();
             for doc in cursor {
@@ -319,12 +322,13 @@ impl Controller for MovieLensController {
         } else {
             let collection = self.mongo_db.collection("users_ratings");
             let ids: Vec<_> = users.iter().map(|u| u.id).collect();
+            let options = FindOptions::builder().show_record_id(false).build();
 
             let cursor = collection.find(
                 doc! {
                     "user_id": { "$in": ids }
                 },
-                None,
+                options,
             )?;
 
             let mut maped_ratings = HashMap::new();
@@ -368,12 +372,13 @@ impl Controller for MovieLensController {
             Ok(maped_ratings)
         } else {
             let collection = self.mongo_db.collection("users_ratings");
+            let options = FindOptions::builder().show_record_id(false).build();
 
             let cursor = collection.find(
                 doc! {
                     "user_id": { "$ne": user.id }
                 },
-                None,
+                options,
             )?;
 
             let mut maped_ratings = HashMap::new();
