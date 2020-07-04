@@ -91,7 +91,7 @@ fn main() -> Result<(), Error> {
                 current_user = Some(user_id);
             }
 
-            current_ratings.insert(user_id.to_string(), Bson::Double(score));
+            current_ratings.insert(movie_id.to_string(), Bson::Double(score));
         }
     }
 
