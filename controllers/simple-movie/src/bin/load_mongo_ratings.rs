@@ -21,7 +21,8 @@ fn main() -> Result<(), Error> {
     db.mongo_db = vars["MONGO_DB"].clone();
 
     let client = Client::with_uri_str(&db.mongo_url)?;
-    let collection = client.database(&db.mongo_db).collection("users_who_rated");
+    let who_rated_collection = client.database(&db.mongo_db).collection("users_who_rated");
+    let user_ratings_collection = client.database(&db.mongo_db).collection("user_ratings");
 
     let controller = SimpleMovieController::from_config(&config, "simple-movie")?;
 
@@ -42,10 +43,9 @@ fn main() -> Result<(), Error> {
         })
         .collect::<Result<_, Error>>()?;
 
-    collection.insert_many(docs, None)?;
+    who_rated_collection.insert_many(docs, None)?;
 
     // Inserting the inverse of above (It was item_id=>user_id now is user_id=>item_id)
-    let collection = db.collection("user_ratings");
     let mut docs = HashMap::new();
     for (user_id, ratings) in controller.maped_ratings()? {
         for (item_id, score) in ratings {
@@ -63,7 +63,7 @@ fn main() -> Result<(), Error> {
         })
         .collect::<Result<_, Error>>()?;
 
-    collection.insert_many(docs, None)?;
+    user_ratings_collection.insert_many(docs, None)?;
 
     Ok(())
 }
