@@ -832,7 +832,7 @@ fn main() -> Result<(), Error> {
 
                             Database::SimpleMovie => database_connected_prompt(
                                 &config,
-                                SimpleMovieController::with_url(psql_url, mongo_url, mongo_db)?,
+                                SimpleMovieController::from_config(&config, &name)?,
                                 &name,
                                 &mut rl,
                             )?,

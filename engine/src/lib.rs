@@ -454,11 +454,7 @@ mod tests {
     #[test]
     fn euclidean_distance() -> Result<(), Error> {
         let config = Config::default();
-        let psql_url = &config.databases["simple-movie"].psql_url;
-        let mongo_url = &config.databases["simple-movie"].mongo_url;
-        let mongo_db = &config.databases["simple-movie"].mongo_db;
-
-        let controller = SimpleMovieController::with_url(psql_url, mongo_url, mongo_db)?;
+        let controller = SimpleMovieController::from_config(&config, "simple-movie")?;
         let engine = Engine::with_controller(&controller, &config);
 
         let user_a = controller
@@ -484,11 +480,7 @@ mod tests {
     #[test]
     fn manhattan_distance() -> Result<(), Error> {
         let config = Config::default();
-        let psql_url = &config.databases["simple-movie"].psql_url;
-        let mongo_url = &config.databases["simple-movie"].mongo_url;
-        let mongo_db = &config.databases["simple-movie"].mongo_db;
-
-        let controller = SimpleMovieController::with_url(psql_url, mongo_url, mongo_db)?;
+        let controller = SimpleMovieController::from_config(&config, "simple-movie")?;
         let engine = Engine::with_controller(&controller, &config);
 
         let user_a = controller
@@ -514,11 +506,7 @@ mod tests {
     #[test]
     fn cosine_similarity_distance() -> Result<(), Error> {
         let config = Config::default();
-        let psql_url = &config.databases["simple-movie"].psql_url;
-        let mongo_url = &config.databases["simple-movie"].mongo_url;
-        let mongo_db = &config.databases["simple-movie"].mongo_db;
-
-        let controller = SimpleMovieController::with_url(psql_url, mongo_url, mongo_db)?;
+        let controller = SimpleMovieController::from_config(&config, "simple-movie")?;
         let engine = Engine::with_controller(&controller, &config);
 
         let user_a = controller
@@ -544,11 +532,7 @@ mod tests {
     #[test]
     fn knn_with_manhattan() -> Result<(), Error> {
         let config = Config::default();
-        let psql_url = &config.databases["simple-movie"].psql_url;
-        let mongo_url = &config.databases["simple-movie"].mongo_url;
-        let mongo_db = &config.databases["simple-movie"].mongo_db;
-
-        let controller = SimpleMovieController::with_url(psql_url, mongo_url, mongo_db)?;
+        let controller = SimpleMovieController::from_config(&config, "simple-movie")?;
         let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
@@ -568,11 +552,7 @@ mod tests {
     #[test]
     fn knn_with_euclidean() -> Result<(), Error> {
         let config = Config::default();
-        let psql_url = &config.databases["simple-movie"].psql_url;
-        let mongo_url = &config.databases["simple-movie"].mongo_url;
-        let mongo_db = &config.databases["simple-movie"].mongo_db;
-
-        let controller = SimpleMovieController::with_url(psql_url, mongo_url, mongo_db)?;
+        let controller = SimpleMovieController::from_config(&config, "simple-movie")?;
         let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
@@ -592,11 +572,7 @@ mod tests {
     #[test]
     fn knn_with_cosine() -> Result<(), Error> {
         let config = Config::default();
-        let psql_url = &config.databases["simple-movie"].psql_url;
-        let mongo_url = &config.databases["simple-movie"].mongo_url;
-        let mongo_db = &config.databases["simple-movie"].mongo_db;
-
-        let controller = SimpleMovieController::with_url(psql_url, mongo_url, mongo_db)?;
+        let controller = SimpleMovieController::from_config(&config, "simple-movie")?;
         let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
@@ -616,11 +592,7 @@ mod tests {
     #[test]
     fn knn_in_books() -> Result<(), Error> {
         let config = Config::default();
-        let psql_url = &config.databases["books"].psql_url;
-        let mongo_url = &config.databases["books"].mongo_url;
-        let mongo_db = &config.databases["books"].mongo_db;
-
-        let controller = BooksController::with_url(psql_url, mongo_url, mongo_db)?;
+        let controller = BooksController::from_config(&config, "books")?;
         let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
@@ -644,11 +616,8 @@ mod tests {
         use std::time::Instant;
 
         let config = Config::default();
-        let psql_url = &config.databases["movie-lens-small"].psql_url;
-        let mongo_url = &config.databases["movie-lens-small"].mongo_url;
-        let mongo_db = &config.databases["movie-lens-small"].mongo_db;
+        let controller = MovieLensSmallController::from_config(&config, "movie-lens")?;
 
-        let controller = MovieLensSmallController::with_url(psql_url, mongo_url, mongo_db)?;
         let mut sim_matrix = SimilarityMatrix::new(&controller, &config, 10000, 10000);
 
         let now = Instant::now();
@@ -694,7 +663,7 @@ mod tests {
         let mongo_url = &config.databases["simple-movie"].mongo_url;
         let mongo_db = &config.databases["simple-movie"].mongo_db;
 
-        let controller = SimpleMovieController::with_url(psql_url, mongo_url, mongo_db)?;
+        let controller = SimpleMovieController::from_config(&config, "simple-movie")?;
         let engine = Engine::with_controller(&controller, &config);
 
         let user = controller
