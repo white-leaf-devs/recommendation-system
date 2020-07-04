@@ -383,7 +383,7 @@ impl Controller for ShelvesController {
         let result = users_who_rated.update_one(doc! { "item_id": item_id }, delete_doc, None)?;
         if result.matched_count.is_zero() || result.modified_count.is_zero() {
             return Err(
-                ErrorKind::InsertRatingFailed(user_id.to_string(), item_id.to_string()).into(),
+                ErrorKind::RemoveRatingFailed(user_id.to_string(), item_id.to_string()).into(),
             );
         }
 
