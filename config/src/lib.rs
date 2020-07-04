@@ -29,6 +29,7 @@ pub struct EngineConfig {
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct SystemConfig {
+    pub use_postgres: bool,
     pub term_verbosity_level: usize,
     pub file_verbosity_level: usize,
     pub log_output: Option<String>,
@@ -46,6 +47,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             system: SystemConfig {
+                use_postgres: false,
                 term_verbosity_level: 0,
                 file_verbosity_level: 3,
                 log_output: Some("debugrs.log".to_string()),
@@ -107,6 +109,7 @@ mod tests {
     fn load_example_config() -> Result<(), Error> {
         let expected = Config {
             system: SystemConfig {
+                use_postgres: false,
                 log_output: Some("rs.log".to_string()),
                 term_verbosity_level: 1,
                 file_verbosity_level: 2,

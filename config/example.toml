@@ -1,17 +1,18 @@
 [system]
+file_verbosity_level = 2
 log_output = "rs.log"
 term_verbosity_level = 1
-file_verbosity_level = 2
+use_postgres = false
 
 [matrix]
+allow_chunk_optimization = true
 chunk_size_threshold = 0.3
 partial_users_chunk_size = 10000
-allow_chunk_optimization = true 
 
 [engine]
 partial_users_chunk_size = 10000
 
 [databases.some-database]
-psql_url = "postgres://postgres:@localhost/some-database"
-mongo_url = "mongodb://localhost:27017"
 mongo_db = "some-database"
+mongo_url = "mongodb://localhost:27017"
+psql_url = "postgres://postgres:@localhost/some-database"
