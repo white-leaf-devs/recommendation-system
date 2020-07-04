@@ -17,7 +17,6 @@ fn main() -> Result<(), Error> {
     let mut config = Config::default();
 
     let db = config.databases.get_mut("books").unwrap();
-    db.use_postgres = true;
     db.psql_url = vars["DATABASE_URL"].clone();
     db.mongo_url = vars["MONGO_URL"].clone();
     db.mongo_db = vars["MONGO_DB"].clone();
