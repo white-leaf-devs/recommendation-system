@@ -203,28 +203,76 @@ impl Controller for MovieLensSmallController {
     }
 
     fn user_ratings(&self, user: &Self::User) -> Result<ratings!(Self::Item), Error> {
-        let ratings = Rating::belonging_to(user)
-            .load::<Rating>(&self.pg_conn)?
-            .iter()
-            .map(|rating| (rating.movie_id, rating.score))
-            .collect();
+        if self.use_postgres {
+            let ratings = Rating::belonging_to(user)
+                .load::<Rating>(&self.pg_conn)?
+                .iter()
+                .map(|rating| (rating.movie_id, rating.score))
+                .collect();
 
-        Ok(ratings)
+            Ok(ratings)
+        } else {
+            let collection = self.mongo_db.collection("users_ratings");
+
+            let cursor = collection.find(
+                doc! {
+                    "user_id": user.id
+                },
+                None,
+            )?;
+
+            let mut ratings = HashMap::new();
+            for doc in cursor.take(1) {
+                let doc = doc?;
+
+                for (item_id, score) in doc.get_document("scores")? {
+                    let item_id: i32 = item_id.parse()?;
+                    let score = score.as_f64().ok_or_else(|| ErrorKind::BsonConvert)?;
+
+                    ratings.insert(item_id, score);
+                }
+            }
+
+            Ok(ratings)
+        }
     }
 
     #[allow(clippy::type_complexity)]
     fn all_users_ratings(&self) -> Result<maped_ratings!(Self::User => Self::Item), Error> {
-        let ratings = ratings::table.load::<Rating>(&self.pg_conn)?;
+        if self.use_postgres {
+            let ratings = ratings::table.load::<Rating>(&self.pg_conn)?;
 
-        let mut maped_ratings = HashMap::new();
-        for rating in ratings {
-            maped_ratings
-                .entry(rating.user_id)
-                .or_insert_with(HashMap::new)
-                .insert(rating.movie_id, rating.score);
+            let mut maped_ratings = HashMap::new();
+            for rating in ratings {
+                maped_ratings
+                    .entry(rating.user_id)
+                    .or_insert_with(HashMap::new)
+                    .insert(rating.movie_id, rating.score);
+            }
+
+            Ok(maped_ratings)
+        } else {
+            let collection = self.mongo_db.collection("users_ratings");
+            let cursor = collection.find(None, None)?;
+
+            let mut maped_ratings = HashMap::new();
+            for doc in cursor {
+                let doc = doc?;
+                let user_id = doc.get_i32("user_id")?;
+
+                for (item_id, score) in doc.get_document("scores")? {
+                    let item_id: i32 = item_id.parse()?;
+                    let score = score.as_f64().ok_or_else(|| ErrorKind::BsonConvert)?;
+
+                    maped_ratings
+                        .entry(user_id)
+                        .or_insert_with(HashMap::new)
+                        .insert(item_id, score);
+                }
+            }
+
+            Ok(maped_ratings)
         }
-
-        Ok(maped_ratings)
     }
 
     fn create_partial_users(
@@ -257,17 +305,47 @@ impl Controller for MovieLensSmallController {
         &self,
         users: &[Self::User],
     ) -> Result<maped_ratings!(Self::User => Self::Item), Error> {
-        let ratings = Rating::belonging_to(users).load::<Rating>(&self.pg_conn)?;
+        if self.use_postgres {
+            let ratings = Rating::belonging_to(users).load::<Rating>(&self.pg_conn)?;
 
-        let mut maped_ratings = HashMap::new();
-        for rating in ratings {
-            maped_ratings
-                .entry(rating.user_id)
-                .or_insert_with(HashMap::new)
-                .insert(rating.movie_id, rating.score);
+            let mut maped_ratings = HashMap::new();
+            for rating in ratings {
+                maped_ratings
+                    .entry(rating.user_id)
+                    .or_insert_with(HashMap::new)
+                    .insert(rating.movie_id, rating.score);
+            }
+
+            Ok(maped_ratings)
+        } else {
+            let collection = self.mongo_db.collection("users_ratings");
+            let ids: Vec<_> = users.iter().map(|u| u.id).collect();
+
+            let cursor = collection.find(
+                doc! {
+                    "user_id": { "$in": ids }
+                },
+                None,
+            )?;
+
+            let mut maped_ratings = HashMap::new();
+            for doc in cursor {
+                let doc = doc?;
+                let user_id = doc.get_i32("user_id")?;
+
+                for (item_id, score) in doc.get_document("scores")? {
+                    let item_id: i32 = item_id.parse()?;
+                    let score = score.as_f64().ok_or_else(|| ErrorKind::BsonConvert)?;
+
+                    maped_ratings
+                        .entry(user_id)
+                        .or_insert_with(HashMap::new)
+                        .insert(item_id, score);
+                }
+            }
+
+            Ok(maped_ratings)
         }
-
-        Ok(maped_ratings)
     }
 
     #[allow(clippy::type_complexity)]
@@ -275,19 +353,48 @@ impl Controller for MovieLensSmallController {
         &self,
         user: &Self::User,
     ) -> Result<maped_ratings!(Self::User => Self::Item), Error> {
-        let ratings = ratings::table
-            .filter(ratings::user_id.is_distinct_from(user.id))
-            .load::<Rating>(&self.pg_conn)?;
+        if self.use_postgres {
+            let ratings = ratings::table
+                .filter(ratings::user_id.is_distinct_from(user.id))
+                .load::<Rating>(&self.pg_conn)?;
 
-        let mut maped_ratings = HashMap::new();
-        for rating in ratings {
-            maped_ratings
-                .entry(rating.user_id)
-                .or_insert_with(HashMap::new)
-                .insert(rating.movie_id, rating.score);
+            let mut maped_ratings = HashMap::new();
+            for rating in ratings {
+                maped_ratings
+                    .entry(rating.user_id)
+                    .or_insert_with(HashMap::new)
+                    .insert(rating.movie_id, rating.score);
+            }
+
+            Ok(maped_ratings)
+        } else {
+            let collection = self.mongo_db.collection("users_ratings");
+
+            let cursor = collection.find(
+                doc! {
+                    "user_id": { "$ne": user.id }
+                },
+                None,
+            )?;
+
+            let mut maped_ratings = HashMap::new();
+            for doc in cursor {
+                let doc = doc?;
+                let user_id = doc.get_i32("user_id")?;
+
+                for (item_id, score) in doc.get_document("scores")? {
+                    let item_id: i32 = item_id.parse()?;
+                    let score = score.as_f64().ok_or_else(|| ErrorKind::BsonConvert)?;
+
+                    maped_ratings
+                        .entry(user_id)
+                        .or_insert_with(HashMap::new)
+                        .insert(item_id, score);
+                }
+            }
+
+            Ok(maped_ratings)
         }
-
-        Ok(maped_ratings)
     }
 
     fn users_means(&self, users: &[Self::User]) -> Result<means!(Self::User), Error> {
