@@ -16,6 +16,7 @@ use crate::models::{
 };
 use crate::schema::{movies, ratings, users};
 use anyhow::Error;
+use config::Config;
 use controller::{
     eid, error::ErrorKind, maped_ratings, means, ratings, Controller, Field, SearchBy, Type,
 };
@@ -36,25 +37,38 @@ pub fn establish_connection(url: &str) -> Result<PgConnection, Error> {
 }
 
 pub struct MovieLensController {
+    use_postgres: bool,
     pg_conn: PgConnection,
     mongo_db: Database,
 }
 
 impl MovieLensController {
     pub fn new() -> Result<Self, Error> {
-        Self::with_url(
-            "postgres://postgres:@localhost/movie-lens",
-            "mongodb://localhost:27017",
-            "movie-lens",
-        )
+        let cfg = Config::default();
+
+        Self::from_config(&cfg, "movie-lens")
     }
 
-    pub fn with_url(psql_url: &str, mongo_url: &str, mongo_db: &str) -> Result<Self, Error> {
+    pub fn from_config(config: &Config, name: &str) -> Result<Self, Error> {
+        let db = config
+            .databases
+            .get(name)
+            .ok_or_else(|| ErrorKind::DbConfigError(name.into()))?;
+
+        let use_postgres = db.use_postgres;
+        let psql_url = &db.psql_url;
+        let mongo_url = &db.mongo_url;
+        let mongo_db = &db.mongo_db;
+
         let pg_conn = establish_connection(psql_url)?;
         let client = Client::with_uri_str(mongo_url)?;
         let mongo_db = client.database(mongo_db);
 
-        Ok(Self { pg_conn, mongo_db })
+        Ok(Self {
+            use_postgres,
+            pg_conn,
+            mongo_db,
+        })
     }
 }
 
@@ -316,7 +330,6 @@ impl Controller for MovieLensController {
         item_id: &eid!(Self::Item),
         score: f64,
     ) -> Result<Self::Rating, Error> {
-
         let collection = self.mongo_db.collection("users_who_rated");
 
         let query = doc! {

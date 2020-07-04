@@ -16,18 +16,18 @@ use crate::models::{
 };
 use crate::schema::{books, ratings, users};
 use anyhow::Error;
+use config::Config;
 use controller::{
     eid, error::ErrorKind, maped_ratings, means, ratings, Controller, Field, SearchBy, Type,
 };
 use diesel::pg::PgConnection;
 use diesel::{delete, insert_into, prelude::*, update};
-use models::{books::NewUnseenBook, users::NewUnseenUser, ratings::NewRating};
+use models::{books::NewUnseenBook, ratings::NewRating, users::NewUnseenUser};
 use mongodb::bson::doc;
 use mongodb::{
     options::UpdateOptions,
-    sync::{Client, Database}
+    sync::{Client, Database},
 };
-
 use num_traits::Zero;
 use std::collections::HashMap;
 
@@ -36,25 +36,38 @@ pub fn establish_connection(url: &str) -> Result<PgConnection, Error> {
 }
 
 pub struct BooksController {
+    use_postgres: bool,
     pg_conn: PgConnection,
     mongo_db: Database,
 }
 
 impl BooksController {
     pub fn new() -> Result<Self, Error> {
-        Self::with_url(
-            "postgres://postgres:@localhost/books",
-            "mongodb://localhost:27017",
-            "books",
-        )
+        let cfg = Config::default();
+
+        Self::from_config(&cfg, "books")
     }
 
-    pub fn with_url(psql_url: &str, mongo_url: &str, mongo_db: &str) -> Result<Self, Error> {
+    pub fn from_config(config: &Config, name: &str) -> Result<Self, Error> {
+        let db = config
+            .databases
+            .get(name)
+            .ok_or_else(|| ErrorKind::DbConfigError(name.into()))?;
+
+        let use_postgres = db.use_postgres;
+        let psql_url = &db.psql_url;
+        let mongo_url = &db.mongo_url;
+        let mongo_db = &db.mongo_db;
+
         let pg_conn = establish_connection(psql_url)?;
         let client = Client::with_uri_str(mongo_url)?;
         let mongo_db = client.database(mongo_db);
 
-        Ok(Self { pg_conn, mongo_db })
+        Ok(Self {
+            use_postgres,
+            pg_conn,
+            mongo_db,
+        })
     }
 }
 
