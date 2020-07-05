@@ -58,16 +58,23 @@ user_knn(10, id('67544'), pearson_a, 1000)
 # Usuario 67544 tiene 12 ratings
 # Ítem 0971880107 tiene 2502 ratings
 # Ítem 0446672211 tiene 585 ratings
-# Ítem 0002259834 tiene 12 ratings
+# Ítem 0345465083 tiene 187 ratings
 
-user_based_predict(90, id('11676'), id('0971880107'), euclidean, 1000)
-user_based_predict(90, id('185223'), id('0446672211'), cosine, 1000)
-user_based_predict(90, id('67544'), id('0971880107'), pearson_c, 1000)
-user_based_predict(90, id('11676'), id('0002259834'), pearson_a, 1000)
-item_based_predict(id('11676'), id('0971880107'), adj_cosine, 1000)
-item_based_predict(id('11676'), id('0971880107'), slope_one, 1000)
-item_based_predict(id('185223'), id('0446672211'), adj_cosine, 1000)
-item_based_predict(id('185223'), id('0446672211'), slope_one, 1000)
+user_based_predict(50, id('11676'), id('0971880107'), manhattan, 1000)
+user_based_predict(50, id('11676'), id('0971880107'), pearson_a, 1000)
+user_based_predict(50, id('11676'), id('0446672211'), manhattan, 1000)
+user_based_predict(50, id('11676'), id('0446672211'), pearson_a, 1000)
+user_based_predict(50, id('185223'), id('0971880107'), manhattan, 1000)
+user_based_predict(50, id('185223'), id('0971880107'), pearson_a, 1000)
+user_based_predict(50, id('185223'), id('0446672211'), manhattan, 1000)
+user_based_predict(50, id('185223'), id('0446672211'), pearson_a, 1000)
+
+item_based_predict(id('15'), id('0971880107'), adj_cosine, 1000)
+item_based_predict(id('15'), id('0971880107'), slope_one, 1000)
+item_based_predict(id('17'), id('0446672211'), adj_cosine, 1000)
+item_based_predict(id('17'), id('0446672211'), slope_one, 1000)
+item_based_predict(id('9'), id('0345465083'), adj_cosine, 1000)
+item_based_predict(id('9'), id('0345465083'), slope_one, 1000)
 disconnect
 
 connect(movie-lens-small)
