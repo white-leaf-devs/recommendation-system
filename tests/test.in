@@ -12,7 +12,9 @@ user_knn(5, id('2'), pearson_a)
 
 # Usuario 15 tiene 24 ratings
 # Usuario 17 tiene 6 ratings
-# Ítem 23 tiene 25 ratings 
+# Ítem 22 tiene 23 ratings 
+# Ítem 16 tiene 12 ratings
+# Ítem 21 tiene 8 ratings
 
 user_based_predict(90, id('15'), id('23'), euclidean)
 user_based_predict(90, id('17'), id('23'), cosine)
