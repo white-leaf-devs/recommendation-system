@@ -117,6 +117,8 @@ where
 
             empty if empty.is_empty() => {}
 
+            comment if comment.starts_with('#') => {}
+
             line => match parser::parse_line(line) {
                 Some(stmt) => match stmt {
                     Statement::MatrixGet(searchby_a, searchby_b) => {
@@ -205,6 +207,8 @@ where
             }
 
             empty if empty.is_empty() => {}
+
+            comment if comment.starts_with('#') => {}
 
             line => match parser::parse_line(line) {
                 Some(stmt) => match stmt {
@@ -806,6 +810,8 @@ fn main() -> Result<(), Error> {
             }
 
             empty if empty.is_empty() => {}
+
+            comment if comment.starts_with('#') => {}
 
             line => match parser::parse_line(line) {
                 Some(stmt) => {
