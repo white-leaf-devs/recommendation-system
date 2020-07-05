@@ -215,7 +215,7 @@ impl Controller for BooksController {
             let mut items_users = HashMap::new();
             for doc in cursor {
                 let doc = doc?;
-                let item_id = doc.get_i32("item_id")?;
+                let item_id = doc.get_str("item_id")?;
 
                 for (user_id, score) in doc.get_document("scores")? {
                     let user_id: i32 = user_id.parse()?;
