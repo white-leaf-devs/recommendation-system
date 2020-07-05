@@ -1,53 +1,111 @@
 connect(simple-movie)
-user_knn(5, id('9'), euclidean, 100)
-user_knn(5, id('17'), cosine, 100)
-user_knn(5, id('9'), pearson_c, 100)
-user_knn(5, id('9'), pearson_a, 100)
-user_based_predict(90, id('15'), id('23'), euclidean, 100)
-user_based_predict(90, id('17'), id('23'), cosine, 100)
-user_based_predict(90, id('15'), id('23'), pearson_c, 100)
-user_based_predict(90, id('15'), id('23'), pearson_a, 100)
-item_based_predict(id('15'), id('23'), adj_cosine, 1000)
-item_based_predict(id('15'), id('23'), slope_one, 1000)
-disconnect
 
-connect(movie-lens-small)
-user_knn(5, id('91'), euclidean, 100)
-user_knn(5, id('91'), cosine, 100)
-user_knn(5, id('477'), pearson_c, 100)
-user_knn(5, id('477'), pearson_a, 100)
-user_based_predict(90, id('477'), id('589'), euclidean, 100)
-user_based_predict(90, id('189'), id('216'), cosine, 100)
-user_based_predict(90, id('477'), id('589'), pearson_c, 100)
-user_based_predict(90, id('189'), id('216'), pearson_a, 100)
-item_based_predict(id('91'), id('589'), adj_cosine, 1000)
-item_based_predict(id('91'), id('4993'), slope_one, 1000)
+# Usuario 9 tiene 23 ratings
+# Usuario 2 tiene 15 ratings
+# Usuario 17 tiene 6 ratings
+
+user_knn(5, id('9'), euclidean)
+user_knn(5, id('17'), cosine)
+user_knn(5, id('2'), pearson_c)
+user_knn(5, id('9'), pearson_a)
+user_knn(5, id('2'), pearson_a)
+
+# Usuario 15 tiene 24 ratings
+# Usuario 17 tiene 6 ratings
+# Ítem 23 tiene 25 ratings 
+
+user_based_predict(90, id('15'), id('23'), euclidean)
+user_based_predict(90, id('17'), id('23'), cosine)
+user_based_predict(90, id('15'), id('23'), pearson_c)
+user_based_predict(90, id('15'), id('23'), pearson_a)
+item_based_predict(id('15'), id('23'), adj_cosine, 100)
+item_based_predict(id('15'), id('23'), slope_one, 100)
+item_based_predict(id('17'), id('23'), adj_cosine, 100)
+item_based_predict(id('17'), id('23'), slope_one, 100)
 disconnect
 
 connect(books)
-user_knn(5, id('152697'), euclidean, 1000)
-user_knn(5, id('152697'), cosine, 1000)
-user_knn(5, id('67544'), pearson_c, 1000)
-user_knn(5, id('67544'), pearson_a, 1000)
-user_based_predict(90, id('152697'), id('0002259834'), euclidean, 1000)
-user_based_predict(90, id('152697'), id('0002259834'), cosine, 1000)
-user_based_predict(90, id('152697'), id('0002259834'), pearson_c, 1000)
-user_based_predict(90, id('152697'), id('0002259834'), pearson_a, 1000)
-item_based_predict(id('67544'), id('0002005018'), adj_cosine, 1000)
-item_based_predict(id('67544'), id('0002005018'), slope_one, 1000)
+
+# Usuario 11676 tiene 11146 ratings
+# Usuario 185223 tiene 2382 ratings
+# Usuario 67544 tiene 12 ratings
+
+user_knn(5, id('11676'), euclidean, 1000)
+user_knn(5, id('67544'), cosine, 1000)
+user_knn(5, id('185223'), pearson_c, 1000)
+user_knn(5, id('185223'), pearson_a, 1000)
+user_knn(5, id('11676'), pearson_a, 1000)
+
+# Usuario 11676 tiene 11146 ratings
+# Usuario 185223 tiene 2382 ratings
+# Usuario 67544 tiene 12 ratings
+# Ítem 0971880107 tiene 2502 ratings
+# Ítem 0446672211 tiene 585 ratings
+# Ítem 0002259834 tiene 12 ratings
+
+user_based_predict(90, id('11676'), id('0971880107'), euclidean, 1000)
+user_based_predict(90, id('185223'), id('0446672211'), cosine, 1000)
+user_based_predict(90, id('67544'), id('0971880107'), pearson_c, 1000)
+user_based_predict(90, id('11676'), id('0002259834'), pearson_a, 1000)
+item_based_predict(id('11676'), id('0971880107'), adj_cosine, 1000)
+item_based_predict(id('11676'), id('0971880107'), slope_one, 1000)
+item_based_predict(id('185223'), id('0446672211'), adj_cosine, 1000)
+item_based_predict(id('185223'), id('0446672211'), slope_one, 1000)
+disconnect
+
+connect(movie-lens-small)
+
+# Usuario 414 tiene 2698 ratings 
+# Usuario 91 tiene 575 ratings 
+# Usuario 385 tiene 201 ratings
+
+user_knn(5, id('414'), euclidean, 1000)
+user_knn(5, id('385'), cosine, 1000)
+user_knn(5, id('91'), pearson_c, 1000)
+user_knn(5, id('414'), pearson_a, 1000)
+user_knn(5, id('385'), pearson_a, 1000)
+
+# Usuario 414 tiene 2698 ratings 
+# Usuario 477 tiene 600 ratings 
+# Usuario 189 tiene 20 ratings
+# Ítem 356 tiene 329 ratings
+# Ítem 589 tiene 224 ratings
+# Ítem 216 tiene 49 ratings
+
+user_based_predict(90, id('414'), id('589'), euclidean, 1000)
+user_based_predict(90, id('477'), id('589'), cosine, 1000)
+user_based_predict(90, id('414'), id('216'), pearson_c, 1000)
+user_based_predict(90, id('414'), id('216'), pearson_a, 1000)
+
+item_based_predict(id('414'), id('589'), adj_cosine, 1000)
+item_based_predict(id('414'), id('589'), slope_one, 1000)
 disconnect
 
 connect(movie-lens)
-user_knn(5, id('91'), euclidean, 1000)
-user_knn(5, id('91'), cosine, 1000)
-user_knn(5, id('477'), pearson_c, 1000)
-user_knn(5, id('477'), pearson_a, 1000)
-user_based_predict(90, id('477'), id('589'), euclidean, 1000)
-user_based_predict(90, id('189'), id('216'), cosine, 1000)
-user_based_predict(90, id('477'), id('589'), pearson_c, 1000)
-user_based_predict(90, id('189'), id('216'), pearson_a, 1000)
-item_based_predict(id('91'), id('589'), adj_cosine, 1000)
-item_based_predict(id('91'), id('4993'), slope_one, 1000)
+
+# Usuario 123100 tiene 23715 ratings
+# Usuario 133016 tiene 4572 ratings
+# Usuario 477 tiene 29 ratings
+
+user_knn(5, id('123100'), euclidean, 3000)
+user_knn(5, id('477'), cosine, 3000)
+user_knn(5, id('133016'), pearson_c, 3000)
+user_knn(5, id('133016'), pearson_a, 3000)
+user_knn(5, id('123100'), pearson_a, 3000)
+
+# Usuario 123100 tiene 23715 ratings
+# Usuario 133016 tiene 4572 ratings
+# Usuario 189 tiene 43 ratings
+# Ítem 318 tiene 97999 ratings
+# Ítem 589 tiene 64258 ratings 
+# Ítem 216 tiene 10663 ratings
+
+user_based_predict(90, id('477'), id('589'), euclidean, 2000)
+user_based_predict(90, id('189'), id('216'), cosine, 2000)
+user_based_predict(90, id('477'), id('589'), pearson_c, 2000)
+user_based_predict(90, id('189'), id('216'), pearson_a, 2000)
+item_based_predict(id('91'), id('589'), adj_cosine, 2000)
+item_based_predict(id('91'), id('4993'), slope_one, 2000)
 disconnect
 
 connect(shelves)
