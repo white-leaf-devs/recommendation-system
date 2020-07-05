@@ -100,13 +100,21 @@ user_knn(5, id('385'), pearson_a, 1000)
 # Ítem 589 tiene 224 ratings
 # Ítem 216 tiene 49 ratings
 
-user_based_predict(90, id('414'), id('589'), euclidean, 1000)
-user_based_predict(90, id('477'), id('589'), cosine, 1000)
-user_based_predict(90, id('414'), id('216'), pearson_c, 1000)
-user_based_predict(90, id('414'), id('216'), pearson_a, 1000)
+user_based_predict(50, id('414'), id('356'), manhattan, 1000)
+user_based_predict(50, id('414'), id('356'), pearson_a, 1000)
+user_based_predict(50, id('414'), id('589'), manhattan, 1000)
+user_based_predict(50, id('414'), id('589'), pearson_a, 1000)
+user_based_predict(50, id('477'), id('356'), manhattan, 1000)
+user_based_predict(50, id('477'), id('356'), pearson_a, 1000)
+user_based_predict(50, id('477'), id('589'), manhattan, 1000)
+user_based_predict(50, id('477'), id('589'), pearson_a, 1000)
 
-item_based_predict(id('414'), id('589'), adj_cosine, 1000)
-item_based_predict(id('414'), id('589'), slope_one, 1000)
+item_based_predict(id('15'), id('356'), adj_cosine, 1000)
+item_based_predict(id('15'), id('356'), slope_one, 1000)
+item_based_predict(id('17'), id('589'), adj_cosine, 1000)
+item_based_predict(id('17'), id('589'), slope_one, 1000)
+item_based_predict(id('9'), id('216'), adj_cosine, 1000)
+item_based_predict(id('9'), id('216'), slope_one, 1000)
 disconnect
 
 connect(movie-lens)
