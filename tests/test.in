@@ -40,15 +40,15 @@ disconnect
 connect(books)
 
 # Usuario 11676 tiene 11146 ratings
-# Usuario 185223 tiene 2382 ratings
+# Usuario 185233 tiene 2382 ratings
 # Usuario 67544 tiene 12 ratings
 
 user_knn(10, id('11676'), euclidean, 1000)
 user_knn(10, id('11676'), cosine, 1000)
 user_knn(10, id('11676'), pearson_a, 1000)
-user_knn(10, id('185223'), euclidean, 1000)
-user_knn(10, id('185223'), cosine, 1000)
-user_knn(10, id('185223'), pearson_a, 1000)
+user_knn(10, id('185233'), euclidean, 1000)
+user_knn(10, id('185233'), cosine, 1000)
+user_knn(10, id('185233'), pearson_a, 1000)
 user_knn(10, id('67544'), euclidean, 1000)
 user_knn(10, id('67544'), cosine, 1000)
 user_knn(10, id('67544'), pearson_a, 1000)
@@ -64,15 +64,15 @@ user_based_predict(50, id('11676'), id('0971880107'), manhattan, 1000)
 user_based_predict(50, id('11676'), id('0971880107'), pearson_a, 1000)
 user_based_predict(50, id('11676'), id('0446672211'), manhattan, 1000)
 user_based_predict(50, id('11676'), id('0446672211'), pearson_a, 1000)
-user_based_predict(50, id('185223'), id('0971880107'), manhattan, 1000)
-user_based_predict(50, id('185223'), id('0971880107'), pearson_a, 1000)
-user_based_predict(50, id('185223'), id('0446672211'), manhattan, 1000)
-user_based_predict(50, id('185223'), id('0446672211'), pearson_a, 1000)
+user_based_predict(50, id('185233'), id('0971880107'), manhattan, 1000)
+user_based_predict(50, id('185233'), id('0971880107'), pearson_a, 1000)
+user_based_predict(50, id('185233'), id('0446672211'), manhattan, 1000)
+user_based_predict(50, id('185233'), id('0446672211'), pearson_a, 1000)
 
 item_based_predict(id('11676'), id('0971880107'), adj_cosine, 1000)
 item_based_predict(id('11676'), id('0971880107'), slope_one, 1000)
-item_based_predict(id('185223'), id('0446672211'), adj_cosine, 1000)
-item_based_predict(id('185223'), id('0446672211'), slope_one, 1000)
+item_based_predict(id('185233'), id('0446672211'), adj_cosine, 1000)
+item_based_predict(id('185233'), id('0446672211'), slope_one, 1000)
 item_based_predict(id('67544'), id('0345465083'), adj_cosine, 1000)
 item_based_predict(id('67544'), id('0345465083'), slope_one, 1000)
 disconnect
