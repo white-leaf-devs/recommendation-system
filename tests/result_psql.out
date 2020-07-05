@@ -1,0 +1,363 @@
+    Finished release [optimized] target(s) in 0.13s
+     Running `target/release/recommendation-system`
+Welcome to recommendation-system 0.1.0
+Distance with user with id(19) is 2.8284271247461903
+Distance with user with id(14) is 3.3166247903554
+Distance with user with id(12) is 3.4641016151377544
+Distance with user with id(16) is 4.123105625617661
+Distance with user with id(24) is 4.123105625617661
+Operation took 0.0012 seconds
+Distance with user with id(19) is 0.9799476611690809
+Distance with user with id(14) is 0.9794042137487836
+Distance with user with id(12) is 0.9787985865724381
+Distance with user with id(10) is 0.971819988095365
+Distance with user with id(16) is 0.9706836289609658
+Operation took 0.0008 seconds
+Distance with user with id(14) is 0.7866066361276136
+Distance with user with id(16) is 0.7799312462760732
+Distance with user with id(21) is 0.729724308026952
+Distance with user with id(13) is 0.7232533840577898
+Distance with user with id(24) is 0.7222222222222222
+Operation took 0.0007 seconds
+Distance with user with id(19) is 3.3166247903554
+Distance with user with id(25) is 3.4641016151377544
+Distance with user with id(17) is 3.4641016151377544
+Distance with user with id(12) is 3.605551275463989
+Distance with user with id(24) is 3.872983346207417
+Operation took 0.0007 seconds
+Distance with user with id(25) is 0.9743938926360205
+Distance with user with id(12) is 0.9735148829949454
+Distance with user with id(19) is 0.9706701179443327
+Distance with user with id(8) is 0.9672041516493515
+Distance with user with id(3) is 0.9638847126084745
+Operation took 0.0007 seconds
+Distance with user with id(25) is 0.716331592380582
+Distance with user with id(3) is 0.6009094359141389
+Distance with user with id(18) is 0.5012464335210294
+Distance with user with id(17) is 0.49999999999999983
+Distance with user with id(24) is 0.4859630732351671
+Operation took 0.0006 seconds
+Distance with user with id(19) is 1
+Distance with user with id(7) is 1.4142135623730951
+Distance with user with id(20) is 1.4142135623730951
+Distance with user with id(13) is 2.449489742783178
+Distance with user with id(10) is 2.449489742783178
+Operation took 0.0007 seconds
+Distance with user with id(10) is 0.9939990885479666
+Distance with user with id(19) is 0.9918365981341757
+Distance with user with id(7) is 0.9843091327750998
+Distance with user with id(8) is 0.9834878940976717
+Distance with user with id(20) is 0.9801960588196068
+Operation took 0.0007 seconds
+Distance with user with id(10) is 1.0000000000000004
+Distance with user with id(8) is 0.9759000729485338
+Distance with user with id(7) is 0.9428090415820635
+Distance with user with id(13) is 0.8214285714285713
+Distance with user with id(25) is 0.8214285714285713
+Operation took 0.0008 seconds
+Predicted score for item with id(22) is 4.402559593335649
+Operation took 0.0007 seconds
+Predicted score for item with id(22) is 4.484119186096672
+Operation took 0.0007 seconds
+Predicted score for item with id(16) is 4.130640410571671
+Operation took 0.0007 seconds
+Predicted score for item with id(16) is 4.248784142033165
+Operation took 0.0006 seconds
+Predicted score for item with id(22) is 4.481436446553916
+Operation took 0.0006 seconds
+Predicted score for item with id(22) is 4.180075992560278
+Operation took 0.0007 seconds
+Predicted score for item with id(16) is 4.231999309496051
+Operation took 0.0006 seconds
+Predicted score for item with id(16) is 4.231999309496052
+Operation took 0.0006 seconds
+Predicted score for item with id(22) is 3.704480743679923
+Operation took 0.0158 seconds
+Predicted score for item with id(22) is 3.2935064935064937
+Operation took 0.0015 seconds
+Predicted score for item with id(16) is 3.8932326829656123
+Operation took 0.0030 seconds
+Predicted score for item with id(16) is 3.75
+Operation took 0.0006 seconds
+Predicted score for item with id(21) is 1.71303593826617
+Operation took 0.0022 seconds
+Predicted score for item with id(21) is 1.6
+Operation took 0.0009 seconds
+Disconnecting from database simple-movie
+Distance with user with id(791) is 0
+Distance with user with id(558) is 0
+Distance with user with id(207) is 0
+Distance with user with id(413) is 0
+Distance with user with id(144) is 0
+Distance with user with id(951) is 0
+Distance with user with id(77) is 0
+Distance with user with id(42) is 0
+Distance with user with id(232) is 0
+Distance with user with id(850) is 0
+Operation took 5.3247 seconds
+Distance with user with id(241527) is 1.0000000000000002
+Distance with user with id(8290) is 1.0000000000000002
+Distance with user with id(252101) is 1.0000000000000002
+Distance with user with id(224650) is 1.0000000000000002
+Distance with user with id(42528) is 1.0000000000000002
+Distance with user with id(156502) is 1.0000000000000002
+Distance with user with id(251253) is 1.0000000000000002
+Distance with user with id(367) is 1
+Distance with user with id(780) is 1
+Distance with user with id(850) is 1
+Operation took 4.6006 seconds
+Distance with user with id(107329) is 1.0000000000000107
+Distance with user with id(8930) is 1.0000000000000089
+Distance with user with id(108271) is 1.000000000000008
+Distance with user with id(133958) is 1.000000000000008
+Distance with user with id(161794) is 1.000000000000008
+Distance with user with id(71884) is 1.000000000000007
+Distance with user with id(158448) is 1.000000000000007
+Distance with user with id(136022) is 1.000000000000007
+Distance with user with id(159059) is 1.000000000000007
+Distance with user with id(10951) is 1.000000000000007
+Operation took 4.6311 seconds
+[0m[31m[ERROR] [0mFailed to find the 10 nearest neighbors
+[0m[31m[ERROR] [0mReason: Empty k nearest neighbors
+Operation took 4.4085 seconds
+[0m[31m[ERROR] [0mFailed to find the 10 nearest neighbors
+[0m[31m[ERROR] [0mReason: Empty k nearest neighbors
+Operation took 4.2911 seconds
+[0m[31m[ERROR] [0mFailed to find the 10 nearest neighbors
+[0m[31m[ERROR] [0mReason: Empty k nearest neighbors
+Operation took 4.3169 seconds
+Distance with user with id(10314) is 0
+Distance with user with id(8234) is 0
+Distance with user with id(1597) is 0
+Distance with user with id(14546) is 0
+Distance with user with id(2977) is 0
+Distance with user with id(15051) is 0
+Distance with user with id(12775) is 0
+Distance with user with id(14449) is 0
+Distance with user with id(16013) is 0
+Distance with user with id(4090) is 0
+Operation took 4.3113 seconds
+Distance with user with id(243) is 1
+Distance with user with id(1597) is 1
+Distance with user with id(1805) is 1
+Distance with user with id(2977) is 1
+Distance with user with id(3100) is 1
+Distance with user with id(4090) is 1
+Distance with user with id(4669) is 1
+Distance with user with id(6178) is 1
+Distance with user with id(6251) is 1
+Distance with user with id(8) is 1
+Operation took 4.3746 seconds
+Distance with user with id(67544) is 1.0000000000000002
+Distance with user with id(30972) is 1
+Distance with user with id(8454) is 1
+Distance with user with id(102967) is 0.9999999999999999
+Distance with user with id(269566) is 0.9999999999999999
+Distance with user with id(116866) is 0.9999999999999998
+Distance with user with id(72950) is 0.9999999999999998
+Distance with user with id(140000) is 0.9999999999999998
+Distance with user with id(138844) is 0.9999999999999998
+Distance with user with id(22625) is 0.9999999999999998
+Operation took 4.3744 seconds
+Predicted score for item with id(0971880107) is 5.600953769771752
+Operation took 4.3247 seconds
+Predicted score for item with id(0971880107) is 2.2200000000000006
+Operation took 4.2949 seconds
+Predicted score for item with id(0446672211) is 9.60694232262709
+Operation took 4.2752 seconds
+Predicted score for item with id(0446672211) is 8.086396590769086
+Operation took 4.3481 seconds
+[0m[31m[ERROR] [0mFailed to predict the score
+[0m[31m[ERROR] [0mReason: Empty k nearest neighbors
+Operation took 4.3543 seconds
+[0m[31m[ERROR] [0mFailed to predict the score
+[0m[31m[ERROR] [0mReason: Empty k nearest neighbors
+Operation took 4.2473 seconds
+[0m[31m[ERROR] [0mFailed to predict the score
+[0m[31m[ERROR] [0mReason: Empty k nearest neighbors
+Operation took 4.3001 seconds
+[0m[31m[ERROR] [0mFailed to predict the score
+[0m[31m[ERROR] [0mReason: Empty k nearest neighbors
+Operation took 4.3301 seconds
+Predicted score for item with id(0971880107) is 7.679517186848387
+Operation took 9.0868 seconds
+Predicted score for item with id(0971880107) is 3.5892332586507343
+Operation took 0.8692 seconds
+[0m[31m[ERROR] [0mFailed to predict the score
+[0m[31m[ERROR] [0mReason: Tried to divide by zero
+Operation took 3.3751 seconds
+[0m[31m[ERROR] [0mFailed to predict the score
+[0m[31m[ERROR] [0mReason: Tried to divide by zero
+Operation took 0.0023 seconds
+Predicted score for item with id(0345465083) is 5.524425827868034
+Operation took 3.5347 seconds
+Predicted score for item with id(0345465083) is 6.74
+Operation took 0.0035 seconds
+Disconnecting from database books
+Distance with user with id(414) is 0
+Distance with user with id(87) is 1.8708286933869707
+Distance with user with id(251) is 2.345207879911715
+Distance with user with id(320) is 2.449489742783178
+Distance with user with id(440) is 2.958039891549808
+Operation took 0.1225 seconds
+Distance with user with id(414) is 1.0000000000000002
+Distance with user with id(251) is 0.9945264469527311
+Distance with user with id(348) is 0.9939551919624139
+Distance with user with id(87) is 0.9933979068016842
+Distance with user with id(25) is 0.9931204762322176
+Operation took 0.1073 seconds
+Distance with user with id(414) is 1
+Distance with user with id(494) is 0.8040100054211148
+Distance with user with id(431) is 0.7925590927610653
+Distance with user with id(110) is 0.769885631665135
+Distance with user with id(392) is 0.7641180361141049
+Operation took 0.0997 seconds
+Distance with user with id(91) is 0
+Distance with user with id(184) is 1
+Distance with user with id(158) is 1
+Distance with user with id(388) is 1.4142135623730951
+Distance with user with id(87) is 1.5
+Operation took 0.1269 seconds
+Distance with user with id(158) is 1
+Distance with user with id(506) is 1
+Distance with user with id(91) is 1
+Distance with user with id(53) is 0.9977851578566088
+Distance with user with id(582) is 0.9974056771750386
+Operation took 0.0937 seconds
+Distance with user with id(397) is 1
+Distance with user with id(91) is 0.9999999999999998
+Distance with user with id(442) is 0.9999999999999998
+Distance with user with id(3) is 0.9773555548504427
+Distance with user with id(388) is 0.9176629354822475
+Operation took 0.1251 seconds
+Distance with user with id(481) is 0
+Distance with user with id(473) is 0
+Distance with user with id(106) is 0
+Distance with user with id(157) is 0
+Distance with user with id(385) is 0
+Operation took 0.0983 seconds
+Distance with user with id(236) is 1
+Distance with user with id(157) is 1
+Distance with user with id(291) is 1
+Distance with user with id(576) is 1
+Distance with user with id(496) is 1
+Operation took 0.1035 seconds
+Distance with user with id(550) is 1.000000000000016
+Distance with user with id(508) is 1.000000000000004
+Distance with user with id(114) is 1.0000000000000002
+Distance with user with id(385) is 1
+Distance with user with id(55) is 0.9999999999999999
+Operation took 0.1146 seconds
+Predicted score for item with id(356) is 4.525916167760098
+Operation took 0.0989 seconds
+Predicted score for item with id(356) is 4.182285830746777
+Operation took 0.0959 seconds
+Predicted score for item with id(589) is 4.341843884725746
+Operation took 0.0965 seconds
+Predicted score for item with id(589) is 4.208024441289346
+Operation took 0.1068 seconds
+Predicted score for item with id(356) is 4.700933740512482
+Operation took 0.1026 seconds
+Predicted score for item with id(356) is 4.3871665686683565
+Operation took 0.1005 seconds
+Predicted score for item with id(589) is 4.462907276579381
+Operation took 0.0907 seconds
+Predicted score for item with id(589) is 3.9941885249005034
+Operation took 0.0908 seconds
+Predicted score for item with id(356) is 3.4592240766384657
+Operation took 0.1909 seconds
+Predicted score for item with id(356) is 4.346584231771499
+Operation took 0.1303 seconds
+Predicted score for item with id(589) is 3.61087017164422
+Operation took 0.0717 seconds
+Predicted score for item with id(589) is 4.215617421180275
+Operation took 0.0507 seconds
+Predicted score for item with id(216) is 1.651954783964036
+Operation took 0.0333 seconds
+Predicted score for item with id(216) is 3.2604395604395604
+Operation took 0.0056 seconds
+Disconnecting from database movie-lens-small
+Distance with user with id(2417) is 0
+Distance with user with id(2360) is 0
+Distance with user with id(264) is 0
+Distance with user with id(1873) is 0
+Distance with user with id(2137) is 0
+Operation took 27.0418 seconds
+Distance with user with id(8182) is 1.0000000000000002
+Distance with user with id(15081) is 1.0000000000000002
+Distance with user with id(14392) is 1.0000000000000002
+Distance with user with id(33941) is 1.0000000000000002
+Distance with user with id(5859) is 1.0000000000000002
+Operation took 27.9754 seconds
+Distance with user with id(189018) is 1.000000000000033
+Distance with user with id(268025) is 1.0000000000000255
+Distance with user with id(83882) is 1.0000000000000255
+Distance with user with id(33291) is 1.000000000000016
+Distance with user with id(4207) is 1.000000000000016
+Operation took 29.6481 seconds
+Distance with user with id(1315) is 0
+Distance with user with id(1873) is 0
+Distance with user with id(554) is 0
+Distance with user with id(1613) is 0
+Distance with user with id(2438) is 0
+Operation took 27.6641 seconds
+Distance with user with id(16396) is 1.0000000000000002
+Distance with user with id(20331) is 1.0000000000000002
+Distance with user with id(15155) is 1.0000000000000002
+Distance with user with id(21216) is 1.0000000000000002
+Distance with user with id(8729) is 1.0000000000000002
+Operation took 27.9138 seconds
+Distance with user with id(243967) is 1.0000000000000255
+Distance with user with id(21813) is 1.0000000000000255
+Distance with user with id(78551) is 1.0000000000000255
+Distance with user with id(186385) is 1.000000000000017
+Distance with user with id(10411) is 1.000000000000016
+Operation took 27.9338 seconds
+Distance with user with id(2842) is 0
+Distance with user with id(2214) is 0
+Distance with user with id(1301) is 0
+Distance with user with id(231) is 0
+Distance with user with id(609) is 0
+Operation took 27.3408 seconds
+Distance with user with id(4062) is 1.0000000000000002
+Distance with user with id(5962) is 1.0000000000000002
+Distance with user with id(5770) is 1.0000000000000002
+Distance with user with id(3410) is 1.0000000000000002
+Distance with user with id(1297) is 1.0000000000000002
+Operation took 25.5704 seconds
+Distance with user with id(255516) is 1.000000000000017
+Distance with user with id(28780) is 1.000000000000016
+Distance with user with id(62462) is 1.000000000000016
+Distance with user with id(94495) is 1.000000000000016
+Distance with user with id(72119) is 1.000000000000016
+Operation took 27.1891 seconds
+Predicted score for item with id(318) is 4.5
+Operation took 27.8852 seconds
+Predicted score for item with id(318) is 4.875
+Operation took 27.9311 seconds
+Predicted score for item with id(589) is 4.048608614056992
+Operation took 27.3267 seconds
+Predicted score for item with id(589) is 4.30339980383885
+Operation took 24.4147 seconds
+Predicted score for item with id(318) is 4
+Operation took 25.8150 seconds
+Predicted score for item with id(318) is 4.200000000000001
+Operation took 27.7326 seconds
+Predicted score for item with id(589) is 4
+Operation took 31.5091 seconds
+Predicted score for item with id(589) is 4.249999999999998
+Operation took 30.4037 seconds
+Predicted score for item with id(318) is 3.1801006039652755
+Operation took 95.8430 seconds
+Predicted score for item with id(318) is 4.303237028888555
+Operation took 75.2903 seconds
+Predicted score for item with id(589) is 3.0822724879154846
+Operation took 55.0069 seconds
+Predicted score for item with id(589) is 3.638223043470507
+Operation took 46.7158 seconds
+Predicted score for item with id(216) is 1.970917423391543
+Operation took 7.0855 seconds
+Predicted score for item with id(216) is 3.4230314120997813
+Operation took 4.5765 seconds
+Disconnecting from database movie-lens
+#SHELVES NO SE PUEDE :(

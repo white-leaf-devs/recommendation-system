@@ -20,33 +20,33 @@ partial_users_chunk_size = 10000
 mongo_db = "simple-movie"
 mongo_url = "mongodb://localhost:27017"
 psql_url = "postgres://postgres:@localhost/simple-movie"
-users_ratings_mongo = true
-users_who_rated_mongo = true
+users_ratings_mongo = false
+users_who_rated_mongo = false
 
 [databases.books]
 mongo_db = "books"
 mongo_url = "mongodb://localhost:27017"
 psql_url = "postgres://postgres:@localhost/books"
-users_ratings_mongo = true
-users_who_rated_mongo = true
+users_ratings_mongo = false
+users_who_rated_mongo = false
 
 [databases.shelves]
 mongo_db = "shelves" 
 mongo_url = "mongodb://localhost:27017" 
 psql_url = "postgres://postgres:@localhost/shelves" 
 users_ratings_mongo = false # no effect
-users_who_rated_mongo = true 
+users_who_rated_mongo = false 
 
 [databases.movie-lens]
 mongo_db = "movie-lens"
 mongo_url = "mongodb://localhost:27017"
 psql_url = "postgres://postgres:@localhost/movie-lens"
-users_ratings_mongo = true
-users_who_rated_mongo = true
+users_ratings_mongo = false
+users_who_rated_mongo = false
 
 [databases.movie-lens-small]
 mongo_db = "movie-lens-small"
 mongo_url = "mongodb://localhost:27017"
 psql_url = "postgres://postgres:@localhost/movie-lens-small"
-users_ratings_mongo = true
-users_who_rated_mongo = true
+users_ratings_mongo = false
+users_who_rated_mongo = false
