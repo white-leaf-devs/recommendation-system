@@ -157,6 +157,6 @@ item_based_predict(id('189'), id('216'), adj_cosine, 3000)
 item_based_predict(id('189'), id('216'), slope_one, 3000)
 disconnect
 
-connect(shelves)
-item_based_predict(id('0'), id('1000'), adj_cosine, 10000)
-item_based_predict(id('0'), id('1000'), slope_one, 10000)
+#connect(shelves)
+#item_based_predict(id('0'), id('1000'), adj_cosine, 10000)
+#item_based_predict(id('0'), id('1000'), slope_one, 10000)
